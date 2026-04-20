@@ -3,9 +3,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cells.forEach(cell => {
         cell.addEventListener('click', () => {
-            cell.classList.toggle('bg-blue-500');
-            cell.classList.toggle('text-white');
-            cell.classList.toggle('border-blue-500');
+            const isSelected = cell.classList.toggle('selected');
+
+            cell.classList.toggle('bg-blue-500', isSelected);
+            cell.classList.toggle('text-white', isSelected);
+            cell.classList.toggle('border-blue-500', isSelected);
+
+            cell.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
         });
     });
 });
+
+    
