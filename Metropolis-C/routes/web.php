@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\gridcontroller;
+
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -20,5 +22,7 @@ Route::middleware('auth')->group(function () {
 Route::get('/grid', function () {
     return view('grid.grid');
 });
+
+Route::get('/grid', [gridcontroller::class, 'grid']);
 
 require __DIR__.'/auth.php';
