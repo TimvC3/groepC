@@ -149,28 +149,39 @@
                         <div class="flex justify-center">
                             <div id="grid" class="grid grid-cols-4 gap-4">
                                 <template x-for="cell in cells" :key="cell.id">
-                                    <button
-                                        type="button"
-                                        :data-testid="'district-' + cell.id"
-                                        :aria-pressed="cell.selected ? 'true' : 'false'"
-                                        x-on:click="toggleDistrict(cell.id)"
-                                        :class="cell.selected
-                                            ? 'selected bg-blue-300 border-blue-500'
-                                            : 'bg-white border-gray-300 dark:bg-gray-900 dark:border-gray-600'"
-                                        class="district w-24 h-24 rounded-2xl border text-2xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-hidden"
-                                        :title="cell.designation ? cell.designation.name : 'District ' + cell.id"
-                                    >
-                                        <template x-if="cell.designation">
-                                            <div class="flex h-full w-full flex-col items-center justify-center px-1">
-                                                <div class="text-2xl leading-none" x-text="cell.designation.icon"></div>
-                                                <div class="mt-1 text-[10px] font-semibold leading-tight text-center" x-text="cell.designation.name"></div>
+                                    <div class="relative">
+                                        <button
+                                            type="button"
+                                            :data-testid="'district-' + cell.id"
+                                            :aria-pressed="cell.selected ? 'true' : 'false'"
+                                            x-on:click="toggleDistrict(cell.id)"
+                                            x-on:mouseenter="hoveredCellId = cell.id"
+                                            x-on:mouseleave="hoveredCellId = null"
+                                            x-on:touchstart="hoveredCellId = cell.id"
+                                            x-on:touchend="hoveredCellId = null"
+                                            :class="cell.selected
+                                                ? 'selected bg-blue-300 border-blue-500'
+                                                : 'bg-white border-gray-300 dark:bg-gray-900 dark:border-gray-600'"
+                                            class="district w-24 h-24 rounded-2xl border text-2xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            :aria-label="cell.designation ? cell.designation.name : 'District ' + cell.id"
+                                        >
+                                            <template x-if="cell.designation">
+                                                <div class="flex h-full w-full items-center justify-center">
+                                                    <div class="leading-none" x-text="cell.designation.icon"></div>
+                                                </div>
+                                            </template>
+
+                                            <template x-if="!cell.designation">
+                                                <span x-text="cell.id"></span>
+                                            </template>
+                                        </button>
+
+                                        <template x-if="cell.designation && hoveredCellId === cell.id">
+                                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-900 dark:bg-gray-700 text-white dark:text-gray-100 px-3 py-1.5 rounded-md text-sm font-semibold whitespace-nowrap z-50 shadow-lg pointer-events-none"
+                                                x-text="cell.designation.name">
                                             </div>
                                         </template>
-
-                                        <template x-if="!cell.designation">
-                                            <span x-text="cell.id"></span>
-                                        </template>
-                                    </button>
+                                    </div>
                                 </template>
                             </div>
                         </div>
@@ -187,6 +198,7 @@
                 search: '',
                 selectedDesignation: null,
                 cells: [],
+                hoveredCellId: null,
 
                 init() {
                     this.cells = Array.from({ length: 12 }, (_, index) => ({
