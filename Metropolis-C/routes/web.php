@@ -21,4 +21,9 @@ Route::get('/grid', function () {
     return view('grid.grid');
 });
 
+Route::get('/grid-drag', function(){
+    $images = ['image1.jpg', 'image2.jpg', 'image3.jpg', 'image4.jpg'];
+    return view('grid.grid-drag', compact('images'));
+});
+
 require __DIR__.'/auth.php';
