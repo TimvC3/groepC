@@ -30,6 +30,6 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/grid', function () {
     return view('grid.grid');
-});
+})->name('grid');
 
 require __DIR__.'/auth.php';
