@@ -5,7 +5,7 @@ use App\Models\ZoningDesignation;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('grid');
+    return view('welcome');
 });
 
 require __DIR__ . '/auth.php';
