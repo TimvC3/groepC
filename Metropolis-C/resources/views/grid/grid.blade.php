@@ -11,7 +11,7 @@
                 <aside class="xl:col-span-1">
                     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
                         <h3 class="text-2xl font-bold">Zoning Library</h3>
-                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Sleep een item naar het grid.</p>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Drag the items to the grid.</p>
 
                         <div class="mt-4">
                             <input id="designation-search" type="search" placeholder="Search..."
