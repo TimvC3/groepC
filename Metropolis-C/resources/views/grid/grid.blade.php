@@ -1,4 +1,10 @@
 <x-app-layout>
+    <head>
+        <script 
+        src="https://cdn.jsdelivr.net/npm/@dragdroptouch/drag-drop-touch@latest/dist/drag-drop-touch.esm.min.js?autoload" 
+        type="module">
+    </script>
+    </head>
     @php
         $zoningDesignations = \App\Models\ZoningDesignation::orderBy('category')->orderBy('name')->get();
         $groupedDesignations = $zoningDesignations->groupBy('category');
@@ -74,68 +80,119 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            let draggedData = null;
+    let draggedData = null;
+    let sourceCell = null; // Track which cell the item is being dragged FROM
 
-            // 1. Drag logic for Library Items
-            document.querySelectorAll('.zoning-item').forEach(item => {
-                item.addEventListener('dragstart', (e) => {
-                    draggedData = {
-                        id: item.dataset.id,
-                        name: item.dataset.name,
-                        icon: item.dataset.icon
-                    };
-                    e.dataTransfer.setData('text/plain', item.dataset.id); 
-                });
+    // 1. Drag logic for Library Items
+    document.querySelectorAll('.zoning-item').forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+            sourceCell = null; // Dragging from library, not a cell
+            draggedData = {
+                id: item.dataset.id,
+                name: item.dataset.name,
+                icon: item.dataset.icon
+            };
+        });
+    });
+
+    // 2. Grid Cell Logic
+    document.querySelectorAll('.grid-cell').forEach(cell => {
+            // ALLOW DRAGGING OUT: Make the cell content draggable if it has an item
+            cell.addEventListener('dragstart', (e) => {
+                const iconDiv = cell.querySelector('.flex');
+                if (!iconDiv) {
+                    e.preventDefault(); // Nothing to drag
+                    return;
+                }
+
+                sourceCell = cell; // Mark this cell as the source
+                draggedData = {
+                    icon: cell.querySelector('.text-2xl').innerText,
+                    name: cell.querySelector('.font-bold').innerText
+                };
+                
+                // Visual feedback: make the source look semi-transparent while dragging
+                cell.style.opacity = '0.5';
             });
 
-            // 2. Drop logic for Grid Cells
-            document.querySelectorAll('.grid-cell').forEach(cell => {
-                cell.addEventListener('dragover', (e) => {
-                    e.preventDefault(); // Required to allow a drop
-                    cell.classList.add('bg-indigo-50', 'border-indigo-400');
-                });
+            // Clear visual feedback when dragging ends
+            cell.addEventListener('dragend', (e) => {
+                cell.style.opacity = '1';
+                
+                // REMOVE LOGIC: If the drop happened outside (dropEffect is 'none')
+                // or if it was dragged out of the grid area
+                if (e.dataTransfer.dropEffect === 'none' && sourceCell) {
+                    removeCellContent(sourceCell);
+                }
+            });
 
-                cell.addEventListener('dragleave', () => {
-                    cell.classList.remove('bg-indigo-50', 'border-indigo-400');
-                });
+            cell.addEventListener('dragover', (e) => {
+                e.preventDefault(); 
+                cell.classList.add('bg-indigo-50', 'border-indigo-400');
+            });
 
-                cell.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    cell.classList.remove('bg-indigo-50', 'border-indigo-400');
+            cell.addEventListener('dragleave', () => {
+                cell.classList.remove('bg-indigo-50', 'border-indigo-400');
+            });
 
-                    if (draggedData) {
-                        // Update the cell content
-                        cell.innerHTML = `
-                            <div class="flex flex-col items-center">
-                                <div class="text-2xl">${draggedData.icon}</div>
-                                <div class="mt-1 text-[10px] font-bold leading-tight">${draggedData.name}</div>
-                            </div>
-                        `;
-                        cell.classList.remove('border-dashed');
-                        cell.classList.add('border-solid', 'bg-blue-50', 'dark:bg-blue-900/20');
+            cell.addEventListener('drop', (e) => {
+                e.preventDefault();
+                cell.classList.remove('bg-indigo-50', 'border-indigo-400');
+
+                if (draggedData) {
+                    // If we are moving from one cell to another, clear the old one
+                    if (sourceCell && sourceCell !== cell) {
+                        removeCellContent(sourceCell);
                     }
-                });
-            });
 
-            // 3. Search functionality
-            const searchInput = document.getElementById('designation-search');
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase();
-                document.querySelectorAll('.zoning-item').forEach(item => {
-                    const text = (item.dataset.name + item.dataset.category).toLowerCase();
-                    item.style.display = text.includes(query) ? 'block' : 'none';
-                });
+                    // Update the new cell content
+                    cell.innerHTML = `
+                        <div class="flex flex-col items-center pointer-events-none">
+                            <div class="text-2xl">${draggedData.icon}</div>
+                            <div class="mt-1 text-[10px] font-bold leading-tight">${draggedData.name}</div>
+                        </div>
+                    `;
+                    cell.classList.remove('border-dashed');
+                    cell.classList.add('border-solid', 'bg-blue-50', 'dark:bg-blue-900/20');
+                    
+                    // Make the cell itself draggable now that it has content
+                    cell.setAttribute('draggable', 'true');
+                }
+                sourceCell = null; 
             });
-
-            // 4. Clear Grid
-            document.getElementById('clear-grid').addEventListener('click', () => {
-                document.querySelectorAll('.grid-cell').forEach(cell => {
-                    const index = cell.dataset.index;
-                    cell.innerHTML = `<span class="text-gray-400 text-xs font-mono">${index}</span>`;
-                    cell.classList.remove('border-solid', 'bg-blue-50', 'dark:bg-blue-900/20');
-                    cell.classList.add('border-dashed');
-                });
+            // 5. Click to remove logic
+            cell.addEventListener('click', (e) => {
+            // Only remove if the cell actually has an item in it
+            // (We check if it has the 'border-solid' class we added during drop)
+            if (cell.classList.contains('border-solid')) {
+                removeCellContent(cell);
+            }
             });
         });
+
+        // Helper function to reset a cell
+        function removeCellContent(cell) {
+            const index = cell.dataset.index;
+            cell.innerHTML = `<span class="text-gray-400 text-xs font-mono">${index}</span>`;
+            cell.classList.remove('border-solid', 'bg-blue-50', 'dark:bg-blue-900/20');
+            cell.classList.add('border-dashed');
+            cell.removeAttribute('draggable');
+        }
+
+        // 3. Search functionality (unchanged)
+        const searchInput = document.getElementById('designation-search');
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.zoning-item').forEach(item => {
+                const text = (item.dataset.name + item.dataset.category).toLowerCase();
+                item.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        });
+
+        // 4. Clear Grid (unchanged)
+        document.getElementById('clear-grid').addEventListener('click', () => {
+            document.querySelectorAll('.grid-cell').forEach(cell => removeCellContent(cell));
+        });
+    });
     </script>
 </x-app-layout>
