@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Models\ZoningDesignation;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\ZoningDesignationController;
 
 Route::get('/', function () {
     return redirect("/grid");
@@ -27,3 +28,14 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+Route::get('/functions', function () {
+    return redirect()->route('admin.functions.index');
+});
+
+Route::prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::resource('functions', ZoningDesignationController::class)
+            ->only(['index', 'edit', 'update']);
+    });
