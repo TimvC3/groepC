@@ -8,6 +8,7 @@ export default defineConfig({
                 'resources/css/app.css', 
                 'resources/js/app.js',
                 'resources/js/facilities/scoreEditor.js',
+                'resources/js/grid/effectGrid.js',
             ],
             refresh: true,
         }),

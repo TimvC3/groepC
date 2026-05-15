@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Facility;
+use App\Support\GridEffectData;
 
 class GridController extends Controller
 {
@@ -16,28 +17,13 @@ class GridController extends Controller
             ->get();
 
         $groupedFacilities = $facilities->groupBy('category.name');
-
-        $effectCategories = $categories
-            ->map(fn (Category $category) => [
-                'id' => $category->id,
-                'name' => $category->name,
-            ]);
-
-        $facilityScoreMatrix = $facilities
-            ->mapWithKeys(fn (Facility $facility) => [
-                $facility->id => $categories
-                    ->mapWithKeys(fn (Category $category) => [
-                        $category->id => (int) ($facility->scores->firstWhere('category_id', $category->id)?->score ?? 0),
-                    ])
-                    ->all(),
-            ]);
+        $effectData = GridEffectData::from($categories, $facilities);
 
         return view('grid.grid', compact(
             'categories',
             'facilities',
             'groupedFacilities',
-            'effectCategories',
-            'facilityScoreMatrix',
+            'effectData',
         ));
     }
 }
