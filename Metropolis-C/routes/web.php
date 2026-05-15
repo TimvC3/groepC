@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Models\ZoningDesignation;
+use App\Http\Controllers\GridController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\ZoningDesignationController;
+use App\Http\Controllers\FacilityController;
 
 Route::get('/', function () {
     return redirect("/grid");
@@ -12,18 +14,17 @@ Route::get('/', function () {
 require __DIR__ . '/auth.php';
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/grid', function () {
-        $zoningDesignations = ZoningDesignation::orderBy('category')
-            ->orderBy('name')
-            ->get();
+    Route::get('/grid', [GridController::class, 'index'])->name('grid');
 
-        return view('grid.grid', compact('zoningDesignations'));
-    })->name('grid');
+    Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities');
+    Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])->name('facilities.scores.update');
+ 
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
 
 Route::get('/functions', function () {
     return redirect()->route('admin.functions.index');
