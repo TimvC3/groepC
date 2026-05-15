@@ -55,16 +55,16 @@
                 </aside>
 
                 <section class="xl:col-span-2">
-                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                        <div class="flex justify-between items-center mb-6">
+                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex flex-col items-center">
+                        <div class="flex justify-between items-center mb-6 w-full max-w-md">
                             <h3 class="text-2xl font-bold">City Grid</h3>
                             <button id="clear-grid"
                                 class="px-4 py-2 text-sm border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">Clear</button>
                         </div>
 
-                        <div class="grid grid-cols-4 gap-4">
+                        <div class="grid grid-cols-4 gap-1 justify-center border-4 border-gray-100 dark:border-gray-700 p-2 rounded-3xl dark:bg-gray-900/50">
                             @for ($i = 1; $i <= 12; $i++)
-                                <div class="grid-cell w-24 h-24 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all"
+                                <div class="grid-cell w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all"
                                     data-index="{{ $i }}">
                                     <span class="text-gray-400 text-xs font-mono">{{ $i }}</span>
                                 </div>
