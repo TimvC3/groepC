@@ -72,9 +72,6 @@
                     </table>
                 </div>
 
-                <div class="mt-4">
-                    {{ $functions->links() }}
-                </div>
             </div>
 
         </div>

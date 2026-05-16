@@ -19,6 +19,11 @@ class DatabaseSeeder extends Seeder
             'email' => 'city.planner@example.com',
             'password' => 'Password',
         ]);
+        User::factory()->create([
+            'name' => 'Admin',
+            'email' => 'admin@example.com',
+            'password' => 'Password',
+        ]);
         $this->call([
             CategorySeeder::class,
             FacilitySeeder::class,

@@ -24,6 +24,17 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::get('/functions', function () {
+Route::middleware(['auth', 'admin'])->get('/functions', function () {
     return redirect()->route('admin.functions.index');
 });
+
+Route::middleware(['auth', 'admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::resource('functions', ZoningDesignationController::class)
+            ->only(['index', 'create', 'store', 'edit', 'update'])
+            ->parameters([
+                'functions' => 'zoningDesignation',
+            ]);
+    });
