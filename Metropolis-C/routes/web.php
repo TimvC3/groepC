@@ -37,5 +37,8 @@ Route::prefix('admin')
     ->name('admin.')
     ->group(function () {
         Route::resource('functions', ZoningDesignationController::class)
-            ->only(['index', 'edit', 'update']);
+            ->only(['index', 'edit', 'update'])
+            ->parameters([
+                'functions' => 'zoningDesignation',
+            ]);
     });

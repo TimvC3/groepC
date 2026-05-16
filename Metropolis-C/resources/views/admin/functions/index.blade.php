@@ -3,42 +3,32 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                            Existing Functions
-                        </h1>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                            Overview of all functions used in the Metropolis simulation.
-                        </p>
+
+                <h1 class="text-2xl font-bold mb-6">
+                    Existing Functions
+                </h1>
+
+                @if (session('success'))
+                    <div class="mb-4 rounded-md bg-green-100 px-4 py-3 text-green-800">
+                        {{ session('success') }}
                     </div>
-                </div>
+                @endif
 
                 <div class="overflow-x-auto">
-                    <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                    <table class="min-w-full border border-gray-200 dark:border-gray-700">
                         <thead class="bg-gray-100 dark:bg-gray-900">
                             <tr>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                                    Icon
-                                </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                                    Name
-                                </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                                    Category
-                                </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                                    Last updated
-                                </th>
-                                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-200">
-                                    Actions
-                                </th>
+                                <th class="px-4 py-3 text-left">Icon</th>
+                                <th class="px-4 py-3 text-left">Name</th>
+                                <th class="px-4 py-3 text-left">Slug</th>
+                                <th class="px-4 py-3 text-left">Category</th>
+                                <th class="px-4 py-3 text-right">Action</th>
                             </tr>
                         </thead>
 
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            @forelse ($functions as $function)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <tbody>
+                            @foreach ($functions as $function)
+                                <tr class="border-t border-gray-200 dark:border-gray-700">
                                     <td class="px-4 py-3 text-2xl">
                                         {{ $function->icon }}
                                     </td>
@@ -48,7 +38,7 @@
                                     </td>
 
                                     <td class="px-4 py-3">
-                                        {{ $function->category }}
+                                        {{ $function->slug }}
                                     </td>
 
                                     <td class="px-4 py-3">
@@ -56,25 +46,17 @@
                                     </td>
 
                                     <td class="px-4 py-3 text-right">
-                                        <a href="{{ route('admin.functions.edit', $function) }}">
+                                        <a href="{{ route('admin.functions.edit', $function) }}"
+                                           class="rounded-md bg-indigo-600 px-3 py-2 text-sm text-black hover:bg-indigo-700">
                                             Edit
                                         </a>
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">
-                                        No functions found.
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
 
-                <div class="mt-4">
-                    {{ $functions->links() }}
-                </div>
             </div>
 
         </div>
