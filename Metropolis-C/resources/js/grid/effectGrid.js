@@ -11,14 +11,8 @@ function formatScore(score) {
 }
 
 function scoreColorClass(score) {
-    if (score > 0) {
-        return 'text-green-700 dark:text-green-300';
-    }
-
-    if (score < 0) {
-        return 'text-red-600 dark:text-red-300';
-    }
-
+    if (score > 0) return 'text-green-700 dark:text-green-300';
+    if (score < 0) return 'text-red-600 dark:text-red-300';
     return 'text-gray-500 dark:text-gray-400';
 }
 
@@ -30,39 +24,11 @@ function selectedFacilityIds() {
 
 function updateStatus(totalScore, facilityCount) {
     const statusElement = document.getElementById('effect-status');
-
-    if (!statusElement) {
-        return;
-    }
+    if (!statusElement) return;
 
     statusElement.textContent = facilityCount === 0
         ? 'Geen faciliteiten geselecteerd. Totale score is 0.'
         : `${facilityCount} faciliteiten geselecteerd. Totale score is ${formatScore(totalScore)}.`;
-}
-
-function hideOpenTooltips(exceptCell = null) {
-    document.querySelectorAll('.grid-cell').forEach((cell) => {
-        if (cell === exceptCell) {
-            return;
-        }
-
-        cell.querySelector('.facility-tooltip')?.classList.add('hidden');
-        cell.querySelector('.facility-tooltip')?.classList.remove('block');
-    });
-}
-
-function toggleCellTooltip(cell) {
-    const tooltip = cell.querySelector('.facility-tooltip');
-
-    if (!tooltip) {
-        return;
-    }
-
-    const isHidden = tooltip.classList.contains('hidden');
-
-    hideOpenTooltips(cell);
-    tooltip.classList.toggle('hidden', !isHidden);
-    tooltip.classList.toggle('block', isHidden);
 }
 
 function updateEffectView() {
@@ -85,9 +51,7 @@ function updateEffectView() {
 
         totalScore += categoryScore;
 
-        if (!scoreElement) {
-            return;
-        }
+        if (!scoreElement) return;
 
         scoreElement.textContent = formatScore(categoryScore);
         scoreElement.className = [
@@ -114,28 +78,85 @@ function updateEffectView() {
     updateStatus(totalScore, facilityIds.length);
 }
 
-function createFacilityCellContent(facility) {
-    const wrapper = document.createElement('div');
-    const icon = document.createElement('div');
+function getFacilityScores(facilityId) {
+    const scores = facilityScoreMatrix[facilityId] || {};
+
+    return effectCategories.map((category) => ({
+        name: category.name,
+        score: Number(scores[category.id] ?? 0),
+    }));
+}
+
+function createHoverTooltip(facility) {
     const tooltip = document.createElement('div');
 
-    wrapper.className = 'relative flex flex-col items-center pointer-events-none';
-    icon.className = 'text-2xl';
-    icon.textContent = facility.icon;
+    const scores = getFacilityScores(facility.id);
+    const total = scores.reduce((sum, item) => sum + item.score, 0);
+
     tooltip.className = [
         'facility-tooltip',
-        'absolute bottom-full left-1/2 z-20 mb-2 hidden -translate-x-1/2 whitespace-nowrap',
-        'rounded-md px-2 py-1 text-xs font-medium shadow-lg',
-        'group-hover:block group-focus-within:block',
+        'absolute bottom-full left-1/2 z-30 mb-3 hidden -translate-x-1/2',
+        'w-64 rounded-lg p-3 text-left text-xs shadow-lg',
     ].join(' ');
+
     tooltip.style.backgroundColor = '#111827';
     tooltip.style.border = '1px solid #374151';
     tooltip.style.color = '#ffffff';
-    tooltip.textContent = facility.name;
+
+    tooltip.innerHTML = `
+        <div class="mb-2 font-bold">${facility.name}</div>
+        <div class="mb-2 text-gray-300">Quality-of-life effects</div>
+
+        <div class="space-y-1">
+            ${scores.map((item) => `
+                <div class="flex justify-between gap-3">
+                    <span>${item.name}</span>
+                    <span class="${item.score > 0 ? 'text-green-300' : item.score < 0 ? 'text-red-300' : 'text-gray-300'}">
+                        ${formatScore(item.score)}
+                    </span>
+                </div>
+            `).join('')}
+        </div>
+
+        <div class="mt-2 border-t border-gray-600 pt-2 flex justify-between font-bold">
+            <span>Total</span>
+            <span class="${total > 0 ? 'text-green-300' : total < 0 ? 'text-red-300' : 'text-gray-300'}">
+                ${formatScore(total)}
+            </span>
+        </div>
+    `;
+
+    return tooltip;
+}
+
+function createFacilityCellContent(facility) {
+    const wrapper = document.createElement('div');
+    const icon = document.createElement('div');
+    const tooltip = createHoverTooltip(facility);
+
+    wrapper.className = 'relative flex flex-col items-center';
+    icon.className = 'text-2xl pointer-events-none';
+    icon.textContent = facility.icon;
 
     wrapper.append(icon, tooltip);
 
     return wrapper;
+}
+
+function showCellTooltip(cell) {
+    const tooltip = cell.querySelector('.facility-tooltip');
+    if (!tooltip) return;
+
+    tooltip.classList.remove('hidden');
+    tooltip.classList.add('block');
+}
+
+function hideCellTooltip(cell) {
+    const tooltip = cell.querySelector('.facility-tooltip');
+    if (!tooltip) return;
+
+    tooltip.classList.add('hidden');
+    tooltip.classList.remove('block');
 }
 
 function removeCellContent(cell) {
@@ -225,9 +246,7 @@ function bindGridCells() {
             event.preventDefault();
             cell.classList.remove('bg-indigo-50', 'border-indigo-400');
 
-            if (!draggedData) {
-                return;
-            }
+            if (!draggedData) return;
 
             droppedOnGrid = true;
 
@@ -239,27 +258,27 @@ function bindGridCells() {
             sourceCell = null;
         });
 
-        cell.addEventListener('click', () => {
-            if (cell.classList.contains('border-solid')) {
-                toggleCellTooltip(cell);
+        cell.addEventListener('mouseenter', () => {
+            if (cell.dataset.facilityId) {
+                showCellTooltip(cell);
             }
+        });
+
+        cell.addEventListener('mouseleave', () => {
+            hideCellTooltip(cell);
         });
     });
 }
 
 function bindSearch() {
     const searchInput = document.getElementById('designation-search');
-
-    if (!searchInput) {
-        return;
-    }
+    if (!searchInput) return;
 
     searchInput.addEventListener('input', (event) => {
         const query = event.target.value.toLowerCase();
 
         document.querySelectorAll('.zoning-item').forEach((item) => {
             const text = `${item.dataset.name}${item.dataset.category}`.toLowerCase();
-
             item.style.display = text.includes(query) ? 'block' : 'none';
         });
     });
