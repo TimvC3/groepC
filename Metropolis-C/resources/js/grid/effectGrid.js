@@ -7,6 +7,7 @@ const gridColumns = 4;
 let draggedData = null;
 let sourceCell = null;
 let droppedOnGrid = false;
+let activeTooltip = null;
 
 function formatScore(score) {
     return score > 0 ? `+${score}` : String(score);
@@ -127,26 +128,46 @@ function getLocalScores(cell) {
     };
 }
 
-function createTooltip() {
-    const tooltip = document.createElement('div');
+function getOrCreateTooltip() {
+    let tooltip = document.getElementById('grid-tooltip');
 
-    tooltip.className = [
-        'facility-tooltip',
-        'absolute bottom-full left-1/2 z-30 mb-3 hidden -translate-x-1/2',
-        'w-64 rounded-lg p-3 text-left text-xs shadow-lg',
-    ].join(' ');
-
-    tooltip.style.backgroundColor = '#111827';
-    tooltip.style.border = '1px solid #374151';
-    tooltip.style.color = '#ffffff';
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'grid-tooltip';
+        tooltip.className = 'fixed hidden w-64 rounded-lg p-3 text-left text-xs shadow-lg pointer-events-none';
+        tooltip.style.backgroundColor = '#111827';
+        tooltip.style.border = '1px solid #374151';
+        tooltip.style.color = '#ffffff';
+        tooltip.style.zIndex = '9999';
+        document.body.appendChild(tooltip);
+    }
 
     return tooltip;
 }
 
-function updateTooltip(cell) {
-    const tooltip = cell.querySelector('.facility-tooltip');
-    if (!tooltip) return;
+function positionTooltip(tooltip, mouseX, mouseY) {
+    const offset = 14;
+    const tooltipWidth = 256;
+    const tooltipHeight = tooltip.offsetHeight || 200;
+    const viewportWidth = window.innerWidth;
 
+    // Always above the cursor
+    let top = mouseY - tooltipHeight - offset;
+    let left = mouseX - tooltipWidth / 2;
+
+    // Clamp horizontally within viewport
+    left = Math.max(8, Math.min(left, viewportWidth - tooltipWidth - 8));
+
+    // If it would go off the top, flip below instead
+    if (top < 8) {
+        top = mouseY + offset;
+    }
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+}
+
+function updateTooltipContent(cell, tooltip) {
     const facilityName = cell.getAttribute('aria-label') || 'Unknown function';
     const localData = getLocalScores(cell);
     const total = localData.scores.reduce((sum, item) => sum + item.score, 0);
@@ -186,61 +207,43 @@ function updateTooltip(cell) {
     `;
 }
 
+function hideAllTooltips() {
+    getOrCreateTooltip().classList.add('hidden');
+    activeTooltip = null;
+}
+
+function showCellTooltip(cell, mouseX, mouseY) {
+    const tooltip = getOrCreateTooltip();
+    activeTooltip = cell;
+    updateTooltipContent(cell, tooltip);
+    tooltip.classList.remove('hidden');
+    positionTooltip(tooltip, mouseX, mouseY);
+}
+
+function hideCellTooltip() {
+    getOrCreateTooltip().classList.add('hidden');
+    activeTooltip = null;
+}
+
+function toggleCellTooltip(cell, mouseX, mouseY) {
+    if (activeTooltip === cell) {
+        hideCellTooltip();
+    } else {
+        showCellTooltip(cell, mouseX, mouseY);
+    }
+}
+
 function createFacilityCellContent(facility) {
     const wrapper = document.createElement('div');
     const icon = document.createElement('div');
-    const tooltip = createTooltip();
 
     wrapper.className = 'relative flex flex-col items-center';
     icon.className = 'text-2xl pointer-events-none';
     icon.textContent = facility.icon;
 
-    wrapper.append(icon, tooltip);
+    wrapper.append(icon);
 
     return wrapper;
-}
-
-function hideAllTooltips(exceptCell = null) {
-    document.querySelectorAll('.grid-cell').forEach((cell) => {
-        if (cell === exceptCell) return;
-
-        const tooltip = cell.querySelector('.facility-tooltip');
-
-        if (!tooltip) return;
-
-        tooltip.classList.add('hidden');
-        tooltip.classList.remove('block');
-    });
-}
-
-function showCellTooltip(cell) {
-    const tooltip = cell.querySelector('.facility-tooltip');
-    if (!tooltip) return;
-
-    hideAllTooltips(cell);
-    updateTooltip(cell);
-
-    tooltip.classList.remove('hidden');
-    tooltip.classList.add('block');
-}
-
-function hideCellTooltip(cell) {
-    const tooltip = cell.querySelector('.facility-tooltip');
-    if (!tooltip) return;
-
-    tooltip.classList.add('hidden');
-    tooltip.classList.remove('block');
-}
-
-function toggleCellTooltip(cell) {
-    const tooltip = cell.querySelector('.facility-tooltip');
-    if (!tooltip) return;
-
-    if (tooltip.classList.contains('hidden')) {
-        showCellTooltip(cell);
-    } else {
-        hideCellTooltip(cell);
-    }
 }
 
 function removeCellContent(cell) {
@@ -253,7 +256,6 @@ function removeCellContent(cell) {
     cell.replaceChildren(label);
     delete cell.dataset.facilityId;
     cell.removeAttribute('aria-label');
-    cell.removeAttribute('title');
     cell.classList.remove('group', 'border-solid', 'bg-blue-50', 'dark:bg-blue-900/20');
     cell.classList.add('border-dashed');
     cell.removeAttribute('draggable');
@@ -265,7 +267,6 @@ function fillCell(cell, facility) {
     cell.replaceChildren(createFacilityCellContent(facility));
     cell.dataset.facilityId = facility.id;
     cell.setAttribute('aria-label', facility.name);
-    cell.setAttribute('title', facility.name);
     cell.classList.remove('border-dashed');
     cell.classList.add('group', 'border-solid', 'bg-blue-50', 'dark:bg-blue-900/20');
     cell.setAttribute('draggable', 'true');
@@ -342,19 +343,27 @@ function bindGridCells() {
             sourceCell = null;
         });
 
-        cell.addEventListener('mouseenter', () => {
+        cell.addEventListener('mouseenter', (event) => {
             if (cell.dataset.facilityId) {
-                showCellTooltip(cell);
+                showCellTooltip(cell, event.clientX, event.clientY);
+            }
+        });
+
+        cell.addEventListener('mousemove', (event) => {
+            if (!cell.dataset.facilityId) return;
+            const tooltip = getOrCreateTooltip();
+            if (!tooltip.classList.contains('hidden')) {
+                positionTooltip(tooltip, event.clientX, event.clientY);
             }
         });
 
         cell.addEventListener('mouseleave', () => {
-            hideCellTooltip(cell);
+            hideCellTooltip();
         });
 
-        cell.addEventListener('click', () => {
+        cell.addEventListener('click', (event) => {
             if (cell.dataset.facilityId) {
-                toggleCellTooltip(cell);
+                toggleCellTooltip(cell, event.clientX, event.clientY);
             }
         });
     });
