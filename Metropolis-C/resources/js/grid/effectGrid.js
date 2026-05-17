@@ -147,11 +147,17 @@ function updateTooltip(cell) {
     const tooltip = cell.querySelector('.facility-tooltip');
     if (!tooltip) return;
 
+    const facilityName = cell.getAttribute('aria-label') || 'Unknown function';
     const localData = getLocalScores(cell);
     const total = localData.scores.reduce((sum, item) => sum + item.score, 0);
 
     tooltip.innerHTML = `
-        <div class="mb-2 font-bold">Local quality-of-life impact</div>
+        <div class="mb-2 font-bold">${facilityName}</div>
+
+        <div class="mb-2 text-gray-300">
+            Local quality-of-life impact
+        </div>
+
         <div class="mb-2 text-gray-300">
             Based on this area and surrounding areas.
         </div>
@@ -194,10 +200,24 @@ function createFacilityCellContent(facility) {
     return wrapper;
 }
 
+function hideAllTooltips(exceptCell = null) {
+    document.querySelectorAll('.grid-cell').forEach((cell) => {
+        if (cell === exceptCell) return;
+
+        const tooltip = cell.querySelector('.facility-tooltip');
+
+        if (!tooltip) return;
+
+        tooltip.classList.add('hidden');
+        tooltip.classList.remove('block');
+    });
+}
+
 function showCellTooltip(cell) {
     const tooltip = cell.querySelector('.facility-tooltip');
     if (!tooltip) return;
 
+    hideAllTooltips(cell);
     updateTooltip(cell);
 
     tooltip.classList.remove('hidden');
@@ -210,6 +230,17 @@ function hideCellTooltip(cell) {
 
     tooltip.classList.add('hidden');
     tooltip.classList.remove('block');
+}
+
+function toggleCellTooltip(cell) {
+    const tooltip = cell.querySelector('.facility-tooltip');
+    if (!tooltip) return;
+
+    if (tooltip.classList.contains('hidden')) {
+        showCellTooltip(cell);
+    } else {
+        hideCellTooltip(cell);
+    }
 }
 
 function removeCellContent(cell) {
@@ -319,6 +350,12 @@ function bindGridCells() {
 
         cell.addEventListener('mouseleave', () => {
             hideCellTooltip(cell);
+        });
+
+        cell.addEventListener('click', () => {
+            if (cell.dataset.facilityId) {
+                toggleCellTooltip(cell);
+            }
         });
     });
 }
