@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\NewFacilityCreated;
 use App\Models\Category;
 use App\Models\Facility;
 use Illuminate\Http\Request;
@@ -9,6 +10,7 @@ use App\Models\FacilityScore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -69,6 +71,8 @@ class FacilityController extends Controller
 
             return $facility;
         });
+
+        Mail::to(env('EXPERT_EMAIL'))->send(new NewFacilityCreated($facility->load(['category', 'scores.category'])));
 
         return redirect()
             ->route('facilities')
