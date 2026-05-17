@@ -19,7 +19,6 @@ class NewFacilityCreated extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new Address('wouterver10@gmail.com', 'Metropolis'),
             subject: 'New Function Added: ' . $this->facility->name,
         );
     }

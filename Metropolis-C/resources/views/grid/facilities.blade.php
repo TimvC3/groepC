@@ -111,6 +111,7 @@
                             method="POST"
                             action="{{ $isEditing ? route('facilities.update', $editingFacility) : route('facilities.store') }}"
                             class="mt-6 space-y-5"
+                            onsubmit="this.querySelector('[type=submit]').disabled=true; this.querySelector('[type=submit]').innerText='Saving...';"
                         >
                             @csrf
                             @if ($isEditing)
