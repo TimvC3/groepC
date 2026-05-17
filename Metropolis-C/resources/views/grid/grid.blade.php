@@ -86,7 +86,7 @@
                             </div>
 
                             <p id="effect-empty-state" class="mt-4 text-sm text-gray-500" aria-live="polite">
-                                Sleep faciliteiten in de grid om de scores te berekenen.
+                                Drag facilities in the grid to see the score change.
                             </p>
                             <div id="effect-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
                         </div>
