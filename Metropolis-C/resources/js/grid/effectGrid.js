@@ -9,6 +9,8 @@ let sourceCell = null;
 let droppedOnGrid = false;
 let activeTooltip = null;
 
+const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
+
 function formatScore(score) {
     return score > 0 ? `+${score}` : String(score);
 }
@@ -145,22 +147,19 @@ function getOrCreateTooltip() {
     return tooltip;
 }
 
-function positionTooltip(tooltip, mouseX, mouseY) {
+function positionTooltip(tooltip, x, y) {
     const offset = 14;
     const tooltipWidth = 256;
     const tooltipHeight = tooltip.offsetHeight || 200;
     const viewportWidth = window.innerWidth;
 
-    // Always above the cursor
-    let top = mouseY - tooltipHeight - offset;
-    let left = mouseX - tooltipWidth / 2;
+    let top = y - tooltipHeight - offset;
+    let left = x - tooltipWidth / 2;
 
-    // Clamp horizontally within viewport
     left = Math.max(8, Math.min(left, viewportWidth - tooltipWidth - 8));
 
-    // If it would go off the top, flip below instead
     if (top < 8) {
-        top = mouseY + offset;
+        top = y + offset;
     }
 
     tooltip.style.left = `${left}px`;
@@ -207,30 +206,17 @@ function updateTooltipContent(cell, tooltip) {
     `;
 }
 
-function hideAllTooltips() {
-    getOrCreateTooltip().classList.add('hidden');
-    activeTooltip = null;
-}
-
-function showCellTooltip(cell, mouseX, mouseY) {
-    const tooltip = getOrCreateTooltip();
-    activeTooltip = cell;
-    updateTooltipContent(cell, tooltip);
-    tooltip.classList.remove('hidden');
-    positionTooltip(tooltip, mouseX, mouseY);
-}
-
 function hideCellTooltip() {
     getOrCreateTooltip().classList.add('hidden');
     activeTooltip = null;
 }
 
-function toggleCellTooltip(cell, mouseX, mouseY) {
-    if (activeTooltip === cell) {
-        hideCellTooltip();
-    } else {
-        showCellTooltip(cell, mouseX, mouseY);
-    }
+function showCellTooltip(cell, x, y) {
+    const tooltip = getOrCreateTooltip();
+    activeTooltip = cell;
+    updateTooltipContent(cell, tooltip);
+    tooltip.classList.remove('hidden');
+    positionTooltip(tooltip, x, y);
 }
 
 function createFacilityCellContent(facility) {
@@ -343,13 +329,16 @@ function bindGridCells() {
             sourceCell = null;
         });
 
+        // ── Desktop: hover to show, leave to hide ──────────────────────────
         cell.addEventListener('mouseenter', (event) => {
+            if (isTouchDevice()) return;
             if (cell.dataset.facilityId) {
                 showCellTooltip(cell, event.clientX, event.clientY);
             }
         });
 
         cell.addEventListener('mousemove', (event) => {
+            if (isTouchDevice()) return;
             if (!cell.dataset.facilityId) return;
             const tooltip = getOrCreateTooltip();
             if (!tooltip.classList.contains('hidden')) {
@@ -358,14 +347,26 @@ function bindGridCells() {
         });
 
         cell.addEventListener('mouseleave', () => {
+            if (isTouchDevice()) return;
             hideCellTooltip();
         });
 
-        cell.addEventListener('click', (event) => {
-            if (cell.dataset.facilityId) {
-                toggleCellTooltip(cell, event.clientX, event.clientY);
+        // ── Mobile: tap to show, tap same cell to hide ─────────────────────
+        // event.preventDefault() stops the browser firing synthetic mouse
+        // events after touch, which was causing the double-tap problem.
+        cell.addEventListener('touchstart', (event) => {
+            if (!cell.dataset.facilityId) return;
+
+            event.preventDefault();
+
+            const touch = event.touches[0];
+
+            if (activeTooltip === cell) {
+                hideCellTooltip();
+            } else {
+                showCellTooltip(cell, touch.clientX, touch.clientY);
             }
-        });
+        }, { passive: false });
     });
 }
 
@@ -389,10 +390,21 @@ function bindClearButton() {
     });
 }
 
+// Hide tooltip when tapping anywhere outside a grid cell
+function bindOutsideTap() {
+    document.addEventListener('touchstart', (event) => {
+        if (!activeTooltip) return;
+        if (!event.target.closest('.grid-cell')) {
+            hideCellTooltip();
+        }
+    }, { passive: true });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     bindLibraryItems();
     bindGridCells();
     bindSearch();
     bindClearButton();
+    bindOutsideTap();
     updateEffectView();
 });
