@@ -2,6 +2,8 @@ const gridEffectData = window.gridEffectData || {};
 const effectCategories = gridEffectData.categories || [];
 const facilityScoreMatrix = gridEffectData.scoreMatrix || {};
 
+const gridColumns = 4;
+
 let draggedData = null;
 let sourceCell = null;
 let droppedOnGrid = false;
@@ -78,20 +80,55 @@ function updateEffectView() {
     updateStatus(totalScore, facilityIds.length);
 }
 
-function getFacilityScores(facilityId) {
-    const scores = facilityScoreMatrix[facilityId] || {};
+function getSurroundingCells(cell) {
+    const index = Number(cell.dataset.index);
+    const allCells = Array.from(document.querySelectorAll('.grid-cell'));
+    const totalCells = allCells.length;
+    const row = Math.floor((index - 1) / gridColumns);
+    const column = (index - 1) % gridColumns;
 
-    return effectCategories.map((category) => ({
-        name: category.name,
-        score: Number(scores[category.id] ?? 0),
-    }));
+    return allCells.filter((otherCell) => {
+        const otherIndex = Number(otherCell.dataset.index);
+        const otherRow = Math.floor((otherIndex - 1) / gridColumns);
+        const otherColumn = (otherIndex - 1) % gridColumns;
+
+        const isAroundCell = Math.abs(otherRow - row) <= 1
+            && Math.abs(otherColumn - column) <= 1;
+
+        return otherIndex >= 1 && otherIndex <= totalCells && isAroundCell;
+    });
 }
 
-function createHoverTooltip(facility) {
-    const tooltip = document.createElement('div');
+function getLocalScores(cell) {
+    const localCells = getSurroundingCells(cell);
+    const totals = Object.fromEntries(effectCategories.map((category) => [category.id, 0]));
+    let facilityCount = 0;
 
-    const scores = getFacilityScores(facility.id);
-    const total = scores.reduce((sum, item) => sum + item.score, 0);
+    localCells.forEach((localCell) => {
+        const facilityId = localCell.dataset.facilityId;
+
+        if (!facilityId) return;
+
+        facilityCount += 1;
+
+        const scores = facilityScoreMatrix[facilityId] || {};
+
+        effectCategories.forEach((category) => {
+            totals[category.id] += Number(scores[category.id] ?? 0);
+        });
+    });
+
+    return {
+        facilityCount,
+        scores: effectCategories.map((category) => ({
+            name: category.name,
+            score: totals[category.id],
+        })),
+    };
+}
+
+function createTooltip() {
+    const tooltip = document.createElement('div');
 
     tooltip.className = [
         'facility-tooltip',
@@ -103,12 +140,28 @@ function createHoverTooltip(facility) {
     tooltip.style.border = '1px solid #374151';
     tooltip.style.color = '#ffffff';
 
+    return tooltip;
+}
+
+function updateTooltip(cell) {
+    const tooltip = cell.querySelector('.facility-tooltip');
+    if (!tooltip) return;
+
+    const localData = getLocalScores(cell);
+    const total = localData.scores.reduce((sum, item) => sum + item.score, 0);
+
     tooltip.innerHTML = `
-        <div class="mb-2 font-bold">${facility.name}</div>
-        <div class="mb-2 text-gray-300">Quality-of-life effects</div>
+        <div class="mb-2 font-bold">Local quality-of-life impact</div>
+        <div class="mb-2 text-gray-300">
+            Based on this area and surrounding areas.
+        </div>
+
+        <div class="mb-2 text-gray-300">
+            ${localData.facilityCount} function(s) nearby
+        </div>
 
         <div class="space-y-1">
-            ${scores.map((item) => `
+            ${localData.scores.map((item) => `
                 <div class="flex justify-between gap-3">
                     <span>${item.name}</span>
                     <span class="${item.score > 0 ? 'text-green-300' : item.score < 0 ? 'text-red-300' : 'text-gray-300'}">
@@ -125,14 +178,12 @@ function createHoverTooltip(facility) {
             </span>
         </div>
     `;
-
-    return tooltip;
 }
 
 function createFacilityCellContent(facility) {
     const wrapper = document.createElement('div');
     const icon = document.createElement('div');
-    const tooltip = createHoverTooltip(facility);
+    const tooltip = createTooltip();
 
     wrapper.className = 'relative flex flex-col items-center';
     icon.className = 'text-2xl pointer-events-none';
@@ -146,6 +197,8 @@ function createFacilityCellContent(facility) {
 function showCellTooltip(cell) {
     const tooltip = cell.querySelector('.facility-tooltip');
     if (!tooltip) return;
+
+    updateTooltip(cell);
 
     tooltip.classList.remove('hidden');
     tooltip.classList.add('block');
