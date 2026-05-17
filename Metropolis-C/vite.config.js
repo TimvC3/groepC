@@ -13,9 +13,8 @@ export default defineConfig({
             refresh: true,
         }),
     ],
-
     server: {
-        host: 'metropolis-c.test',
+        host: 'metropolis-c.test', // Je domeinnaam
         hmr: {
             host: 'metropolis-c.test',
         },
