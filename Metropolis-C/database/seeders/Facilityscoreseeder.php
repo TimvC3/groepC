@@ -8,39 +8,39 @@ use Illuminate\Support\Facades\DB;
 class FacilityScoreSeeder extends Seeder
 {
     /**
-     * Score matrix — rows = facilities, columns = categories:
-     * [Veiligheid, Recreatie, Milieukwaliteit, Voorzieningen, Mobiliteit]
+     * Score matrix: rows = facilities, columns = categories:
+     * [Security, Recreation, Environmental Quality, Facilities, Mobility]
      *
      * Scores range from -5 (very negative impact) to 5 (very positive impact).
      */
     public function run(): void
     {
-        $facilities  = DB::table('facilities')->pluck('id', 'slug');
-        $categories  = DB::table('categories')->pluck('id', 'slug');
+        $facilities = DB::table('facilities')->pluck('id', 'slug');
+        $categories = DB::table('categories')->pluck('id', 'slug');
 
-        // [facility_slug => [veiligheid, recreatie, milieukwaliteit, voorzieningen, mobiliteit]]
+        // [facility_slug => [security, recreation, environmental-quality, facilities, mobility]]
         $matrix = [
-            'politiebureau'   => [ 5,  1,  0,  1,  2],
-            'brandweerkazerne'=> [ 4,  1,  2,  1,  2],
-            'park'            => [-2,  5,  4,  0,  0],
-            'bioscoop'        => [-1,  4,  0,  2,  0],
-            'sportpark'       => [ 0,  5,  2,  3,  0],
-            'waterzuivering'  => [ 0,  0,  5,  2,  0],
-            'school'          => [ 2,  2,  0,  5, -3],
-            'winkel'          => [ 0,  0, -2,  5,  0],
-            'ziekenhuis'      => [ 3,  0,  0,  5,  0],
-            'station'         => [-2,  2,  0,  4,  5],
-            'weg'             => [-4,  2, -4,  3,  5],
-            'fietspad'        => [ 0,  3,  3,  3,  4],
-            'tankstation'     => [-2,  0, -4,  1,  4],
+            'police-station' => [5, 1, 0, 1, 2],
+            'fire-station' => [4, 1, 2, 1, 2],
+            'park' => [-2, 5, 4, 0, 0],
+            'cinema' => [-1, 4, 0, 2, 0],
+            'sports-park' => [0, 5, 2, 3, 0],
+            'water-purification' => [0, 0, 5, 2, 0],
+            'school' => [2, 2, 0, 5, -3],
+            'store' => [0, 0, -2, 5, 0],
+            'hospital' => [3, 0, 0, 5, 0],
+            'train-station' => [-2, 2, 0, 4, 5],
+            'road' => [-4, 2, -4, 3, 5],
+            'cycling-path' => [0, 3, 3, 3, 4],
+            'petrol-station' => [-2, 0, -4, 1, 4],
         ];
 
         $categoryOrder = [
-            'veiligheid',
-            'recreatie',
-            'milieukwaliteit',
-            'voorzieningen',
-            'mobiliteit',
+            'security',
+            'recreation',
+            'environmental-quality',
+            'facilities',
+            'mobility',
         ];
 
         $rows = [];
@@ -50,7 +50,7 @@ class FacilityScoreSeeder extends Seeder
                 $rows[] = [
                     'facility_id' => $facilities[$facilitySlug],
                     'category_id' => $categories[$categorySlug],
-                    'score'       => $scores[$index],
+                    'score' => $scores[$index],
                 ];
             }
         }

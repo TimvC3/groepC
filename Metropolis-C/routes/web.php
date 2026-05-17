@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\ZoningDesignationController;
 use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\GridController;
 use App\Http\Controllers\ProfileController;
@@ -24,17 +23,20 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth', 'admin'])->get('/functions', function () {
-    return redirect()->route('admin.functions.index');
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::post('/facilities', [FacilityController::class, 'store'])->name('facilities.store');
+    Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('facilities.edit');
+    Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('facilities.update');
+    Route::redirect('/functions', '/facilities')->name('functions.index');
 });
 
 Route::middleware(['auth', 'admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        Route::resource('functions', ZoningDesignationController::class)
-            ->only(['index', 'create', 'store', 'edit', 'update'])
-            ->parameters([
-                'functions' => 'zoningDesignation',
-            ]);
+        Route::redirect('/functions', '/facilities')->name('functions.index');
+        Route::redirect('/functions/create', '/facilities')->name('functions.create');
+        Route::post('/functions', [FacilityController::class, 'store'])->name('functions.store');
+        Route::get('/functions/{facility}/edit', [FacilityController::class, 'edit'])->name('functions.edit');
+        Route::patch('/functions/{facility}', [FacilityController::class, 'updateFacility'])->name('functions.update');
     });

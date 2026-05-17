@@ -47,7 +47,7 @@ class ZoningDesignationLibraryTest extends TestCase
     public function test_designations_have_valid_categories(): void
     {
         $designations = ZoningDesignationLibrary::all();
-        $allowedCategories = ['Safety', 'Recreation', 'Environment', 'Facility', 'Mobility'];
+        $allowedCategories = ['Security', 'Recreation', 'Environmental Quality', 'Facilities', 'Mobility'];
 
         foreach ($designations as $designation) {
             $this->assertContains($designation['category'], $allowedCategories);

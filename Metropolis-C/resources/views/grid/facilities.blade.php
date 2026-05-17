@@ -1,25 +1,245 @@
 <x-app-layout>
+    @php
+        $isEditing = isset($editingFacility) && $editingFacility;
+    @endphp
+
     <x-slot name="header">
-        <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-            {{ __('Facilities & Scores') }}
-        </h2>
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                    {{ __('Facilities') }}
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ __('Manage facilities and their impact scores.') }}
+                </p>
+            </div>
+        </div>
     </x-slot>
 
     <div class="py-8">
-        <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+        <div class="w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            @if (session('success'))
+                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            @if (auth()->user()?->is_admin)
+                <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
+                    <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+                        <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                {{ __('Existing Facilities') }}
+                            </h3>
+                            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                                {{ __('These facilities are available in the simulation and scoring matrix.') }}
+                            </p>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-900">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                                            {{ __('Icon') }}
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                                            {{ __('Name') }}
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                                            {{ __('Category') }}
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                                            {{ __('Slug') }}
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                                            {{ __('Last Updated') }}
+                                        </th>
+                                        <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">
+                                            {{ __('Actions') }}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    @forelse ($facilities as $facility)
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                            <td class="px-6 py-4 text-2xl">
+                                                {{ $facility->icon }}
+                                            </td>
+                                            <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
+                                                {{ $facility->name }}
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                                {{ $facility->category->name }}
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                {{ $facility->slug }}
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                {{ $facility->updated_at?->format('M j, Y') }}
+                                            </td>
+                                            <td class="px-6 py-4 text-right text-sm font-medium">
+                                                <a
+                                                    href="{{ route('facilities.edit', $facility) }}"
+                                                    class="text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                >
+                                                    {{ __('Edit') }}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">
+                                                {{ __('No facilities found.') }}
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section id="{{ $isEditing ? 'edit' : 'create' }}" class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            {{ $isEditing ? __('Edit Facility') : __('Create Facility') }}
+                        </h3>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                            {{ $isEditing ? __('Update facility details and category scores.') : __('Add a facility and set its initial category scores.') }}
+                        </p>
+
+                        <form
+                            method="POST"
+                            action="{{ $isEditing ? route('facilities.update', $editingFacility) : route('facilities.store') }}"
+                            class="mt-6 space-y-5"
+                        >
+                            @csrf
+                            @if ($isEditing)
+                                @method('PATCH')
+                            @endif
+
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {{ __('Name') }}
+                                </label>
+                                <input
+                                    id="name"
+                                    name="name"
+                                    type="text"
+                                    value="{{ old('name', $editingFacility?->name) }}"
+                                    required
+                                    placeholder="Example: Police Station"
+                                    class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                >
+                                @error('name')
+                                    <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="category_id" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {{ __('Category') }}
+                                </label>
+                                <select
+                                    id="category_id"
+                                    name="category_id"
+                                    required
+                                    class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                >
+                                    <option value="">{{ __('Select a category') }}</option>
+                                    @foreach ($categories as $category)
+                                        <option value="{{ $category->id }}" @selected((int) old('category_id', $editingFacility?->category_id) === $category->id)>
+                                            {{ $category->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('category_id')
+                                    <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="icon" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {{ __('Icon') }}
+                                </label>
+                                <input
+                                    id="icon"
+                                    name="icon"
+                                    type="text"
+                                    value="{{ old('icon', $editingFacility?->icon) }}"
+                                    placeholder="Example: hospital"
+                                    class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                >
+                                @error('icon')
+                                    <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <p class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {{ $isEditing ? __('Scores') : __('Initial Scores') }}
+                                </p>
+                                <div class="mt-2 grid grid-cols-2 gap-3">
+                                    @foreach ($categories as $category)
+                                        @php
+                                            $scoreValue = $editingFacility?->scores->firstWhere('category_id', $category->id)?->score ?? 0;
+                                        @endphp
+                                        <label class="block">
+                                            <span class="text-xs font-medium text-gray-600 dark:text-gray-300">{{ $category->name }}</span>
+                                            <input
+                                                name="scores[{{ $category->id }}]"
+                                                type="number"
+                                                min="-5"
+                                                max="5"
+                                                value="{{ old('scores.'.$category->id, $scoreValue) }}"
+                                                class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                            >
+                                        </label>
+                                    @endforeach
+                                </div>
+                                @error('scores.*')
+                                    <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <button
+                                type="submit"
+                                class="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                            >
+                                {{ $isEditing ? __('Update Facility') : __('Save Facility') }}
+                            </button>
+
+                            @if ($isEditing)
+                                <a
+                                    href="{{ route('facilities') }}"
+                                    class="inline-flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
+                                >
+                                    {{ __('Cancel Edit') }}
+                                </a>
+                            @endif
+                        </form>
+                    </section>
+                </div>
+            @endif
+
+            <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {{ __('Facility Score Matrix') }}
+                    </h3>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        {{ __('Click a score to edit its value from -5 to 5.') }}
+                    </p>
+                </div>
 
                 <div class="overflow-x-auto">
                     <table class="min-w-full w-full divide-y divide-gray-200 dark:divide-gray-700">
-
-                        {{-- Header --}}
                         <thead class="bg-gray-50 dark:bg-gray-900">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 w-48">
-                                    Facility
+                                    {{ __('Facility') }}
                                 </th>
                                 <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 w-36">
-                                    Categorie
+                                    {{ __('Category') }}
                                 </th>
                                 @foreach ($categories as $category)
                                     <th class="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">
@@ -29,14 +249,10 @@
                             </tr>
                         </thead>
 
-                        {{-- Body --}}
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-
                             @php $currentCategory = null; @endphp
 
                             @foreach ($facilities as $facility)
-
-                                {{-- Category group header row --}}
                                 @if ($currentCategory !== $facility->category->name)
                                     @php $currentCategory = $facility->category->name; @endphp
                                     <tr class="bg-indigo-50 dark:bg-indigo-900/20">
@@ -47,10 +263,7 @@
                                     </tr>
                                 @endif
 
-                                {{-- Facility row --}}
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-
-                                    {{-- Icon + naam --}}
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center gap-3">
                                             <span class="text-2xl">{{ $facility->icon }}</span>
@@ -60,49 +273,44 @@
                                         </div>
                                     </td>
 
-                                    {{-- Categorie label --}}
                                     <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                         {{ $facility->category->name }}
                                     </td>
 
-                                    {{-- Score per category --}}
                                     @foreach ($categories as $category)
                                         @php
                                             $facilityScore = $facility->scores->firstWhere('category_id', $category->id);
                                             $score = $facilityScore?->score;
                                         @endphp
                                         <td class="px-4 py-4 text-center">
-                                            @if (!is_null($score))
+                                            @if (! is_null($score))
                                                 <span
                                                     data-score-id="{{ $facilityScore->id }}"
                                                     data-score="{{ $score }}"
-                                                    title="Klik om aan te passen"
+                                                    title="Click to edit"
                                                     @class([
                                                         'inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold cursor-pointer select-none transition hover:ring-2 hover:ring-indigo-300',
                                                         'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' => $score > 0,
-                                                        'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300'         => $score < 0,
-                                                        'text-gray-500 dark:bg-gray-700 dark:text-gray-400'                    => $score === 0,
+                                                        'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300' => $score < 0,
+                                                        'text-gray-500 dark:bg-gray-700 dark:text-gray-400' => $score === 0,
                                                     ])>
-                                                    {{ $score > 0 ? "+" . $score : $score }}
+                                                    {{ $score > 0 ? '+'.$score : $score }}
                                                 </span>
                                             @else
-                                                <span class="text-gray-300">—</span>
+                                                <span class="text-gray-300">-</span>
                                             @endif
                                         </td>
                                     @endforeach
-
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
-
-            </div>
+            </section>
         </div>
     </div>
 
     @push('scripts')
         @vite('resources/js/facilities/scoreEditor.js')
     @endpush
-
 </x-app-layout>
