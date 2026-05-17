@@ -15,9 +15,9 @@ class GridEffectDataTest extends TestCase
 
     public function test_it_builds_effect_categories_and_facility_score_matrix(): void
     {
-        $safety = Category::create([
-            'name' => 'Safety',
-            'slug' => 'safety',
+        $security = Category::create([
+            'name' => 'Security',
+            'slug' => 'security',
             'sort_order' => 1,
         ]);
         $mobility = Category::create([
@@ -26,7 +26,7 @@ class GridEffectDataTest extends TestCase
             'sort_order' => 2,
         ]);
         $policeStation = Facility::create([
-            'category_id' => $safety->id,
+            'category_id' => $security->id,
             'name' => 'Police Station',
             'slug' => 'police-station',
             'icon' => 'P',
@@ -35,7 +35,7 @@ class GridEffectDataTest extends TestCase
 
         FacilityScore::create([
             'facility_id' => $policeStation->id,
-            'category_id' => $safety->id,
+            'category_id' => $security->id,
             'score' => 5,
         ]);
         FacilityScore::create([
@@ -50,11 +50,11 @@ class GridEffectDataTest extends TestCase
         );
 
         $this->assertSame([
-            ['id' => $safety->id, 'name' => 'Safety'],
+            ['id' => $security->id, 'name' => 'Security'],
             ['id' => $mobility->id, 'name' => 'Mobility'],
         ], $effectData['categories']->all());
 
-        $this->assertSame(5, $effectData['scoreMatrix'][$policeStation->id][$safety->id]);
+        $this->assertSame(5, $effectData['scoreMatrix'][$policeStation->id][$security->id]);
         $this->assertSame(-2, $effectData['scoreMatrix'][$policeStation->id][$mobility->id]);
     }
 }

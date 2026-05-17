@@ -8,9 +8,9 @@ return new class extends Migration
 {
     /**
      * facility_scores stores the impact score of a facility (row)
-     * on a category (column), e.g. Politiebureau -> Veiligheid = 5.
+     * on a category (column), e.g. Police Station -> Security = 5.
      *
-     * Score range: -5 (zeer negatief) to 5 (zeer positief).
+     * Score range: -5 (very negative) to 5 (very positive).
      */
     public function up(): void
     {
@@ -18,7 +18,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('facility_id')->constrained()->cascadeOnDelete();
             $table->foreignId('category_id')->constrained()->cascadeOnDelete();
-            $table->tinyInteger('score'); // -5 t/m 5
+            $table->tinyInteger('score'); // -5 to 5
             $table->timestamps();
 
             // Each facility has exactly one score per category

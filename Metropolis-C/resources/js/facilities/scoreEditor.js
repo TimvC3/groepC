@@ -5,23 +5,50 @@ export function initScoreEditor() {
     });
 }
 
+const scoreColorClasses = [
+    'bg-green-100',
+    'text-green-800',
+    'dark:bg-green-900/40',
+    'dark:text-green-300',
+    'bg-red-100',
+    'text-red-600',
+    'dark:bg-red-900/40',
+    'dark:text-red-300',
+    'text-gray-500',
+    'dark:bg-gray-700',
+    'dark:text-gray-400',
+];
+
 function openEditor(badge) {
-    // Voorkom dubbele editors
+    // Avoid opening multiple editors on the same badge.
     if (badge.querySelector('input')) return;
 
     const currentScore = parseInt(badge.dataset.score, 10);
     const scoreId      = badge.dataset.scoreId;
 
-    // Vervang badge inhoud door input
+    // Replace the badge content with an input.
     while (badge.firstChild) badge.removeChild(badge.firstChild);
-    badge.classList.add('ring-2', 'ring-indigo-400');
+    badge.classList.remove(...scoreColorClasses);
+    badge.classList.add('bg-white', 'text-gray-900', 'ring-2', 'ring-indigo-400');
 
     const input = document.createElement('input');
     input.type      = 'number';
     input.min       = '-5';
     input.max       = '5';
     input.value     = currentScore;
-    input.className = 'w-10 text-center bg-transparent font-bold outline-none text-sm';
+    input.className = 'rounded border border-gray-300 text-center text-sm font-bold outline-none';
+    input.style.cssText = [
+        'width: 3rem',
+        'height: 1.75rem',
+        'background-color: #ffffff',
+        'color: #111827',
+        'caret-color: #111827',
+        'border-color: #d1d5db',
+        'padding: 0',
+        'line-height: 1.25rem',
+        'opacity: 1',
+        '-webkit-text-fill-color: #111827',
+    ].join(';');
 
     let handled = false;
 
@@ -29,7 +56,7 @@ function openEditor(badge) {
     input.focus();
     input.select();
 
-    // Opslaan op Enter of blur
+    // Save on Enter or blur.
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') input.blur();
         if (e.key === 'Escape') {
@@ -52,7 +79,7 @@ function openEditor(badge) {
 
             if (isNaN(newScore) || newScore < -5 || newScore > 5) {
                 requestAnimationFrame(() => restoreBadge(badge, currentScore));
-                showToast("Nummer moet -5 t/m 5 zijn.", "error", badge);
+                showToast('The score must be between -5 and 5.', 'error', badge);
                 return;
             }
 
@@ -66,7 +93,7 @@ function openEditor(badge) {
 }
 
 async function saveScore(badge, scoreId, newScore, oldScore) {
-    // Laad-state
+    // Loading state.
     badge.classList.add('opacity-50');
 
     try {
@@ -87,19 +114,16 @@ async function saveScore(badge, scoreId, newScore, oldScore) {
 
     } catch {
         restoreBadge(badge, oldScore);
-        showToast('Opslaan mislukt, probeer opnieuw.', 'error', badge);
+        showToast('Saving failed, please try again.', 'error', badge);
     } finally {
         badge.classList.remove('opacity-50');
     }
 }
 
 function restoreBadge(badge, score) {
-    badge.classList.remove('ring-2', 'ring-indigo-400');
+    badge.classList.remove('bg-white', 'text-gray-900', 'ring-2', 'ring-indigo-400');
 
-    // Kleuren updaten op basis van score
-    badge.className = badge.className
-        .replace(/bg-\S+|text-(?!xs|sm|base|lg|xl)\S+/g, '')
-        .trim();
+    badge.classList.remove(...scoreColorClasses);
 
     if (score > 0) {
         badge.classList.add('bg-green-100', 'text-green-800', 'dark:bg-green-900/40', 'dark:text-green-300');

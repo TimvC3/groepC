@@ -10,11 +10,11 @@ class CategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            ['name' => 'Veiligheid',     'slug' => 'veiligheid',     'sort_order' => 1],
-            ['name' => 'Recreatie',      'slug' => 'recreatie',      'sort_order' => 2],
-            ['name' => 'Milieukwaliteit','slug' => 'milieukwaliteit','sort_order' => 3],
-            ['name' => 'Voorzieningen',  'slug' => 'voorzieningen',  'sort_order' => 4],
-            ['name' => 'Mobiliteit',     'slug' => 'mobiliteit',     'sort_order' => 5],
+            ['name' => 'Security',              'slug' => 'security',              'sort_order' => 1],
+            ['name' => 'Recreation',            'slug' => 'recreation',            'sort_order' => 2],
+            ['name' => 'Environmental Quality', 'slug' => 'environmental-quality', 'sort_order' => 3],
+            ['name' => 'Facilities',            'slug' => 'facilities',            'sort_order' => 4],
+            ['name' => 'Mobility',              'slug' => 'mobility',              'sort_order' => 5],
         ];
 
         DB::table('categories')->insert($categories);

@@ -22,7 +22,7 @@ class Facility extends Model
  
     /**
      * Retrieve the score for a given category slug.
-     * Example: $facility->scoreFor('veiligheid')
+     * Example: $facility->scoreFor('security')
      */
     public function scoreFor(string $categorySlug): ?int
     {
