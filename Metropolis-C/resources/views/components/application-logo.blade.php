@@ -1,1 +1,1 @@
-<img src="./images/planner.png" alt="planner icon" {{ $attributes }}>
+<img src="{{ asset('images/planner.png') }}" alt="planner icon" {{ $attributes }}>
