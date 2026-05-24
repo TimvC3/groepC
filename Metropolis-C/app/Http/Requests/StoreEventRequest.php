@@ -9,7 +9,7 @@ class StoreEventRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->role === 'city_planner'
     }
 
     protected function prepareForValidation(): void

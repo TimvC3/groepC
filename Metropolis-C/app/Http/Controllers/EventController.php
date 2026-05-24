@@ -82,11 +82,11 @@ class EventController extends Controller
     {
         $syncData = [];
 
-        foreach ($validated['category_ids'] as $categoryId) {
-            $syncData[$categoryId] = [
-                'score' => (int) ($validated['scores'][$categoryId] ?? 0),
+        Category::orderBy('sort_order')->each(function (Category $category) use (&$syncData, $validated) {
+            $syncData[$category->id] = [
+                'score' => (int) ($validated['scores'][$category->id] ?? 0),
             ];
-        }
+        });
 
         return $syncData;
     }

@@ -28,6 +28,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/facilities', [FacilityController::class, 'store'])->name('facilities.store');
     Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('facilities.edit');
     Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('facilities.update');
+
+    Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])
+        ->name('facilities.scores.update');
+
     Route::redirect('/functions', '/facilities')->name('functions.index');
 });
 
@@ -42,15 +46,11 @@ Route::middleware(['auth', 'admin'])
         Route::patch('/functions/{facility}', [FacilityController::class, 'updateFacility'])->name('functions.update');
     });
 
-Route::get('/events', [EventController::class, 'index'])
-    ->middleware('auth')
-    ->name('events');
-
-Route::middleware(['auth'])
+Route::middleware(['auth', 'city-planner'])
     ->prefix('events')
     ->name('events.')
     ->group(function () {
-        Route::get('/create', fn () => redirect()->route('events'))->name('create');
+        Route::get('/', [EventController::class, 'index'])->name('index');
         Route::post('/', [EventController::class, 'store'])->name('store');
         Route::get('/{event}/edit', [EventController::class, 'edit'])->name('edit');
         Route::patch('/{event}', [EventController::class, 'update'])->name('update');

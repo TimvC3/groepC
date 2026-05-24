@@ -20,11 +20,13 @@
                     </x-nav-link>
                 </div>
 
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('events')" :active="request()->routeIs('events')">
-                        {{ __('Events') }}
-                    </x-nav-link>
-                </div>
+                @if (auth()->user()?->role === 'city_planner')
+                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                        <x-nav-link :href="route('events.index')" :active="request()->routeIs('events.*')">
+                            {{ __('Events') }}
+                        </x-nav-link>
+                    </div>
+                @endif
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
@@ -80,6 +82,12 @@
             <x-responsive-nav-link :href="route('facilities')" :active="request()->routeIs('facilities')">
                 {{ __('Facilities') }}
             </x-responsive-nav-link>
+
+            @if (auth()->user()?->role === 'city_planner')
+                <x-responsive-nav-link :href="route('events.index')" :active="request()->routeIs('events.*')">
+                    {{ __('Events') }}
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">

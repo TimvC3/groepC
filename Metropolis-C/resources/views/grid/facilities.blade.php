@@ -24,7 +24,7 @@
                 </div>
             @endif
 
-            @if (auth()->user()?->is_admin)
+            @if (auth()->user()?->role === 'admin')
                 <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
                     <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                         <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
