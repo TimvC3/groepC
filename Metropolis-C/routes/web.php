@@ -3,6 +3,7 @@
 use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\GridController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\EventController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -39,4 +40,18 @@ Route::middleware(['auth', 'admin'])
         Route::post('/functions', [FacilityController::class, 'store'])->name('functions.store');
         Route::get('/functions/{facility}/edit', [FacilityController::class, 'edit'])->name('functions.edit');
         Route::patch('/functions/{facility}', [FacilityController::class, 'updateFacility'])->name('functions.update');
+    });
+
+Route::get('/events', [EventController::class, 'index'])
+    ->middleware('auth')
+    ->name('events');
+
+Route::middleware(['auth'])
+    ->prefix('events')
+    ->name('events.')
+    ->group(function () {
+        Route::get('/create', fn () => redirect()->route('events'))->name('create');
+        Route::post('/', [EventController::class, 'store'])->name('store');
+        Route::get('/{event}/edit', [EventController::class, 'edit'])->name('edit');
+        Route::patch('/{event}', [EventController::class, 'update'])->name('update');
     });

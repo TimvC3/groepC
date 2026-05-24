@@ -25,6 +25,7 @@ class Event extends Model
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class, 'event_category', 'event_id', 'category_id')
+            ->withPivot('score')
             ->withTimestamps();
     }
 }

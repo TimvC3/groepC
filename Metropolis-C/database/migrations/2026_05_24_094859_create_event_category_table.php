@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('category_id')
                 ->constrained('categories')
                 ->cascadeOnDelete();
+            $table->tinyInteger('score')->default(0); // -5 to 5
             $table->timestamps();
             $table->unique(['event_id', 'category_id']);
         });
