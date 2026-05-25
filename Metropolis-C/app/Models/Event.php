@@ -76,4 +76,21 @@ class Event extends Model
                 && $simulationDate->day === $eventDate->day,
         };
     }
+
+    public function hasOriginalOccurrenceEndedAt(CarbonInterface $simulationDateTime): bool
+    {
+        $endDateTime = Carbon::parse(
+            $this->event_date->format('Y-m-d') . ' ' . Carbon::parse($this->end_time)->format('H:i:s')
+        );
+
+        $startDateTime = Carbon::parse(
+            $this->event_date->format('Y-m-d') . ' ' . Carbon::parse($this->start_time)->format('H:i:s')
+        );
+
+        if ($endDateTime->lessThanOrEqualTo($startDateTime)) {
+            $endDateTime->addDay();
+        }
+
+        return $simulationDateTime->greaterThan($endDateTime);
+    }
 }
