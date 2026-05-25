@@ -43,9 +43,10 @@ class EventController extends Controller
         $event = DB::transaction(function () use ($validated) {
             $event = Event::create([
                 'name' => $validated['name'],
+                'event_type' => $validated['event_type'],
                 'event_date' => $validated['event_date'],
                 'start_time' => $validated['start_time'],
-                'is_recurring' => $validated['is_recurring'],
+                'is_recurring' => $validated['is_recurring'] ?? false,
             ]);
 
             $event->categories()->sync($this->categoryScores($validated));
@@ -54,7 +55,7 @@ class EventController extends Controller
         });
 
         return redirect()
-            ->route('events.edit', $event)
+            ->route('events.index')
             ->with('success', "{$event->name} was created successfully.");
     }
 
@@ -65,16 +66,17 @@ class EventController extends Controller
         DB::transaction(function () use ($event, $validated) {
             $event->update([
                 'name' => $validated['name'],
+                'event_type' => $validated['event_type'],
                 'event_date' => $validated['event_date'],
                 'start_time' => $validated['start_time'],
-                'is_recurring' => $validated['is_recurring'],
+                'is_recurring' => $validated['is_recurring'] ?? false,
             ]);
 
             $event->categories()->sync($this->categoryScores($validated));
         });
 
         return redirect()
-            ->route('events.edit', $event)
+            ->route('events.index')
             ->with('success', "{$event->name} was updated successfully.");
     }
 

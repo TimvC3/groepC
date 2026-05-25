@@ -24,6 +24,20 @@
                 </div>
             @endif
 
+            @if ($errors->any())
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                    <p class="font-semibold">
+                        {{ __('The event could not be saved:') }}
+                    </p>
+
+                    <ul class="mt-2 list-disc space-y-1 pl-5">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
                 <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                     <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
@@ -35,111 +49,121 @@
                         </p>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead class="bg-gray-50 dark:bg-gray-900">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                                        {{ __('Name') }}
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                                        {{ __('Date') }}
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                                        {{ __('Start Time') }}
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                                        {{ __('Recurring') }}
-                                    </th>
-                                    <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">
-                                        {{ __('Actions') }}
-                                    </th>
-                                </tr>
-                            </thead>
+                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @forelse ($events as $event)
+                            <article class="p-6 transition hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                                {{-- Event info bar --}}
+                                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+                                    <div class="flex flex-wrap items-center gap-4">
+                                        <div class="min-w-[10rem] flex-1">
+                                            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                {{ __('Event') }}
+                                            </p>
+                                            <p class="mt-1 truncate font-semibold text-gray-900 dark:text-gray-100">
+                                                {{ $event->name }}
+                                            </p>
+                                        </div>
 
-                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                @forelse ($events as $event)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                                            {{ $event->name }}
-                                        </td>
+                                        <div class="min-w-[8rem]">
+                                            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                {{ __('Type') }}
+                                            </p>
+                                            <p class="mt-1 truncate text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                {{ $event->event_type }}
+                                            </p>
+                                        </div>
 
-                                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                            {{ $event->event_date?->format('M j, Y') }}
-                                        </td>
+                                        <div class="min-w-[7rem]">
+                                            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                {{ __('Date') }}
+                                            </p>
+                                            <p class="mt-1 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                {{ $event->event_date ? \Illuminate\Support\Carbon::parse($event->event_date)->format('d-m-Y') : '-' }}
+                                            </p>
+                                        </div>
 
-                                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                            {{ \Illuminate\Support\Carbon::parse($event->start_time)->format('H:i') }}
-                                        </td>
+                                        <div class="min-w-[5rem]">
+                                            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                {{ __('Time') }}
+                                            </p>
+                                            <p class="mt-1 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                {{ $event->start_time ? \Illuminate\Support\Carbon::parse($event->start_time)->format('H:i') : '-' }}
+                                            </p>
+                                        </div>
 
-                                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                        <div class="min-w-[7rem]">
+                                            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                {{ __('Recurring') }}
+                                            </p>
+
                                             <span
                                                 @class([
-                                                    'inline-flex rounded-full px-2 py-1 text-xs font-semibold',
+                                                    'mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold',
                                                     'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $event->is_recurring,
                                                     'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => ! $event->is_recurring,
                                                 ])
                                             >
                                                 {{ $event->is_recurring ? __('Yes') : __('No') }}
                                             </span>
-                                        </td>
+                                        </div>
 
-                                        <td class="px-6 py-4 text-right text-sm font-medium">
+                                        <div class="ml-auto min-w-[4rem] text-right">
+                                            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                {{ __('Edit') }}
+                                            </p>
+
                                             <a
                                                 href="{{ route('events.edit', $event) }}"
-                                                class="text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                class="mt-1 inline-flex text-sm font-medium text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                                             >
                                                 {{ __('Edit') }}
                                             </a>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </div>
+                                </div>
 
-                                    <tr class="bg-gray-50/70 dark:bg-gray-900/30">
-                                        <td colspan="5" class="px-6 py-4">
-                                            <div class="mb-2 flex items-center justify-between">
-                                                <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                                    {{ __('Category Impact Scores') }}
-                                                </p>
+                                {{-- Impact scores --}}
+                                <div class="mt-4">
+                                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        {{ __('Impact Scores') }}
+                                    </p>
+
+                                    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+                                        @foreach ($categories as $category)
+                                            @php
+                                                $eventCategory = $event->categories->firstWhere('id', $category->id);
+                                                $score = $eventCategory?->pivot?->score;
+                                            @endphp
+
+                                            <div class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                                                <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                    {{ $category->name }}
+                                                </span>
+
+                                                @if (! is_null($score))
+                                                    <span
+                                                        @class([
+                                                            'inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm font-bold',
+                                                            'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' => $score > 0,
+                                                            'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' => $score < 0,
+                                                            'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' => $score === 0,
+                                                        ])
+                                                    >
+                                                        {{ $score > 0 ? '+'.$score : $score }}
+                                                    </span>
+                                                @else
+                                                    <span class="text-sm text-gray-400">-</span>
+                                                @endif
                                             </div>
-
-                                            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-                                                @foreach ($categories as $category)
-                                                    @php
-                                                        $eventCategory = $event->categories->firstWhere('id', $category->id);
-                                                        $score = (int) ($eventCategory?->pivot?->score ?? 0);
-                                                    @endphp
-
-                                                    <div class="rounded-lg border border-gray-200 bg-white px-3 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                                                        <div class="flex items-center justify-between gap-3">
-                                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                                                {{ $category->name }}
-                                                            </span>
-
-                                                            <span
-                                                                @class([
-                                                                    'inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm font-bold',
-                                                                    'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' => $score > 0,
-                                                                    'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' => $score < 0,
-                                                                    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' => $score === 0,
-                                                                ])
-                                                            >
-                                                                {{ $score > 0 ? '+'.$score : $score }}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="5" class="px-6 py-6 text-center text-sm text-gray-500">
-                                            {{ __('No events found.') }}
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </article>
+                        @empty
+                            <div class="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                                {{ __('No events found.') }}
+                            </div>
+                        @endforelse
                     </div>
                 </section>
 
@@ -185,6 +209,26 @@
                         </div>
 
                         <div>
+                            <label for="event_type" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                {{ __('Event Type') }}
+                            </label>
+
+                            <input
+                                id="event_type"
+                                name="event_type"
+                                type="text"
+                                value="{{ old('event_type', $editingEvent?->event_type) }}"
+                                required
+                                placeholder="Example: Festival, Roadwork, Market"
+                                class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                            >
+
+                            @error('event_type')
+                                <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
                             <label for="event_date" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
                                 {{ __('Date') }}
                             </label>
@@ -193,7 +237,7 @@
                                 id="event_date"
                                 name="event_date"
                                 type="date"
-                                value="{{ old('event_date', $editingEvent?->event_date?->format('Y-m-d')) }}"
+                                value="{{ old('event_date', $editingEvent?->event_date ? \Illuminate\Support\Carbon::parse($editingEvent->event_date)->format('Y-m-d') : '') }}"
                                 required
                                 class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
                             >
@@ -249,7 +293,7 @@
                                 {{ __('Every event affects all categories. Set the impact score from -5 to 5.') }}
                             </p>
 
-                            <div class="mt-3 space-y-3">
+                            <div class="mt-2 grid grid-cols-2 gap-3">
                                 @foreach ($categories as $category)
                                     @php
                                         $existingCategory = $editingEvent?->categories->firstWhere('id', $category->id);
@@ -260,8 +304,8 @@
                                         );
                                     @endphp
 
-                                    <label class="block rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-                                        <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                    <label class="block">
+                                        <span class="text-xs font-medium text-gray-600 dark:text-gray-300">
                                             {{ $category->name }}
                                         </span>
 
@@ -272,7 +316,7 @@
                                             max="5"
                                             value="{{ $scoreValue }}"
                                             required
-                                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                            class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
                                         >
                                     </label>
                                 @endforeach

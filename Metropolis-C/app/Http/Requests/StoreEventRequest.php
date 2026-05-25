@@ -4,12 +4,14 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
+use App\Models\Category;
 
 class StoreEventRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->role === 'city_planner'
+        return $this->user()?->role === 'city_planner';
     }
 
     protected function prepareForValidation(): void
@@ -26,15 +28,35 @@ class StoreEventRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'event_type' => ['required', 'string', 'max:255'],
             'event_date' => ['required', 'date'],
             'start_time' => ['required', 'date_format:H:i'],
             'is_recurring' => ['boolean'],
 
-            'category_ids' => ['required', 'array', 'min:1'],
-            'category_ids.*' => ['integer', 'exists:categories,id'],
-
             'scores' => ['nullable', 'array'],
             'scores.*' => ['nullable', 'integer', 'min:-5', 'max:5'],
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $categoryIds = Category::pluck('id')
+                    ->map(fn ($id) => (string) $id)
+                    ->toArray();
+
+                $scoreIds = array_keys($this->input('scores', []));
+
+                $missingCategoryScores = array_diff($categoryIds, $scoreIds);
+
+                if (! empty($missingCategoryScores)) {
+                    $validator->errors()->add(
+                        'scores',
+                        'Every category must have a score.'
+                    );
+                }
+            },
         ];
     }
 }

@@ -11,6 +11,7 @@ class Event extends Model
 
     protected $fillable = [
         'name',
+        'event_type',
         'event_date',
         'start_time',
         'is_recurring',
