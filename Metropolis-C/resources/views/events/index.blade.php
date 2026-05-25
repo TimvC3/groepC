@@ -267,17 +267,24 @@
                         </div>
 
                         <div>
-                            <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                <input
-                                    type="checkbox"
-                                    name="is_recurring"
-                                    value="1"
-                                    @checked(old('is_recurring', $editingEvent?->is_recurring))
-                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                >
-
-                                <span>{{ __('Recurring event') }}</span>
+                            <label for="is_recurring" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                {{ __('Recurrence') }}
                             </label>
+
+                            <select
+                                id="is_recurring"
+                                name="is_recurring"
+                                required
+                                class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                            >
+                                <option value="0" @selected((string) old('is_recurring', (int) ($editingEvent?->is_recurring ?? 0)) === '0')>
+                                    {{ __('One-off') }}
+                                </option>
+
+                                <option value="1" @selected((string) old('is_recurring', (int) ($editingEvent?->is_recurring ?? 0)) === '1')>
+                                    {{ __('Recurring daily') }}
+                                </option>
+                            </select>
 
                             @error('is_recurring')
                                 <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
