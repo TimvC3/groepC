@@ -10,13 +10,15 @@ class EventService
     public function create(array $data): Event
     {
         return DB::transaction(function () use ($data) {
-            $categoryIds = $data['category_ids'];
+            $categoryScore = [
+                $data['category_id'] => ['score' => (int) $data['score']],
+            ];
 
-            unset($data['category_ids']);
+            unset($data['category_id'], $data['score']);
 
             $event = Event::create($data);
 
-            $event->categories()->sync($categoryIds);
+            $event->categories()->sync($categoryScore);
 
             return $event;
         });
@@ -25,13 +27,15 @@ class EventService
     public function update(Event $event, array $data): Event
     {
         return DB::transaction(function () use ($event, $data) {
-            $categoryIds = $data['category_ids'];
+            $categoryScore = [
+                $data['category_id'] => ['score' => (int) $data['score']],
+            ];
 
-            unset($data['category_ids']);
+            unset($data['category_id'], $data['score']);
 
             $event->update($data);
 
-            $event->categories()->sync($categoryIds);
+            $event->categories()->sync($categoryScore);
 
             return $event;
         });

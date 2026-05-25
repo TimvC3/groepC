@@ -11,7 +11,7 @@
                     {{ __('Events') }}
                 </h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ __('Manage city events and their category impact scores.') }}
+                    {{ __('Manage city events, statuses, and selected category impact.') }}
                 </p>
             </div>
         </div>
@@ -39,6 +39,75 @@
                 </div>
             @endif
 
+            <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {{ __('Upcoming Events') }}
+                    </h3>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        {{ __('The next three planned or active events are shown here.') }}
+                    </p>
+                </div>
+
+                <div class="grid gap-4 p-6 md:grid-cols-3">
+                    @forelse ($upcomingEvents as $upcomingEvent)
+                        @php
+                            $event = $upcomingEvent['event'];
+                            $occurrence = $upcomingEvent['occurrence'];
+                            $status = $event->statusAt();
+                            $affectedCategory = $event->affectedCategory();
+                        @endphp
+
+                        <article class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100">
+                                        {{ $event->name }}
+                                    </h4>
+                                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                                        {{ $occurrence['starts_at']->format('d-m-Y') }}
+                                        {{ $occurrence['starts_at']->format('H:i') }}
+                                        -
+                                        {{ $occurrence['ends_at']->format('H:i') }}
+                                    </p>
+                                </div>
+
+                                <span
+                                    @class([
+                                        'inline-flex rounded-full px-2 py-1 text-xs font-semibold capitalize',
+                                        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' => $status === 'planned',
+                                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $status === 'active',
+                                        'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => $status === 'past',
+                                    ])
+                                >
+                                    {{ __($status) }}
+                                </span>
+                            </div>
+
+                            <div class="mt-3 flex items-center justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-300">
+                                    {{ $affectedCategory?->name ?? __('No category') }}
+                                </span>
+                                <span
+                                    @class([
+                                        'font-bold',
+                                        'text-green-700 dark:text-green-300' => $event->impactScore() > 0,
+                                        'text-red-600 dark:text-red-300' => $event->impactScore() < 0,
+                                        'text-gray-500 dark:text-gray-400' => $event->impactScore() === 0,
+                                    ])
+                                >
+                                    {{ $event->impactScore() > 0 ? '+'.$event->impactScore() : $event->impactScore() }}
+                                </span>
+                            </div>
+                        </article>
+                    @empty
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            {{ __('No upcoming events found.') }}
+                        </p>
+                    @endforelse
+                </div>
+            </section>
+
             <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
                 <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                     <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
@@ -52,6 +121,10 @@
 
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @forelse ($events as $event)
+                            @php
+                                $status = $event->statusAt();
+                                $affectedCategory = $event->affectedCategory();
+                            @endphp
                             <article class="p-6 transition hover:bg-gray-50 dark:hover:bg-gray-700/40">
                                 {{-- Event info bar --}}
                                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
@@ -96,18 +169,29 @@
 
                                         <div class="min-w-[8rem]">
                                             <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                                {{ __('Recurrence') }}
+                                                {{ __('Status') }}
                                             </p>
 
                                             <span
                                                 @class([
-                                                    'mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold',
-                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $event->recurrence_type !== \App\Enums\RecurrenceType::None,
-                                                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => $event->recurrence_type === \App\Enums\RecurrenceType::None,
+                                                    'mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold capitalize',
+                                                    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' => $status === 'planned',
+                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $status === 'active',
+                                                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => $status === 'past',
                                                 ])
                                             >
-                                                {{ __($event->recurrence_type->label()) }}
+                                                {{ __($status) }}
                                             </span>
+                                        </div>
+
+                                        <div class="min-w-[8rem]">
+                                            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                {{ __('Recurrence') }}
+                                            </p>
+
+                                            <p class="mt-1 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                {{ __($event->recurrence_type->label()) }}
+                                            </p>
                                         </div>
 
                                         <div class="ml-auto min-w-[4rem] text-right">
@@ -128,37 +212,24 @@
                                 {{-- Impact scores --}}
                                 <div class="mt-4">
                                     <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        {{ __('Impact Scores') }}
+                                        {{ __('Affected Category') }}
                                     </p>
 
-                                    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-                                        @foreach ($categories as $category)
-                                            @php
-                                                $eventCategory = $event->categories->firstWhere('id', $category->id);
-                                                $score = $eventCategory?->pivot?->score;
-                                            @endphp
+                                    <div class="mt-3 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                            {{ $affectedCategory?->name ?? __('No category selected') }}
+                                        </span>
 
-                                            <div class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                                                <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                                    {{ $category->name }}
-                                                </span>
-
-                                                @if (! is_null($score))
-                                                    <span
-                                                        @class([
-                                                            'inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm font-bold',
-                                                            'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' => $score > 0,
-                                                            'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' => $score < 0,
-                                                            'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' => $score === 0,
-                                                        ])
-                                                    >
-                                                        {{ $score > 0 ? '+'.$score : $score }}
-                                                    </span>
-                                                @else
-                                                    <span class="text-sm text-gray-400">-</span>
-                                                @endif
-                                            </div>
-                                        @endforeach
+                                        <span
+                                            @class([
+                                                'inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm font-bold',
+                                                'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' => $event->impactScore() > 0,
+                                                'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' => $event->impactScore() < 0,
+                                                'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' => $event->impactScore() === 0,
+                                            ])
+                                        >
+                                            {{ $event->impactScore() > 0 ? '+'.$event->impactScore() : $event->impactScore() }}
+                                        </span>
                                     </div>
                                 </div>
                             </article>
@@ -176,7 +247,7 @@
                     </h3>
 
                     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                        {{ $isEditing ? __('Update event details and category scores.') : __('Add an event and set its category impact scores.') }}
+                        {{ $isEditing ? __('Update event details and affected category.') : __('Add an event and set its affected category.') }}
                     </p>
 
                     <form
@@ -315,48 +386,54 @@
                         </div>
 
                         <div>
-                            <p class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {{ __('Category Scores') }}
-                            </p>
+                            <label for="category_id" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                {{ __('Affected Category') }}
+                            </label>
 
-                            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                                {{ __('Every event affects all categories. Set the impact score from -5 to 5.') }}
-                            </p>
+                            @php
+                                $selectedCategoryId = old('category_id', $editingEvent?->affectedCategory()?->id);
+                            @endphp
 
-                            <div class="mt-2 grid grid-cols-2 gap-3">
+                            <select
+                                id="category_id"
+                                name="category_id"
+                                required
+                                class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                            >
+                                <option value="">{{ __('Select a category') }}</option>
                                 @foreach ($categories as $category)
-                                    @php
-                                        $existingCategory = $editingEvent?->categories->firstWhere('id', $category->id);
-
-                                        $scoreValue = old(
-                                            'scores.'.$category->id,
-                                            $existingCategory?->pivot?->score ?? 0
-                                        );
-                                    @endphp
-
-                                    <label class="block">
-                                        <span class="text-xs font-medium text-gray-600 dark:text-gray-300">
-                                            {{ $category->name }}
-                                        </span>
-
-                                        <input
-                                            name="scores[{{ $category->id }}]"
-                                            type="number"
-                                            min="-5"
-                                            max="5"
-                                            value="{{ $scoreValue }}"
-                                            required
-                                            class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                                        >
-                                    </label>
+                                    <option value="{{ $category->id }}" @selected((string) $selectedCategoryId === (string) $category->id)>
+                                        {{ $category->name }}
+                                    </option>
                                 @endforeach
-                            </div>
+                            </select>
 
-                            @error('scores')
+                            @error('category_id')
                                 <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
+                        </div>
 
-                            @error('scores.*')
+                        <div>
+                            <label for="score" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                {{ __('Impact Score') }}
+                            </label>
+
+                            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                                {{ __('This event only adjusts the selected category. Use a score from -5 to 5.') }}
+                            </p>
+
+                            <input
+                                id="score"
+                                name="score"
+                                type="number"
+                                min="-5"
+                                max="5"
+                                value="{{ old('score', $editingEvent?->impactScore() ?? 0) }}"
+                                required
+                                class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                            >
+
+                            @error('score')
                                 <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
                         </div>

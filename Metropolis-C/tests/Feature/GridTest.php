@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Event;
 use App\Models\Facility;
 use App\Models\FacilityScore;
 use App\Models\User;
@@ -44,6 +45,17 @@ class GridTest extends TestCase
             'category_id' => $mobility->id,
             'score' => -2,
         ]);
+        $event = Event::create([
+            'name' => 'Road Closure',
+            'event_type' => 'Roadwork',
+            'event_date' => now()->addDay()->toDateString(),
+            'start_time' => '08:00',
+            'end_time' => '12:00',
+            'recurrence_type' => 'none',
+        ]);
+        $event->categories()->sync([
+            $mobility->id => ['score' => -4],
+        ]);
 
         $response = $this
             ->actingAs($user)
@@ -52,13 +64,23 @@ class GridTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Effect View')
-            ->assertSee('Totale score')
+            ->assertSee('Upcoming Events')
+            ->assertSee('Event Effects')
+            ->assertSee('Road Closure')
+            ->assertSee('Quality Of Life Score')
             ->assertSee('id="effect-status"', false)
             ->assertSee('aria-live="polite"', false)
             ->assertSee('window.gridEffectData', false)
+            ->assertSee('window.gridEventEffectData', false)
             ->assertViewHas('effectData', function (array $effectData) use ($policeStation, $security, $mobility): bool {
                 return $effectData['scoreMatrix'][$policeStation->id][$security->id] === 5
                     && $effectData['scoreMatrix'][$policeStation->id][$mobility->id] === -2;
+            })
+            ->assertViewHas('eventEffectData', function (array $eventEffectData) use ($event, $mobility): bool {
+                $eventData = $eventEffectData['events']->firstWhere('id', $event->id);
+
+                return $eventData['categoryId'] === $mobility->id
+                    && $eventData['score'] === -4;
             });
     }
 }

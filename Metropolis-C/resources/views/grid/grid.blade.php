@@ -1,10 +1,10 @@
 <x-app-layout>
 
     <div class="py-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:gap-8">
+        <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 gap-6 xl:grid-cols-[18rem_minmax(25rem,1fr)_20rem] xl:gap-8">
 
-                <aside class="xl:col-span-1">
+                <aside class="order-1 xl:order-none xl:row-span-2">
                     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
                         <h3 class="text-2xl font-bold">Zoning Library</h3>
 
@@ -42,7 +42,7 @@
                     </div>
                 </aside>
 
-                <section class="xl:col-span-2">
+                <section class="order-2 xl:order-none">
                     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex flex-col items-center">
                         <div class="flex justify-between items-center mb-6 w-full max-w-md">
                             <h3 class="text-2xl font-bold">City Grid</h3>
@@ -60,37 +60,127 @@
                         </div>
                     </div>
 
-                    <section class="mt-6">
-                        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex flex-col">
-                            <div class="flex justify-between items-center mb-6 w-full">
-                                <h3 class="text-2xl font-bold">Effect View</h3>
-                                <div class="text-right">
-                                    <div class="text-xs font-bold uppercase tracking-wider text-gray-500">Totale score</div>
-                                    <div id="effect-total-score" class="text-3xl font-bold text-gray-900 dark:text-gray-100">0</div>
-                                </div>
-                            </div>
+                </section>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                @foreach ($effectData['categories'] as $category)
-                                    <div class="flex items-center justify-between rounded-md border border-gray-200 dark:border-gray-700 px-4 py-3">
-                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                            {{ $category['name'] }}
-                                        </span>
+                <aside class="order-3 xl:order-none">
+                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                        <h3 class="text-2xl font-bold">Upcoming Events</h3>
+
+                        <div class="mt-4 flex gap-3 overflow-x-auto pb-2 xl:grid xl:max-h-[38vh] xl:overflow-y-auto xl:pr-1">
+                            @forelse ($upcomingEvents as $upcomingEvent)
+                                @php
+                                    $event = $upcomingEvent->event;
+                                    $occurrence = $upcomingEvent->occurrence;
+                                    $status = $event->statusAt();
+                                    $affectedCategory = $event->affectedCategory();
+                                @endphp
+
+                                <div class="event-item w-64 flex-none cursor-grab active:cursor-grabbing rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm transition hover:border-indigo-400 dark:border-gray-700 dark:bg-gray-900 xl:w-full"
+                                    draggable="true"
+                                    data-id="{{ $event->id }}"
+                                    data-name="{{ $event->name }}"
+                                    data-status="{{ $status }}"
+                                    data-date="{{ $occurrence['starts_at']->format('d-m-Y') }}"
+                                    data-start-time="{{ $occurrence['starts_at']->format('H:i') }}"
+                                    data-end-time="{{ $occurrence['ends_at']->format('H:i') }}"
+                                    data-category-id="{{ $affectedCategory?->id }}"
+                                    data-category="{{ $affectedCategory?->name }}"
+                                    data-score="{{ $event->impactScore() }}">
+                                    <div class="pointer-events-none flex items-start justify-between gap-3">
+                                            <div>
+                                                <div class="font-semibold text-gray-900 dark:text-gray-100">{{ $event->name }}</div>
+                                                <div class="text-sm text-gray-500">
+                                                    {{ $occurrence['starts_at']->format('d-m-Y') }}
+                                                    {{ $occurrence['starts_at']->format('H:i') }}
+                                                </div>
+                                            <div class="mt-1 text-xs text-gray-500">
+                                                {{ $affectedCategory?->name ?? __('No category') }}
+                                                {{ $event->impactScore() > 0 ? '+'.$event->impactScore() : $event->impactScore() }}
+                                            </div>
+                                        </div>
                                         <span
-                                            id="effect-category-score-{{ $category['id'] }}"
-                                            class="text-sm font-bold text-gray-500 dark:text-gray-400">
-                                            0
+                                            @class([
+                                                'rounded-full px-2 py-1 text-xs font-semibold capitalize',
+                                                'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' => $status === 'planned',
+                                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $status === 'active',
+                                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => $status === 'past',
+                                            ])
+                                        >
+                                            {{ __($status) }}
                                         </span>
                                     </div>
-                                @endforeach
-                            </div>
-
-                            <p id="effect-empty-state" class="mt-4 text-sm text-gray-500" aria-live="polite">
-                                Drag facilities in the grid to see the score change.
-                            </p>
-                            <div id="effect-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+                                </div>
+                            @empty
+                                <p class="text-sm text-gray-500">No upcoming events found.</p>
+                            @endforelse
                         </div>
-                    </section>
+                    </div>
+
+                </aside>
+
+                <section class="order-4 xl:col-start-2 xl:row-start-2">
+                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex flex-col">
+                        <div class="flex justify-between items-center mb-6 w-full">
+                            <h3 class="text-2xl font-bold">Effect View</h3>
+                            <div class="text-right">
+                                <div class="text-xs font-bold uppercase tracking-wider text-gray-500">Quality Of Life Score</div>
+                                <div id="effect-total-score" class="text-3xl font-bold text-gray-900 dark:text-gray-100">0</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            @foreach ($effectData['categories'] as $category)
+                                <div class="flex items-center justify-between rounded-md border border-gray-200 dark:border-gray-700 px-4 py-3">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                        {{ $category['name'] }}
+                                    </span>
+                                    <span
+                                        id="effect-category-score-{{ $category['id'] }}"
+                                        class="text-sm font-bold text-gray-500 dark:text-gray-400">
+                                        0
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <p id="effect-empty-state" class="mt-4 text-sm text-gray-500" aria-live="polite">
+                            Drag facilities in the grid to see the score change.
+                        </p>
+                        <div id="effect-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+                    </div>
+                </section>
+
+                <section class="order-5 xl:col-start-3 xl:row-start-2">
+                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex flex-col">
+                        <div class="flex justify-between items-center mb-6 w-full">
+                            <h3 class="text-2xl font-bold">Event Effects</h3>
+                            <div class="text-right">
+                                <div class="text-xs font-bold uppercase tracking-wider text-gray-500">Total</div>
+                                <div id="event-effect-total-score" class="text-3xl font-bold text-gray-900 dark:text-gray-100">0</div>
+                            </div>
+                        </div>
+
+                        <div id="event-effect-list" class="space-y-3"></div>
+
+                        <p id="event-effect-empty-state" class="text-sm text-gray-500" aria-live="polite">
+                            Drag upcoming events in the grid to see their separate category influence.
+                        </p>
+
+                        <div class="mt-5 grid grid-cols-1 gap-3">
+                            @foreach ($effectData['categories'] as $category)
+                                <div class="flex items-center justify-between rounded-md border border-gray-200 dark:border-gray-700 px-4 py-3">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                        {{ $category['name'] }}
+                                    </span>
+                                    <span
+                                        id="event-effect-category-score-{{ $category['id'] }}"
+                                        class="text-sm font-bold text-gray-500 dark:text-gray-400">
+                                        0
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
                 </section>
             </div>
         </div>
@@ -98,6 +188,7 @@
 
     <script>
         window.gridEffectData = {{ Illuminate\Support\Js::from($effectData) }};
+        window.gridEventEffectData = {{ Illuminate\Support\Js::from($eventEffectData) }};
     </script>
 
     @push('scripts')
