@@ -46,7 +46,7 @@ class EventController extends Controller
                 'event_type' => $validated['event_type'],
                 'event_date' => $validated['event_date'],
                 'start_time' => $validated['start_time'],
-                'is_recurring' => $validated['is_recurring'] ?? false,
+                'recurrence_type' => $validated['recurrence_type'],
             ]);
 
             $event->categories()->sync($this->categoryScores($validated));
@@ -69,7 +69,7 @@ class EventController extends Controller
                 'event_type' => $validated['event_type'],
                 'event_date' => $validated['event_date'],
                 'start_time' => $validated['start_time'],
-                'is_recurring' => $validated['is_recurring'] ?? false,
+                'recurrence_type' => $validated['recurrence_type'] ?? 'none',
             ]);
 
             $event->categories()->sync($this->categoryScores($validated));

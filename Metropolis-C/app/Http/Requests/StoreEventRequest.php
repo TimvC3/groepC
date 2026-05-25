@@ -2,23 +2,18 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\RecurrenceType;
+use App\Models\Category;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
-use App\Models\Category;
 
 class StoreEventRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return $this->user()?->role === 'city_planner';
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'is_recurring' => $this->boolean('is_recurring'),
-        ]);
     }
 
     /**
@@ -31,7 +26,7 @@ class StoreEventRequest extends FormRequest
             'event_type' => ['required', 'string', 'max:255'],
             'event_date' => ['required', 'date'],
             'start_time' => ['required', 'date_format:H:i'],
-            'is_recurring' => ['boolean'],
+            'recurrence_type' => ['required', Rule::enum(RecurrenceType::class)],
 
             'scores' => ['nullable', 'array'],
             'scores.*' => ['nullable', 'integer', 'min:-5', 'max:5'],

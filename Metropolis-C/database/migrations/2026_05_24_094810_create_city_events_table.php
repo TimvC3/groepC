@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('event_type');
             $table->date('event_date');
             $table->time('start_time');
-            $table->boolean('is_recurring')->default(false);
+            $table->enum('recurrence_type', ['none', 'daily', 'weekly', 'monthly', 'yearly'])->default('none');
             $table->timestamps();
         });
     }

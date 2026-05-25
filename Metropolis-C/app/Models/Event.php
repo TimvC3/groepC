@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RecurrenceType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
@@ -14,13 +15,13 @@ class Event extends Model
         'event_type',
         'event_date',
         'start_time',
-        'is_recurring',
+        'recurrence_type',
     ];
 
     protected $casts = [
         'event_date' => 'date',
         'start_time' => 'datetime:H:i',
-        'is_recurring' => 'boolean',
+        'recurrence_type' => RecurrenceType::class,
     ];
 
     public function categories(): BelongsToMany

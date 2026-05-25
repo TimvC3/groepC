@@ -1,6 +1,7 @@
 <x-app-layout>
     @php
         $isEditing = isset($editingEvent) && $editingEvent;
+        $recurrenceTypes = \App\Enums\RecurrenceType::cases();
     @endphp
 
     <x-slot name="header">
@@ -91,19 +92,19 @@
                                             </p>
                                         </div>
 
-                                        <div class="min-w-[7rem]">
+                                        <div class="min-w-[8rem]">
                                             <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                                {{ __('Recurring') }}
+                                                {{ __('Recurrence') }}
                                             </p>
 
                                             <span
                                                 @class([
                                                     'mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold',
-                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $event->is_recurring,
-                                                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => ! $event->is_recurring,
+                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $event->recurrence_type !== \App\Enums\RecurrenceType::None,
+                                                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => $event->recurrence_type === \App\Enums\RecurrenceType::None,
                                                 ])
                                             >
-                                                {{ $event->is_recurring ? __('Yes') : __('No') }}
+                                                {{ __($event->recurrence_type->label()) }}
                                             </span>
                                         </div>
 
@@ -267,26 +268,27 @@
                         </div>
 
                         <div>
-                            <label for="is_recurring" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                            <label for="recurrence_type" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
                                 {{ __('Recurrence') }}
                             </label>
 
                             <select
-                                id="is_recurring"
-                                name="is_recurring"
+                                id="recurrence_type"
+                                name="recurrence_type"
                                 required
                                 class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
                             >
-                                <option value="0" @selected((string) old('is_recurring', (int) ($editingEvent?->is_recurring ?? 0)) === '0')>
-                                    {{ __('One-off') }}
-                                </option>
-
-                                <option value="1" @selected((string) old('is_recurring', (int) ($editingEvent?->is_recurring ?? 0)) === '1')>
-                                    {{ __('Recurring daily') }}
-                                </option>
+                                @foreach ($recurrenceTypes as $recurrenceType)
+                                    <option
+                                        value="{{ $recurrenceType->value }}"
+                                        @selected(old('recurrence_type', $editingEvent?->recurrence_type?->value ?? 'none') === $recurrenceType->value)
+                                    >
+                                        {{ __($recurrenceType->label()) }}
+                                    </option>
+                                @endforeach
                             </select>
 
-                            @error('is_recurring')
+                            @error('recurrence_type')
                                 <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
                         </div>
