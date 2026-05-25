@@ -46,6 +46,7 @@ class EventController extends Controller
                 'event_type' => $validated['event_type'],
                 'event_date' => $validated['event_date'],
                 'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
                 'recurrence_type' => $validated['recurrence_type'],
             ]);
 
@@ -69,6 +70,7 @@ class EventController extends Controller
                 'event_type' => $validated['event_type'],
                 'event_date' => $validated['event_date'],
                 'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
                 'recurrence_type' => $validated['recurrence_type'] ?? 'none',
             ]);
 

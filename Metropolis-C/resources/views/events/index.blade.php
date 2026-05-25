@@ -83,12 +83,14 @@
                                             </p>
                                         </div>
 
-                                        <div class="min-w-[5rem]">
+                                        <div class="min-w-[9rem]">
                                             <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                                 {{ __('Time') }}
                                             </p>
                                             <p class="mt-1 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-200">
                                                 {{ $event->start_time ? \Illuminate\Support\Carbon::parse($event->start_time)->format('H:i') : '-' }}
+                                                -
+                                                {{ $event->end_time ? \Illuminate\Support\Carbon::parse($event->end_time)->format('H:i') : '-' }}
                                             </p>
                                         </div>
 
@@ -263,6 +265,25 @@
                             >
 
                             @error('start_time')
+                                <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="end_time" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                {{ __('End Time') }}
+                            </label>
+
+                            <input
+                                id="end_time"
+                                name="end_time"
+                                type="time"
+                                value="{{ old('end_time', $editingEvent ? \Illuminate\Support\Carbon::parse($editingEvent->end_time)->format('H:i') : '') }}"
+                                required
+                                class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                            >
+
+                            @error('end_time')
                                 <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
                         </div>

@@ -20,4 +20,9 @@ enum RecurrenceType: string
             self::Yearly => 'Yearly',
         };
     }
+
+    public function isRecurring(): bool
+    {
+        return $this !== self::None;
+    }
 }

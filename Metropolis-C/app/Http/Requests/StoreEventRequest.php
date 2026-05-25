@@ -26,6 +26,7 @@ class StoreEventRequest extends FormRequest
             'event_type' => ['required', 'string', 'max:255'],
             'event_date' => ['required', 'date'],
             'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i'],
             'recurrence_type' => ['required', Rule::enum(RecurrenceType::class)],
 
             'scores' => ['nullable', 'array'],
