@@ -117,13 +117,23 @@
                                 City Grid
                             </h3>
 
-                            <button
-                                id="clear-grid"
-                                type="button"
-                                class="px-4 py-2 text-sm border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-                            >
-                                Clear
-                            </button>
+                            <div class="flex gap-2">
+                                <button
+                                    id="export-pdf"
+                                    type="button"
+                                    class="px-4 py-2 text-sm border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                    Export PDF
+                                </button>
+
+                                <button
+                                    id="clear-grid"
+                                    type="button"
+                                    class="px-4 py-2 text-sm border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                    Clear
+                                </button>
+                            </div>
                         </div>
 
                         <div class="grid grid-cols-4 gap-1 justify-center border-4 border-gray-100 dark:border-gray-700 p-2 rounded-3xl dark:bg-gray-900/50">
@@ -204,6 +214,8 @@
     </script>
 
     @push('scripts')
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
         <script
             src="https://cdn.jsdelivr.net/npm/@dragdroptouch/drag-drop-touch@latest/dist/drag-drop-touch.esm.min.js?autoload"
             type="module">
