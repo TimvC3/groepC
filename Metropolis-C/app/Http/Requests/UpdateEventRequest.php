@@ -2,10 +2,4 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
-
-class UpdateEventRequest extends FormRequest
-{
-    //
-}
+class UpdateEventRequest extends StoreEventRequest {}

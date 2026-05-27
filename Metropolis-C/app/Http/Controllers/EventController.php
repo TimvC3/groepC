@@ -33,7 +33,18 @@ class EventController extends Controller
             ->orderBy('start_time')
             ->get();
 
-        return view('events.index', compact('events', 'categories', 'editingEvent'));
+        $upcomingEvents = Event::with('categories')
+            ->get()
+            ->map(fn (Event $event) => [
+                'event' => $event,
+                'occurrence' => $event->nextOccurrenceAt(),
+            ])
+            ->filter(fn (array $item) => $item['occurrence'] !== null)
+            ->sortBy(fn (array $item) => $item['occurrence']['starts_at']->timestamp)
+            ->take(3)
+            ->values();
+
+        return view('events.index', compact('events', 'categories', 'editingEvent', 'upcomingEvents'));
     }
 
     public function store(StoreEventRequest $request): RedirectResponse
@@ -50,7 +61,7 @@ class EventController extends Controller
                 'recurrence_type' => $validated['recurrence_type'],
             ]);
 
-            $event->categories()->sync($this->categoryScores($validated));
+            $event->categories()->sync($this->categoryScore($validated));
 
             return $event;
         });
@@ -74,7 +85,7 @@ class EventController extends Controller
                 'recurrence_type' => $validated['recurrence_type'] ?? 'none',
             ]);
 
-            $event->categories()->sync($this->categoryScores($validated));
+            $event->categories()->sync($this->categoryScore($validated));
         });
 
         return redirect()
@@ -82,16 +93,12 @@ class EventController extends Controller
             ->with('success', "{$event->name} was updated successfully.");
     }
 
-    private function categoryScores(array $validated): array
+    private function categoryScore(array $validated): array
     {
-        $syncData = [];
-
-        Category::orderBy('sort_order')->each(function (Category $category) use (&$syncData, $validated) {
-            $syncData[$category->id] = [
-                'score' => (int) ($validated['scores'][$category->id] ?? 0),
-            ];
-        });
-
-        return $syncData;
+        return [
+            (int) $validated['category_id'] => [
+                'score' => (int) $validated['score'],
+            ],
+        ];
     }
 }
