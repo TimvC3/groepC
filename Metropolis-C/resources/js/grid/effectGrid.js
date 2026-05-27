@@ -808,7 +808,3 @@ document.addEventListener('DOMContentLoaded', () => {
     updateEffectView();
     updateEventEffectView();
 });
-
-    console.log('Simulation JS loaded');
-
-});
