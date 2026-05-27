@@ -48,66 +48,15 @@
                 </aside>
 
                 <section class="order-2 xl:col-start-2 xl:row-start-1">
-                    <div class="mb-6 rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="mb-4 text-xl font-bold">Simulation Settings</h3>
-
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div>
-                                <label class="mb-1 block text-sm font-medium" for="simulation-date">Start Date</label>
-                                <input
-                                    id="simulation-date"
-                                    type="date"
-                                    class="w-full rounded-md border border-gray-300 px-4 py-2 dark:bg-gray-900"
-                                >
-                            </div>
-
-                            <div>
-                                <label class="mb-1 block text-sm font-medium" for="simulation-time">Start Time</label>
-                                <input
-                                    id="simulation-time"
-                                    type="time"
-                                    class="w-full rounded-md border border-gray-300 px-4 py-2 dark:bg-gray-900"
-                                >
-                            </div>
-
-                            <div class="flex items-end">
-                                <button
-                                    id="start-simulation"
-                                    type="button"
-                                    class="w-full rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
-                                >
-                                    Start Simulation
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
-                            <button class="sim-speed rounded-md border px-3 py-1" data-speed="-10" type="button">&lt;&lt;</button>
-                            <button class="sim-speed rounded-md border px-3 py-1" data-speed="-2" type="button">&lt;</button>
-                            <button class="sim-speed rounded-md border px-3 py-1" data-speed="0" type="button">Pause</button>
-                            <button class="sim-speed rounded-md border px-3 py-1" data-speed="2" type="button">&gt;</button>
-                            <button class="sim-speed rounded-md border px-3 py-1" data-speed="10" type="button">&gt;&gt;</button>
-                        </div>
-
-                        <div class="mt-4 text-sm text-gray-600 dark:text-gray-300">
-                            Current Simulation Time:
-                            <span id="simulation-datetime" class="font-bold">Not started</span>
-                        </div>
-
-                        <div id="day-night-status" class="mt-2 text-sm font-semibold text-indigo-600">
-                            Day Mode
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col items-center rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                    <div class="flex flex-col items-center rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 sm:p-6">
                         <div class="mb-6 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <h3 class="text-2xl font-bold">City Grid</h3>
 
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <button
                                     id="export-pdf"
                                     type="button"
-                                    class="rounded-md border px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    class="flex-1 rounded-md border px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 sm:flex-none"
                                 >
                                     Export PDF
                                 </button>
@@ -115,22 +64,84 @@
                                 <button
                                     id="clear-grid"
                                     type="button"
-                                    class="rounded-md border px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    class="flex-1 rounded-md border px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 sm:flex-none"
                                 >
                                     Clear
                                 </button>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-4 justify-center gap-1 rounded-3xl border-4 border-gray-100 p-2 dark:border-gray-700 dark:bg-gray-900/50">
+                        <div class="grid grid-cols-4 justify-center gap-1 rounded-2xl border-4 border-gray-100 p-2 dark:border-gray-700 dark:bg-gray-900/50 sm:rounded-3xl">
                             @for ($i = 1; $i <= 12; $i++)
                                 <div
-                                    class="grid-cell flex h-16 w-16 flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 p-1 text-center transition-all dark:border-gray-600 sm:h-24 sm:w-24"
+                                    class="grid-cell flex h-16 w-16 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-1 text-center transition-all dark:border-gray-600 min-[380px]:h-20 min-[380px]:w-20 sm:h-24 sm:w-24 sm:rounded-xl"
                                     data-index="{{ $i }}"
                                 >
                                     <span class="font-mono text-xs text-gray-400">{{ $i }}</span>
                                 </div>
                             @endfor
+                        </div>
+
+                        <div class="mt-6 w-full max-w-3xl rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+                            <div class="flex flex-col gap-4 lg:flex-row lg:items-end">
+                                <div class="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium" for="simulation-date">Start Date</label>
+                                        <input
+                                            id="simulation-date"
+                                            type="date"
+                                            class="w-full rounded-md border border-gray-300 px-4 py-2 dark:bg-gray-900"
+                                        >
+                                    </div>
+
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium" for="simulation-time">Start Time</label>
+                                        <input
+                                            id="simulation-time"
+                                            type="time"
+                                            class="w-full rounded-md border border-gray-300 px-4 py-2 dark:bg-gray-900"
+                                        >
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col gap-3 sm:flex-row lg:w-72 lg:flex-col">
+                                    <button
+                                        id="start-simulation"
+                                        type="button"
+                                        class="w-full rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                                    >
+                                        Start Simulation
+                                    </button>
+                                    <span class="hidden bg-amber-600 hover:bg-amber-700 bg-green-600 hover:bg-green-700"></span>
+
+                                    <div class="flex items-center justify-between gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+                                        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Speed</span>
+                                        <div class="flex gap-1">
+                                            <button class="sim-speed rounded-md border px-2 py-1 text-xs" data-speed="0.5" type="button">0.5x</button>
+                                            <button class="sim-speed rounded-md border bg-indigo-600 px-2 py-1 text-xs text-white" data-speed="1" type="button">1x</button>
+                                            <button class="sim-speed rounded-md border px-2 py-1 text-xs" data-speed="2" type="button">2x</button>
+                                            <button class="sim-speed rounded-md border px-2 py-1 text-xs" data-speed="5" type="button">5x</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 grid gap-2 text-sm text-gray-600 dark:text-gray-300 md:grid-cols-3">
+                                <div>
+                                    <span class="block text-xs font-bold uppercase tracking-wider text-gray-500">Current Time</span>
+                                    <span id="simulation-datetime" class="font-semibold text-gray-900 dark:text-gray-100">Not started</span>
+                                </div>
+
+                                <div>
+                                    <span class="block text-xs font-bold uppercase tracking-wider text-gray-500">Mode</span>
+                                    <span id="day-night-status" class="font-semibold text-indigo-600">Day Mode</span>
+                                </div>
+
+                                <div>
+                                    <span class="block text-xs font-bold uppercase tracking-wider text-gray-500">Active Events</span>
+                                    <span id="simulation-event-status" class="font-semibold text-gray-900 dark:text-gray-100">No dragged event active at simulation time</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -139,56 +150,59 @@
                     <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                         <h3 class="text-2xl font-bold">Upcoming Events</h3>
 
-                        <div class="mt-4 flex gap-3 overflow-x-auto pb-2 xl:grid xl:max-h-[38vh] xl:overflow-y-auto xl:pr-1">
+                        <div class="mt-4 flex gap-3 overflow-x-auto pb-2 xl:grid xl:max-h-[38vh] xl:overflow-y-auto xl:pr-1" data-upcoming-events-list>
                             @forelse ($upcomingEvents as $upcomingEvent)
                                 @php
                                     $event = $upcomingEvent->event;
                                     $occurrence = $upcomingEvent->occurrence;
-                                    $status = $event->statusAt();
-                                    $affectedCategory = $event->affectedCategory();
+                                    $impactScores = $event->impactScores();
                                 @endphp
 
                                 <div
-                                    class="event-item w-64 flex-none cursor-grab rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm transition hover:border-indigo-400 active:cursor-grabbing dark:border-gray-700 dark:bg-gray-900 xl:w-full"
+                                    class="event-item hidden w-64 flex-none cursor-grab rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm transition hover:border-indigo-400 active:cursor-grabbing dark:border-gray-700 dark:bg-gray-900 xl:w-full"
                                     draggable="true"
+                                    data-upcoming-event-card
                                     data-id="{{ $event->id }}"
                                     data-name="{{ $event->name }}"
-                                    data-status="{{ $status }}"
+                                    data-event-date="{{ $event->event_date?->format('Y-m-d') }}"
+                                    data-recurrence-type="{{ $event->recurrence_type->value }}"
                                     data-date="{{ $occurrence['starts_at']->format('d-m-Y') }}"
                                     data-start-time="{{ $occurrence['starts_at']->format('H:i') }}"
                                     data-end-time="{{ $occurrence['ends_at']->format('H:i') }}"
-                                    data-category-id="{{ $affectedCategory?->id }}"
-                                    data-category="{{ $affectedCategory?->name }}"
                                     data-score="{{ $event->impactScore() }}"
                                 >
                                     <div class="pointer-events-none flex items-start justify-between gap-3">
                                         <div>
                                             <div class="font-semibold text-gray-900 dark:text-gray-100">{{ $event->name }}</div>
-                                            <div class="text-sm text-gray-500">
+                                            <div class="text-sm text-gray-500" data-upcoming-date-line>
                                                 {{ $occurrence['starts_at']->format('d-m-Y') }}
                                                 {{ $occurrence['starts_at']->format('H:i') }}
                                             </div>
-                                            <div class="mt-1 text-xs text-gray-500">
-                                                {{ $affectedCategory?->name ?? __('No category') }}
-                                                {{ $event->impactScore() > 0 ? '+'.$event->impactScore() : $event->impactScore() }}
+                                            <div class="mt-1 space-y-1 text-xs text-gray-500">
+                                                @foreach ($impactScores as $impact)
+                                                    <div>
+                                                        {{ $impact['category_name'] }}
+                                                        {{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}
+                                                    </div>
+                                                @endforeach
                                             </div>
                                         </div>
 
                                         <span
-                                            @class([
-                                                'rounded-full px-2 py-1 text-xs font-semibold capitalize',
-                                                'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' => $status === 'planned',
-                                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $status === 'active',
-                                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => $status === 'past',
-                                            ])
+                                            class="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold capitalize text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                            data-upcoming-status-badge
                                         >
-                                            {{ __($status) }}
+                                            planned
                                         </span>
                                     </div>
                                 </div>
                             @empty
                                 <p class="text-sm text-gray-500">No upcoming events found.</p>
                             @endforelse
+
+                            <p class="w-64 flex-none text-sm text-gray-500 xl:w-full" data-upcoming-empty-message>
+                                Select and start a simulation date and time to see upcoming events.
+                            </p>
                         </div>
                     </div>
                 </aside>

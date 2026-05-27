@@ -42,7 +42,19 @@ class Event extends Model
 
     public function impactScore(): int
     {
-        return (int) ($this->affectedCategory()?->pivot?->score ?? 0);
+        return $this->categories->sum(fn (Category $category) => (int) $category->pivot->score);
+    }
+
+    public function impactScores(): array
+    {
+        return $this->categories
+            ->map(fn (Category $category) => [
+                'category_id' => $category->id,
+                'category_name' => $category->name,
+                'score' => (int) $category->pivot->score,
+            ])
+            ->values()
+            ->all();
     }
 
     public function statusAt(?CarbonInterface $dateTime = null): string

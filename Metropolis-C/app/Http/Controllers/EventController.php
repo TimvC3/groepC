@@ -33,18 +33,27 @@ class EventController extends Controller
             ->orderBy('start_time')
             ->get();
 
+        $groupedEvents = $events
+            ->map(fn (Event $event) => [
+                'event' => $event,
+                'status' => 'planned',
+                'occurrence' => $event->nextOccurrenceAt(),
+            ])
+            ->groupBy('status');
+
         $upcomingEvents = Event::with('categories')
             ->get()
             ->map(fn (Event $event) => [
                 'event' => $event,
-                'occurrence' => $event->nextOccurrenceAt(),
+                'occurrence' => [
+                    'starts_at' => $event->startsAt(),
+                    'ends_at' => $event->endsAt(),
+                ],
             ])
-            ->filter(fn (array $item) => $item['occurrence'] !== null)
             ->sortBy(fn (array $item) => $item['occurrence']['starts_at']->timestamp)
-            ->take(3)
             ->values();
 
-        return view('events.index', compact('events', 'categories', 'editingEvent', 'upcomingEvents'));
+        return view('events.index', compact('events', 'groupedEvents', 'categories', 'editingEvent', 'upcomingEvents'));
     }
 
     public function store(StoreEventRequest $request): RedirectResponse
@@ -61,7 +70,7 @@ class EventController extends Controller
                 'recurrence_type' => $validated['recurrence_type'],
             ]);
 
-            $event->categories()->sync($this->categoryScore($validated));
+            $event->categories()->sync($this->categoryScores($validated));
 
             return $event;
         });
@@ -85,7 +94,7 @@ class EventController extends Controller
                 'recurrence_type' => $validated['recurrence_type'] ?? 'none',
             ]);
 
-            $event->categories()->sync($this->categoryScore($validated));
+            $event->categories()->sync($this->categoryScores($validated));
         });
 
         return redirect()
@@ -93,12 +102,13 @@ class EventController extends Controller
             ->with('success', "{$event->name} was updated successfully.");
     }
 
-    private function categoryScore(array $validated): array
+    private function categoryScores(array $validated): array
     {
-        return [
-            (int) $validated['category_id'] => [
-                'score' => (int) $validated['score'],
-            ],
-        ];
+        return collect($validated['scores'])
+            ->mapWithKeys(fn ($score, $categoryId) => [
+                (int) $categoryId => ['score' => (int) $score],
+            ])
+            ->filter(fn (array $data) => $data['score'] !== 0)
+            ->all();
     }
 }

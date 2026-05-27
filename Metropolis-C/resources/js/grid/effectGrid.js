@@ -7,6 +7,7 @@ const eventImpactMatrix = Object.fromEntries(
 );
 
 const gridColumns = 4;
+const simulationStorageKey = 'metropolis.simulationDateTime';
 
 let draggedData = null;
 let sourceCell = null;
@@ -17,6 +18,7 @@ let simulationDateTime = null;
 let simulationInterval = null;
 let simulationRunning = false;
 let simulationSpeed = 1;
+let lastSimulationSpeed = 1;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 
@@ -36,16 +38,172 @@ function isNightTime(dateTime) {
     return hour >= 18 || hour < 6;
 }
 
+function selectedSimulationDateTime() {
+    if (simulationDateTime) {
+        return simulationDateTime;
+    }
+
+    return null;
+}
+
+function storedSimulationDateTime() {
+    const storedValue = localStorage.getItem(simulationStorageKey);
+
+    if (!storedValue) return null;
+
+    const storedDateTime = new Date(storedValue);
+
+    return Number.isNaN(storedDateTime.getTime()) ? null : storedDateTime;
+}
+
+function sameDate(dateTime, dateString) {
+    const year = dateTime.getFullYear();
+    const month = String(dateTime.getMonth() + 1).padStart(2, '0');
+    const day = String(dateTime.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}` === dateString;
+}
+
+function formatDateInputValue(dateTime) {
+    const year = dateTime.getFullYear();
+    const month = String(dateTime.getMonth() + 1).padStart(2, '0');
+    const day = String(dateTime.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+function formatDisplayDateTime(dateTime) {
+    const day = String(dateTime.getDate()).padStart(2, '0');
+    const month = String(dateTime.getMonth() + 1).padStart(2, '0');
+    const year = dateTime.getFullYear();
+    const hours = String(dateTime.getHours()).padStart(2, '0');
+    const minutes = String(dateTime.getMinutes()).padStart(2, '0');
+
+    return `${day}-${month}-${year} ${hours}:${minutes}`;
+}
+
+function formatDisplayTime(dateTime) {
+    const hours = String(dateTime.getHours()).padStart(2, '0');
+    const minutes = String(dateTime.getMinutes()).padStart(2, '0');
+
+    return `${hours}:${minutes}`;
+}
+
+function timeToMinutes(time) {
+    const [hours, minutes] = String(time || '00:00')
+        .split(':')
+        .map(Number);
+
+    return (hours * 60) + minutes;
+}
+
+function eventOccursOn(event, dateTime) {
+    if (!event.eventDate) return false;
+
+    const eventDate = new Date(`${event.eventDate}T00:00`);
+    const simulationDate = new Date(
+        dateTime.getFullYear(),
+        dateTime.getMonth(),
+        dateTime.getDate()
+    );
+
+    if (simulationDate < eventDate) return false;
+
+    switch (event.recurrenceType) {
+        case 'daily':
+            return true;
+        case 'weekly':
+            return simulationDate.getDay() === eventDate.getDay();
+        case 'monthly':
+            return simulationDate.getDate() === eventDate.getDate();
+        case 'yearly':
+            return simulationDate.getMonth() === eventDate.getMonth()
+                && simulationDate.getDate() === eventDate.getDate();
+        default:
+            return sameDate(dateTime, event.eventDate);
+    }
+}
+
+function eventIsActiveAt(event, dateTime = selectedSimulationDateTime()) {
+    if (!dateTime) return false;
+    if (!eventOccursOn(event, dateTime)) return false;
+
+    const currentMinutes = (dateTime.getHours() * 60) + dateTime.getMinutes();
+    const startMinutes = timeToMinutes(event.startTime);
+    const endMinutes = timeToMinutes(event.endTime);
+
+    if (endMinutes <= startMinutes) {
+        return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+    }
+
+    return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+}
+
+function nextEventOccurrenceAt(event, dateTime = selectedSimulationDateTime()) {
+    if (!dateTime || !event.eventDate) return null;
+
+    const originalDate = new Date(`${event.eventDate}T00:00`);
+    const startMinutes = timeToMinutes(event.startTime);
+    const endMinutes = timeToMinutes(event.endTime);
+    let candidateDate = new Date(
+        dateTime.getFullYear(),
+        dateTime.getMonth(),
+        dateTime.getDate()
+    );
+
+    if (candidateDate < originalDate) {
+        candidateDate = originalDate;
+    }
+
+    for (let daysChecked = 0; daysChecked < 370; daysChecked += 1) {
+        if (eventOccursOn(event, candidateDate)) {
+            const startsAt = new Date(candidateDate);
+            startsAt.setMinutes(startMinutes);
+
+            const endsAt = new Date(candidateDate);
+            endsAt.setMinutes(endMinutes);
+
+            if (endMinutes <= startMinutes) {
+                endsAt.setDate(endsAt.getDate() + 1);
+            }
+
+            if (dateTime <= endsAt) {
+                return { startsAt, endsAt };
+            }
+        }
+
+        candidateDate.setDate(candidateDate.getDate() + 1);
+    }
+
+    return null;
+}
+
+function activeSelectedEvents() {
+    const dateTime = selectedSimulationDateTime();
+
+    return selectedEvents()
+        .map((selection) => ({
+            ...selection,
+            active: eventIsActiveAt(selection.event, dateTime),
+        }));
+}
+
+function activeEventNames() {
+    return activeSelectedEvents()
+        .filter((selection) => selection.active)
+        .map((selection) => selection.event.name);
+}
+
 function updateSimulationDisplay() {
     const simulationDateTimeElement = document.getElementById('simulation-datetime');
     const dayNightStatusElement = document.getElementById('day-night-status');
-    const eventStatusElement = document.getElementById('simulation-event-status');
 
     if (!simulationDateTimeElement || !dayNightStatusElement || !simulationDateTime) {
         return;
     }
 
     simulationDateTimeElement.textContent = simulationDateTime.toLocaleString();
+    localStorage.setItem(simulationStorageKey, simulationDateTime.toISOString());
 
     if (isNightTime(simulationDateTime)) {
         dayNightStatusElement.textContent = 'Night Mode';
@@ -53,26 +211,101 @@ function updateSimulationDisplay() {
         dayNightStatusElement.textContent = 'Day Mode';
     }
 
-    const currentHour = simulationDateTime.getHours();
+    updateEffectView();
+    updateEventEffectView();
+    updateUpcomingEventList();
+}
 
-    if (eventStatusElement) {
-        if (currentHour >= 7 && currentHour <= 9) {
-            eventStatusElement.textContent = 'Morning traffic event active.';
-        } else if (currentHour >= 17 && currentHour <= 19) {
-            eventStatusElement.textContent = 'Evening traffic event active.';
-        } else if (isNightTime(simulationDateTime)) {
-            eventStatusElement.textContent = 'Night rules active.';
-        } else {
-            eventStatusElement.textContent = 'No time-based event active.';
-        }
+function clearSimulationDisplay() {
+    const simulationDateTimeElement = document.getElementById('simulation-datetime');
+    const dayNightStatusElement = document.getElementById('day-night-status');
+
+    if (simulationDateTimeElement) {
+        simulationDateTimeElement.textContent = 'Not started';
+    }
+
+    if (dayNightStatusElement) {
+        dayNightStatusElement.textContent = 'No simulation time selected';
     }
 }
 
-function startSimulation() {
+function hydrateSimulationMoment() {
+    simulationDateTime = storedSimulationDateTime();
+
+    if (!simulationDateTime) {
+        localStorage.removeItem(simulationStorageKey);
+        clearSimulationDisplay();
+        updateUpcomingEventList();
+        return;
+    }
+
+    const dateInput = document.getElementById('simulation-date');
+    const timeInput = document.getElementById('simulation-time');
+
+    if (dateInput) {
+        dateInput.value = formatDateInputValue(simulationDateTime);
+    }
+
+    if (timeInput) {
+        const hours = String(simulationDateTime.getHours()).padStart(2, '0');
+        const minutes = String(simulationDateTime.getMinutes()).padStart(2, '0');
+        timeInput.value = `${hours}:${minutes}`;
+    }
+
+    setSimulationButtonState(
+        'Resume Simulation',
+        ['bg-amber-600', 'hover:bg-amber-700', 'bg-indigo-600', 'hover:bg-indigo-700'],
+        ['bg-green-600', 'hover:bg-green-700']
+    );
+
+    updateSimulationDisplay();
+}
+
+function updateActiveEventDisplay() {
+    const eventStatusElement = document.getElementById('simulation-event-status');
+    if (!eventStatusElement) return;
+
+    const names = activeEventNames();
+
+    eventStatusElement.textContent = names.length > 0
+        ? names.join(', ')
+        : 'No dragged event active at simulation time';
+}
+
+function setSimulationButtonState(label, removeClasses = [], addClasses = []) {
     const button = document.getElementById('start-simulation');
 
+    if (!button) return;
+
+    button.textContent = label;
+    button.classList.remove(...removeClasses);
+    button.classList.add(...addClasses);
+}
+
+function runSimulationClock() {
+    clearInterval(simulationInterval);
+
+    simulationInterval = setInterval(() => {
+        if (!simulationRunning || simulationSpeed === 0) {
+            return;
+        }
+
+        simulationDateTime = new Date(
+            simulationDateTime.getTime() + (simulationSpeed * 60000)
+        );
+
+        updateSimulationDisplay();
+    }, 1000);
+}
+
+function startSimulation() {
     if (simulationRunning) {
-        stopSimulation();
+        pauseSimulation();
+        return;
+    }
+
+    if (simulationDateTime) {
+        resumeSimulation();
         return;
     }
 
@@ -94,50 +327,68 @@ function startSimulation() {
     simulationDateTime = new Date(`${selectedDate}T${selectedTime}`);
 
     simulationRunning = true;
-
-    button.textContent = 'Stop Simulation';
-    button.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-    button.classList.add('bg-red-600', 'hover:bg-red-700');
+    setSimulationButtonState(
+        'Pause Simulation',
+        ['bg-indigo-600', 'hover:bg-indigo-700', 'bg-green-600', 'hover:bg-green-700'],
+        ['bg-amber-600', 'hover:bg-amber-700']
+    );
 
     updateSimulationDisplay();
-
-    simulationInterval = setInterval(() => {
-        if (!simulationRunning || simulationSpeed === 0) {
-            return;
-        }
-
-        simulationDateTime = new Date(
-            simulationDateTime.getTime() + (simulationSpeed * 60000)
-        );
-
-        updateSimulationDisplay();
-    }, 1000);
+    runSimulationClock();
 }
 
-function stopSimulation() {
-    const button = document.getElementById('start-simulation');
-
+function pauseSimulation() {
     clearInterval(simulationInterval);
-
     simulationInterval = null;
     simulationRunning = false;
 
-    button.textContent = 'Start Simulation';
+    setSimulationButtonState(
+        'Resume Simulation',
+        ['bg-amber-600', 'hover:bg-amber-700', 'bg-indigo-600', 'hover:bg-indigo-700'],
+        ['bg-green-600', 'hover:bg-green-700']
+    );
+}
 
-    button.classList.remove('bg-red-600', 'hover:bg-red-700');
-    button.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+function resumeSimulation() {
+    if (!simulationDateTime) {
+        startSimulation();
+        return;
+    }
+
+    if (simulationSpeed === 0) {
+        simulationSpeed = lastSimulationSpeed || 1;
+    }
+
+    simulationRunning = true;
+    setSimulationButtonState(
+        'Pause Simulation',
+        ['bg-green-600', 'hover:bg-green-700', 'bg-indigo-600', 'hover:bg-indigo-700'],
+        ['bg-amber-600', 'hover:bg-amber-700']
+    );
+    updateSimulationDisplay();
+    runSimulationClock();
 }
 
 function bindSimulationSpeedControls() {
     document.querySelectorAll('.sim-speed').forEach((button) => {
         button.addEventListener('click', () => {
-            simulationSpeed = Number(button.dataset.speed);
+            const selectedSpeed = Number(button.dataset.speed);
+
+            if (selectedSpeed !== 0) {
+                lastSimulationSpeed = selectedSpeed;
+            }
+
+            simulationSpeed = selectedSpeed;
 
             document.querySelectorAll('.sim-speed').forEach((btn) => {
                 btn.classList.remove('bg-indigo-600', 'text-white');
             });
 
             button.classList.add('bg-indigo-600', 'text-white');
+
+            if (simulationDateTime && !simulationRunning) {
+                resumeSimulation();
+            }
         });
     });
 }
@@ -150,6 +401,26 @@ function bindSimulationSettings() {
     }
 
     startButton.addEventListener('click', startSimulation);
+
+    const resetSimulationMoment = () => {
+        simulationDateTime = null;
+        simulationRunning = false;
+        clearInterval(simulationInterval);
+        simulationInterval = null;
+        localStorage.removeItem(simulationStorageKey);
+        setSimulationButtonState(
+            'Start Simulation',
+            ['bg-amber-600', 'hover:bg-amber-700', 'bg-green-600', 'hover:bg-green-700'],
+            ['bg-indigo-600', 'hover:bg-indigo-700']
+        );
+        clearSimulationDisplay();
+        updateEffectView();
+        updateEventEffectView();
+        updateUpcomingEventList();
+    };
+
+    document.getElementById('simulation-date')?.addEventListener('change', resetSimulationMoment);
+    document.getElementById('simulation-time')?.addEventListener('change', resetSimulationMoment);
 }
 
 function selectedFacilityIds() {
@@ -214,11 +485,14 @@ function facilityCategoryTotals() {
 function eventCategoryTotals() {
     const totals = emptyCategoryTotals();
 
-    selectedEvents().forEach(({ event }) => {
-        if (!event?.categoryId) return;
+    activeSelectedEvents()
+        .filter((selection) => selection.active)
+        .forEach(({ event }) => {
+            (event.impacts || []).forEach((impact) => {
+                totals[impact.category_id] += Number(impact.score ?? 0);
+            });
+        });
 
-        totals[event.categoryId] += Number(event.score ?? 0);
-    });
 
     return totals;
 }
@@ -267,14 +541,15 @@ function updateEffectView() {
     document
         .getElementById('effect-empty-state')
         ?.classList
-        .toggle('hidden', facilityIds.length > 0);
+        .toggle('hidden', facilityIds.length > 0 || activeEventNames().length > 0);
 
     updateStatus(totalScore, facilityIds.length);
+    updateActiveEventDisplay();
 }
 
 function updateEventEffectView() {
     const totals = eventCategoryTotals();
-    const eventSelections = selectedEvents();
+    const eventSelections = activeSelectedEvents();
 
     let totalScore = 0;
 
@@ -317,15 +592,19 @@ function renderEventEffectList(eventSelections) {
 
     list.replaceChildren();
 
-    eventSelections.forEach(({ cellIndex, event }) => {
-        const score = Number(event.score ?? 0);
+    eventSelections.forEach(({ cellIndex, event, active }) => {
+        const score = active
+            ? (event.impacts || []).reduce((sum, impact) => sum + Number(impact.score ?? 0), 0)
+            : 0;
         const item = document.createElement('div');
         const header = document.createElement('div');
         const name = document.createElement('div');
         const scoreElement = document.createElement('div');
         const meta = document.createElement('div');
 
-        item.className = 'rounded-md border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-900/20';
+        item.className = active
+            ? 'rounded-md border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-900/20'
+            : 'rounded-md border border-gray-200 bg-gray-50 px-4 py-3 opacity-75 dark:border-gray-700 dark:bg-gray-900/40';
         header.className = 'flex items-start justify-between gap-3';
         name.className = 'text-sm font-semibold text-gray-900 dark:text-gray-100';
         scoreElement.className = [
@@ -335,11 +614,22 @@ function renderEventEffectList(eventSelections) {
         meta.className = 'mt-1 text-xs text-gray-500 dark:text-gray-400';
 
         name.textContent = event.name;
-        scoreElement.textContent = formatScore(score);
-        meta.textContent = `Cell ${cellIndex} - ${event.categoryName || 'No category'} - ${event.date || ''} ${event.startTime || ''}`;
+        scoreElement.textContent = active ? formatScore(score) : 'inactive';
+        meta.textContent = `Cell ${cellIndex} - ${active ? 'active' : 'not active'} at simulation time`;
 
         header.append(name, scoreElement);
         item.append(header, meta);
+
+        (event.impacts || []).forEach((impact) => {
+            const row = document.createElement('div');
+            row.className = 'mt-1 flex justify-between gap-3 text-xs text-gray-500 dark:text-gray-400';
+            row.innerHTML = `
+                <span>${impact.category_name}</span>
+                <span>${active ? formatScore(Number(impact.score ?? 0)) : '0'}</span>
+            `;
+            item.append(row);
+        });
+
         list.append(item);
     });
 }
@@ -435,17 +725,23 @@ function updateTooltipContent(cell, tooltip) {
 
     if (isEvent) {
         const event = eventImpactMatrix[String(cell.dataset.itemId)];
+        const active = event ? eventIsActiveAt(event) : false;
 
         tooltip.innerHTML = `
             <div class="mb-2 font-bold">${itemName}</div>
             <div class="mb-2 text-gray-300">${event?.date || ''} ${event?.startTime || ''} - ${event?.endTime || ''}</div>
+            <div class="mb-2 ${active ? 'text-green-300' : 'text-gray-300'}">
+                ${active ? 'Active at simulation time' : 'Not active at simulation time'}
+            </div>
             <div class="space-y-1">
-                <div class="flex justify-between gap-3">
-                    <span>${event?.categoryName || 'No category'}</span>
-                    <span class="${Number(event?.score ?? 0) > 0 ? 'text-green-300' : Number(event?.score ?? 0) < 0 ? 'text-red-300' : 'text-gray-300'}">
-                        ${formatScore(Number(event?.score ?? 0))}
-                    </span>
-                </div>
+                ${(event?.impacts || []).map((impact) => `
+                    <div class="flex justify-between gap-3">
+                        <span>${impact.category_name}</span>
+                        <span class="${Number(impact.score ?? 0) > 0 ? 'text-green-300' : Number(impact.score ?? 0) < 0 ? 'text-red-300' : 'text-gray-300'}">
+                            ${active ? formatScore(Number(impact.score ?? 0)) : '0'}
+                        </span>
+                    </div>
+                `).join('')}
             </div>
         `;
 
@@ -607,6 +903,70 @@ function bindEventItems() {
                 endTime: item.dataset.endTime,
             });
         });
+    });
+}
+
+function updateUpcomingEventList() {
+    const list = document.querySelector('[data-upcoming-events-list]');
+    const emptyMessage = document.querySelector('[data-upcoming-empty-message]');
+    const cards = Array.from(document.querySelectorAll('[data-upcoming-event-card]'));
+    const dateTime = selectedSimulationDateTime();
+
+    if (!list || cards.length === 0) return;
+
+    cards.forEach((card) => card.classList.add('hidden'));
+
+    if (!dateTime) {
+        emptyMessage?.classList.remove('hidden');
+        return;
+    }
+
+    const upcomingItems = cards
+        .map((card) => {
+            const event = eventImpactMatrix[String(card.dataset.id)];
+            const occurrence = event ? nextEventOccurrenceAt(event, dateTime) : null;
+
+            return {
+                card,
+                event,
+                occurrence,
+                active: event ? eventIsActiveAt(event, dateTime) : false,
+            };
+        })
+        .filter((item) => item.occurrence !== null)
+        .sort((a, b) => {
+            if (a.active && !b.active) return -1;
+            if (!a.active && b.active) return 1;
+
+            return a.occurrence.startsAt - b.occurrence.startsAt;
+        });
+
+    emptyMessage?.classList.toggle('hidden', upcomingItems.length > 0);
+
+    upcomingItems.slice(0, 3).forEach(({ card, occurrence, active }) => {
+        const dateLine = card.querySelector('[data-upcoming-date-line]');
+        const statusBadge = card.querySelector('[data-upcoming-status-badge]');
+
+        card.dataset.date = formatDisplayDateTime(occurrence.startsAt);
+        card.dataset.startTime = formatDisplayTime(occurrence.startsAt);
+        card.dataset.endTime = formatDisplayTime(occurrence.endsAt);
+
+        if (dateLine) {
+            dateLine.textContent = `${formatDisplayDateTime(occurrence.startsAt)} - ${formatDisplayTime(occurrence.endsAt)}`;
+        }
+
+        if (statusBadge) {
+            statusBadge.textContent = active ? 'active' : 'planned';
+            statusBadge.className = [
+                'rounded-full px-2 py-1 text-xs font-semibold capitalize',
+                active
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+            ].join(' ');
+        }
+
+        card.classList.remove('hidden');
+        list.appendChild(card);
     });
 }
 
@@ -796,12 +1156,11 @@ function bindOutsideTap() {
 }
 
 function getEventStatus() {
-    if (!simulationDateTime) return 'N/A';
-    const hour = simulationDateTime.getHours();
-    if (hour >= 7 && hour <= 9) return 'Morning traffic event active';
-    if (hour >= 17 && hour <= 19) return 'Evening traffic event active';
-    if (isNightTime(simulationDateTime)) return 'Night rules active';
-    return 'No time-based event active';
+    const names = activeEventNames();
+
+    return names.length > 0
+        ? names.join(', ')
+        : 'No dragged event active at simulation time';
 }
 
 function exportToPDF() {
@@ -814,8 +1173,23 @@ function exportToPDF() {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
     const pageWidth = 210;
+    const pageHeight = 297;
     const margin = 20;
     const usableWidth = pageWidth - margin * 2;
+
+    function ensurePdfSpace(y, needed = 12) {
+        if (y + needed <= pageHeight - margin) {
+            return y;
+        }
+
+        doc.addPage();
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Metropolis City Simulation', margin, 287);
+        doc.setTextColor(0, 0, 0);
+
+        return margin;
+    }
 
     // Header
     doc.setFontSize(22);
@@ -839,8 +1213,9 @@ function exportToPDF() {
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
 
-    const simText = simulationDateTime ? simulationDateTime.toLocaleString() : 'Not started';
-    const modeText = simulationDateTime ? (isNightTime(simulationDateTime) ? 'Night Mode' : 'Day Mode') : 'N/A';
+    const evaluationDateTime = selectedSimulationDateTime();
+    const simText = evaluationDateTime ? evaluationDateTime.toLocaleString() : 'Not started';
+    const modeText = evaluationDateTime ? (isNightTime(evaluationDateTime) ? 'Night Mode' : 'Day Mode') : 'N/A';
     const eventText = getEventStatus();
 
     doc.text('Date & Time:   ' + simText, margin, 55);
@@ -868,11 +1243,17 @@ function exportToPDF() {
         const row = Math.floor(i / gridCols);
         const x = gridStartX + col * cellW;
         const y = gridStartY + row * cellH;
-        const facilityId = cell.dataset.facilityId;
+        const itemId = cell.dataset.itemId;
+        const itemType = cell.dataset.itemType;
 
-        if (facilityId) {
-            doc.setFillColor(219, 234, 254);
-            doc.setDrawColor(99, 102, 241);
+        if (itemId) {
+            if (itemType === 'event') {
+                doc.setFillColor(254, 243, 199);
+                doc.setDrawColor(217, 119, 6);
+            } else {
+                doc.setFillColor(219, 234, 254);
+                doc.setDrawColor(99, 102, 241);
+            }
         } else {
             doc.setFillColor(249, 250, 251);
             doc.setDrawColor(209, 213, 219);
@@ -954,14 +1335,102 @@ function exportToPDF() {
     doc.text(totalText, margin + usableWidth, scoreY, { align: 'right' });
     doc.setTextColor(0, 0, 0);
 
+    scoreY += 14;
+    scoreY = ensurePdfSpace(scoreY, 40);
+    doc.setDrawColor(220, 220, 220);
+    doc.line(margin, scoreY - 5, pageWidth - margin, scoreY - 5);
+
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('Event Effects', margin, scoreY);
+    scoreY += 9;
+
+    const eventSelections = activeSelectedEvents();
+    const eventTotals = eventCategoryTotals();
+
+    if (eventSelections.length === 0) {
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(107, 114, 128);
+        doc.text('No events placed on the grid.', margin, scoreY);
+        doc.setTextColor(0, 0, 0);
+    } else {
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Event Category Totals', margin, scoreY);
+        scoreY += 8;
+
+        effectCategories.forEach((category) => {
+            scoreY = ensurePdfSpace(scoreY, 8);
+
+            const score = Number(eventTotals[category.id] ?? 0);
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(50, 50, 50);
+            doc.text(category.name, margin + 4, scoreY);
+
+            if (score > 0) doc.setTextColor(21, 128, 61);
+            else if (score < 0) doc.setTextColor(185, 28, 28);
+            else doc.setTextColor(107, 114, 128);
+
+            doc.text(formatScore(score), margin + usableWidth, scoreY, { align: 'right' });
+            scoreY += 6;
+        });
+
+        scoreY += 8;
+        scoreY = ensurePdfSpace(scoreY, 14);
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Placed Events', margin, scoreY);
+        scoreY += 8;
+
+        eventSelections.forEach(({ event, cellIndex, active }) => {
+            scoreY = ensurePdfSpace(scoreY, 14 + ((event.impacts || []).length * 5));
+
+            const score = active
+                ? (event.impacts || []).reduce((sum, impact) => sum + Number(impact.score ?? 0), 0)
+                : 0;
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text(`${event.name} (cell ${cellIndex})`, margin, scoreY);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(active ? 21 : 107, active ? 128 : 114, active ? 61 : 128);
+            doc.text(active ? `total ${formatScore(score)}` : 'inactive', margin + usableWidth, scoreY, { align: 'right' });
+
+            scoreY += 6;
+            doc.setTextColor(80, 80, 80);
+            (event.impacts || []).forEach((impact) => {
+                scoreY = ensurePdfSpace(scoreY, 6);
+                const impactScore = active ? Number(impact.score ?? 0) : 0;
+
+                doc.setTextColor(80, 80, 80);
+                doc.text(`- ${impact.category_name}`, margin + 4, scoreY);
+
+                if (impactScore > 0) doc.setTextColor(21, 128, 61);
+                else if (impactScore < 0) doc.setTextColor(185, 28, 28);
+                else doc.setTextColor(107, 114, 128);
+
+                doc.text(formatScore(impactScore), margin + usableWidth, scoreY, { align: 'right' });
+                scoreY += 5;
+            });
+
+            scoreY += 3;
+        });
+    }
+
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.text('Metropolis City Simulation', margin, 287);
     doc.text('Page 1', pageWidth - margin, 287, { align: 'right' });
 
-    const dateStr = simulationDateTime
-        ? simulationDateTime.toISOString().slice(0, 10)
+    const dateStr = evaluationDateTime
+        ? evaluationDateTime.toISOString().slice(0, 10)
         : new Date().toISOString().slice(0, 10);
 
     doc.save(`simulation-report-${dateStr}.pdf`);
@@ -972,6 +1441,7 @@ function bindExportButton() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    hydrateSimulationMoment();
     bindLibraryItems();
     bindEventItems();
     bindGridCells();
@@ -984,4 +1454,5 @@ document.addEventListener('DOMContentLoaded', () => {
     bindSimulationSpeedControls();
     updateEffectView();
     updateEventEffectView();
+    updateUpcomingEventList();
 });

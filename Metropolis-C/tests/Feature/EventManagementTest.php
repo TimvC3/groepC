@@ -13,7 +13,7 @@ class EventManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_city_planner_can_create_event_for_one_affected_category(): void
+    public function test_city_planner_can_create_event_for_multiple_affected_categories(): void
     {
         $user = User::factory()->create();
         $security = Category::create([
@@ -36,8 +36,10 @@ class EventManagementTest extends TestCase
                 'start_time' => '10:00',
                 'end_time' => '14:00',
                 'recurrence_type' => 'none',
-                'category_id' => $security->id,
-                'score' => -3,
+                'scores' => [
+                    $security->id => -3,
+                    $mobility->id => 2,
+                ],
             ]);
 
         $response->assertRedirect(route('events.index'));
@@ -46,8 +48,9 @@ class EventManagementTest extends TestCase
 
         $this->assertSame('Music Festival', $event->name);
         $this->assertTrue($event->categories->contains($security));
-        $this->assertFalse($event->categories->contains($mobility));
-        $this->assertSame(-3, (int) $event->categories->first()->pivot->score);
+        $this->assertTrue($event->categories->contains($mobility));
+        $this->assertSame(-3, (int) $event->categories->firstWhere('id', $security->id)->pivot->score);
+        $this->assertSame(2, (int) $event->categories->firstWhere('id', $mobility->id)->pivot->score);
     }
 
     public function test_event_overview_shows_statuses_and_upcoming_events(): void
