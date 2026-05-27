@@ -795,6 +795,182 @@ function bindOutsideTap() {
     }, { passive: true });
 }
 
+function getEventStatus() {
+    if (!simulationDateTime) return 'N/A';
+    const hour = simulationDateTime.getHours();
+    if (hour >= 7 && hour <= 9) return 'Morning traffic event active';
+    if (hour >= 17 && hour <= 19) return 'Evening traffic event active';
+    if (isNightTime(simulationDateTime)) return 'Night rules active';
+    return 'No time-based event active';
+}
+
+function exportToPDF() {
+    if (!window.jspdf) {
+        alert('PDF library not loaded. Please refresh the page and try again.');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    const pageWidth = 210;
+    const margin = 20;
+    const usableWidth = pageWidth - margin * 2;
+
+    // Header
+    doc.setFontSize(22);
+    doc.setFont(undefined, 'bold');
+    doc.text('Metropolis Simulation Report', margin, 24);
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text('Exported: ' + new Date().toLocaleString(), margin, 32);
+    doc.setTextColor(0, 0, 0);
+
+    doc.setDrawColor(220, 220, 220);
+    doc.line(margin, 37, pageWidth - margin, 37);
+
+    // Simulation Info
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('Simulation Info', margin, 46);
+
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+
+    const simText = simulationDateTime ? simulationDateTime.toLocaleString() : 'Not started';
+    const modeText = simulationDateTime ? (isNightTime(simulationDateTime) ? 'Night Mode' : 'Day Mode') : 'N/A';
+    const eventText = getEventStatus();
+
+    doc.text('Date & Time:   ' + simText, margin, 55);
+    doc.text('Mode:          ' + modeText, margin, 63);
+    doc.text('Active Event:  ' + eventText, margin, 71);
+
+    doc.setDrawColor(220, 220, 220);
+    doc.line(margin, 78, pageWidth - margin, 78);
+
+    // City Grid
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('City Grid', margin, 86);
+
+    const cells = Array.from(document.querySelectorAll('.grid-cell'));
+    const gridCols = 4;
+    const gridRows = 3;
+    const cellW = 38;
+    const cellH = 26;
+    const gridStartX = margin + (usableWidth - gridCols * cellW) / 2;
+    const gridStartY = 91;
+
+    cells.forEach((cell, i) => {
+        const col = i % gridCols;
+        const row = Math.floor(i / gridCols);
+        const x = gridStartX + col * cellW;
+        const y = gridStartY + row * cellH;
+        const facilityId = cell.dataset.facilityId;
+
+        if (facilityId) {
+            doc.setFillColor(219, 234, 254);
+            doc.setDrawColor(99, 102, 241);
+        } else {
+            doc.setFillColor(249, 250, 251);
+            doc.setDrawColor(209, 213, 219);
+        }
+
+        doc.roundedRect(x, y, cellW, cellH, 1.5, 1.5, 'FD');
+
+        const facilityName = cell.getAttribute('aria-label');
+
+        if (facilityName) {
+            doc.setFontSize(7);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(30, 64, 175);
+            const lines = doc.splitTextToSize(facilityName, cellW - 6);
+            const lineHeight = 3.5;
+            const textBlockHeight = lines.length * lineHeight;
+            const textY = y + (cellH - textBlockHeight) / 2 + lineHeight;
+            doc.text(lines, x + cellW / 2, textY, { align: 'center' });
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(0, 0, 0);
+        } else {
+            doc.setFontSize(7);
+            doc.setTextColor(180, 180, 180);
+            doc.text(String(i + 1), x + cellW / 2, y + cellH / 2 + 1.5, { align: 'center' });
+            doc.setTextColor(0, 0, 0);
+        }
+    });
+
+    // Simulation Effects
+    const effectsStartY = gridStartY + gridRows * cellH + 12;
+
+    doc.setDrawColor(220, 220, 220);
+    doc.line(margin, effectsStartY - 4, pageWidth - margin, effectsStartY - 4);
+
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Simulation Effects', margin, effectsStartY + 4);
+
+    let scoreY = effectsStartY + 14;
+
+    effectCategories.forEach((category) => {
+        const scoreEl = document.getElementById(`effect-category-score-${category.id}`);
+        const scoreText = scoreEl ? scoreEl.textContent.trim() : '0';
+        const scoreNum = parseInt(scoreText, 10) || 0;
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(50, 50, 50);
+        doc.text(category.name, margin, scoreY);
+
+        if (scoreNum > 0) doc.setTextColor(21, 128, 61);
+        else if (scoreNum < 0) doc.setTextColor(185, 28, 28);
+        else doc.setTextColor(107, 114, 128);
+
+        doc.text(scoreText, margin + usableWidth, scoreY, { align: 'right' });
+        doc.setTextColor(0, 0, 0);
+
+        doc.setDrawColor(240, 240, 240);
+        doc.line(margin, scoreY + 2.5, pageWidth - margin, scoreY + 2.5);
+
+        scoreY += 9;
+    });
+
+    scoreY += 3;
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Total Score', margin, scoreY);
+
+    const totalEl = document.getElementById('effect-total-score');
+    const totalText = totalEl ? totalEl.textContent.trim() : '0';
+    const totalNum = parseInt(totalText, 10) || 0;
+
+    if (totalNum > 0) doc.setTextColor(21, 128, 61);
+    else if (totalNum < 0) doc.setTextColor(185, 28, 28);
+    else doc.setTextColor(107, 114, 128);
+
+    doc.text(totalText, margin + usableWidth, scoreY, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Metropolis City Simulation', margin, 287);
+    doc.text('Page 1', pageWidth - margin, 287, { align: 'right' });
+
+    const dateStr = simulationDateTime
+        ? simulationDateTime.toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
+
+    doc.save(`simulation-report-${dateStr}.pdf`);
+}
+
+function bindExportButton() {
+    document.getElementById('export-pdf')?.addEventListener('click', exportToPDF);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     bindLibraryItems();
     bindEventItems();
@@ -803,6 +979,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bindSearch();
     bindClearButton();
     bindOutsideTap();
+    bindExportButton();
     bindSimulationSettings();
     bindSimulationSpeedControls();
     updateEffectView();

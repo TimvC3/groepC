@@ -99,6 +99,29 @@
                         </div>
                     </div>
 
+                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex flex-col items-center">
+                        <div class="flex justify-between items-center mb-6 w-full max-w-md">
+                            <h3 class="text-2xl font-bold">
+                                City Grid
+                            </h3>
+
+                            <div class="flex gap-2">
+                                <button
+                                    id="export-pdf"
+                                    type="button"
+                                    class="px-4 py-2 text-sm border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                    Export PDF
+                                </button>
+
+                                <button
+                                    id="clear-grid"
+                                    type="button"
+                                    class="px-4 py-2 text-sm border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                    Clear
+                                </button>
+                            </div>
                     <div class="flex flex-col items-center rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                         <div class="mb-6 flex w-full max-w-md items-center justify-between">
                             <h3 class="text-2xl font-bold">City Grid</h3>
@@ -254,6 +277,8 @@
     </script>
 
     @push('scripts')
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
         <script
             src="https://cdn.jsdelivr.net/npm/@dragdroptouch/drag-drop-touch@latest/dist/drag-drop-touch.esm.min.js?autoload"
             type="module">
