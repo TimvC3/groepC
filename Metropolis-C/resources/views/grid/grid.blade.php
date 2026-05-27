@@ -47,7 +47,7 @@
                     </div>
                 </aside>
 
-                <section class="order-2 xl:order-none">
+                <section class="order-2 xl:col-start-2 xl:row-start-1">
                     <div class="mb-6 rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                         <h3 class="mb-4 text-xl font-bold">Simulation Settings</h3>
 
@@ -99,17 +99,15 @@
                         </div>
                     </div>
 
-                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex flex-col items-center">
-                        <div class="flex justify-between items-center mb-6 w-full max-w-md">
-                            <h3 class="text-2xl font-bold">
-                                City Grid
-                            </h3>
+                    <div class="flex flex-col items-center rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                        <div class="mb-6 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <h3 class="text-2xl font-bold">City Grid</h3>
 
                             <div class="flex gap-2">
                                 <button
                                     id="export-pdf"
                                     type="button"
-                                    class="px-4 py-2 text-sm border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    class="rounded-md border px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                                 >
                                     Export PDF
                                 </button>
@@ -117,21 +115,11 @@
                                 <button
                                     id="clear-grid"
                                     type="button"
-                                    class="px-4 py-2 text-sm border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    class="rounded-md border px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                                 >
                                     Clear
                                 </button>
                             </div>
-                    <div class="flex flex-col items-center rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <div class="mb-6 flex w-full max-w-md items-center justify-between">
-                            <h3 class="text-2xl font-bold">City Grid</h3>
-                            <button
-                                id="clear-grid"
-                                type="button"
-                                class="rounded-md border px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                            >
-                                Clear
-                            </button>
                         </div>
 
                         <div class="grid grid-cols-4 justify-center gap-1 rounded-3xl border-4 border-gray-100 p-2 dark:border-gray-700 dark:bg-gray-900/50">
@@ -147,7 +135,7 @@
                     </div>
                 </section>
 
-                <aside class="order-3 xl:order-none">
+                <aside class="order-3 xl:col-start-3 xl:row-start-1">
                     <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                         <h3 class="text-2xl font-bold">Upcoming Events</h3>
 
