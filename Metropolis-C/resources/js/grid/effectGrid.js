@@ -13,6 +13,10 @@ let sourceCell = null;
 let droppedOnGrid = false;
 let activeTooltip = null;
 let touchTapState = null;
+let simulationDateTime = null;
+let simulationInterval = null;
+let simulationRunning = false;
+let simulationSpeed = 1;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 
@@ -24,6 +28,128 @@ function scoreColorClass(score) {
     if (score > 0) return 'text-green-700 dark:text-green-300';
     if (score < 0) return 'text-red-600 dark:text-red-300';
     return 'text-gray-500 dark:text-gray-400';
+}
+
+function isNightTime(dateTime) {
+    const hour = dateTime.getHours();
+
+    return hour >= 18 || hour < 6;
+}
+
+function updateSimulationDisplay() {
+    const simulationDateTimeElement = document.getElementById('simulation-datetime');
+    const dayNightStatusElement = document.getElementById('day-night-status');
+    const eventStatusElement = document.getElementById('simulation-event-status');
+
+    if (!simulationDateTimeElement || !dayNightStatusElement || !simulationDateTime) {
+        return;
+    }
+
+    simulationDateTimeElement.textContent = simulationDateTime.toLocaleString();
+
+    if (isNightTime(simulationDateTime)) {
+        dayNightStatusElement.textContent = 'Night Mode';
+    } else {
+        dayNightStatusElement.textContent = 'Day Mode';
+    }
+
+    const currentHour = simulationDateTime.getHours();
+
+    if (eventStatusElement) {
+        if (currentHour >= 7 && currentHour <= 9) {
+            eventStatusElement.textContent = 'Morning traffic event active.';
+        } else if (currentHour >= 17 && currentHour <= 19) {
+            eventStatusElement.textContent = 'Evening traffic event active.';
+        } else if (isNightTime(simulationDateTime)) {
+            eventStatusElement.textContent = 'Night rules active.';
+        } else {
+            eventStatusElement.textContent = 'No time-based event active.';
+        }
+    }
+}
+
+function startSimulation() {
+    const button = document.getElementById('start-simulation');
+
+    if (simulationRunning) {
+        stopSimulation();
+        return;
+    }
+
+    const dateInput = document.getElementById('simulation-date');
+    const timeInput = document.getElementById('simulation-time');
+
+    if (!dateInput || !timeInput) {
+        return;
+    }
+
+    const selectedDate = dateInput.value;
+    const selectedTime = timeInput.value;
+
+    if (!selectedDate || !selectedTime) {
+        alert('Select a date and time first.');
+        return;
+    }
+
+    simulationDateTime = new Date(`${selectedDate}T${selectedTime}`);
+
+    simulationRunning = true;
+
+    button.textContent = 'Stop Simulation';
+    button.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+    button.classList.add('bg-red-600', 'hover:bg-red-700');
+
+    updateSimulationDisplay();
+
+    simulationInterval = setInterval(() => {
+        if (!simulationRunning || simulationSpeed === 0) {
+            return;
+        }
+
+        simulationDateTime = new Date(
+            simulationDateTime.getTime() + (simulationSpeed * 60000)
+        );
+
+        updateSimulationDisplay();
+    }, 1000);
+}
+
+function stopSimulation() {
+    const button = document.getElementById('start-simulation');
+
+    clearInterval(simulationInterval);
+
+    simulationInterval = null;
+    simulationRunning = false;
+
+    button.textContent = 'Start Simulation';
+
+    button.classList.remove('bg-red-600', 'hover:bg-red-700');
+    button.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+}
+
+function bindSimulationSpeedControls() {
+    document.querySelectorAll('.sim-speed').forEach((button) => {
+        button.addEventListener('click', () => {
+            simulationSpeed = Number(button.dataset.speed);
+
+            document.querySelectorAll('.sim-speed').forEach((btn) => {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+            });
+
+            button.classList.add('bg-indigo-600', 'text-white');
+        });
+    });
+}
+
+function bindSimulationSettings() {
+    const startButton = document.getElementById('start-simulation');
+
+    if (!startButton) {
+        return;
+    }
+
+    startButton.addEventListener('click', startSimulation);
 }
 
 function selectedFacilityIds() {
@@ -547,7 +673,6 @@ function bindGridCells() {
             draggedData = null;
         });
 
-        // ── Desktop: hover to show, leave to hide ──────────────────────────
         cell.addEventListener('mouseenter', (event) => {
             if (isTouchDevice()) return;
             if (cell.dataset.itemId) {
@@ -661,7 +786,6 @@ function bindClearButton() {
     });
 }
 
-// Hide tooltip when tapping anywhere outside a grid cell
 function bindOutsideTap() {
     document.addEventListener('touchstart', (event) => {
         if (!activeTooltip) return;
@@ -679,6 +803,12 @@ document.addEventListener('DOMContentLoaded', () => {
     bindSearch();
     bindClearButton();
     bindOutsideTap();
+    bindSimulationSettings();
+    bindSimulationSpeedControls();
     updateEffectView();
     updateEventEffectView();
+});
+
+    console.log('Simulation JS loaded');
+
 });
