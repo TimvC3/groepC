@@ -3,6 +3,7 @@
 use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\GridController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\EventController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -27,6 +28,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/facilities', [FacilityController::class, 'store'])->name('facilities.store');
     Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('facilities.edit');
     Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('facilities.update');
+
+    Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])
+        ->name('facilities.scores.update');
+
     Route::redirect('/functions', '/facilities')->name('functions.index');
 });
 
@@ -39,4 +44,14 @@ Route::middleware(['auth', 'admin'])
         Route::post('/functions', [FacilityController::class, 'store'])->name('functions.store');
         Route::get('/functions/{facility}/edit', [FacilityController::class, 'edit'])->name('functions.edit');
         Route::patch('/functions/{facility}', [FacilityController::class, 'updateFacility'])->name('functions.update');
+    });
+
+Route::middleware(['auth', 'city-planner'])
+    ->prefix('events')
+    ->name('events.')
+    ->group(function () {
+        Route::get('/', [EventController::class, 'index'])->name('index');
+        Route::post('/', [EventController::class, 'store'])->name('store');
+        Route::get('/{event}/edit', [EventController::class, 'edit'])->name('edit');
+        Route::patch('/{event}', [EventController::class, 'update'])->name('update');
     });

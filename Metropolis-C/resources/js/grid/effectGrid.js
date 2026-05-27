@@ -1,6 +1,10 @@
 const gridEffectData = window.gridEffectData || {};
 const effectCategories = gridEffectData.categories || [];
 const facilityScoreMatrix = gridEffectData.scoreMatrix || {};
+const gridEventEffectData = window.gridEventEffectData || {};
+const eventImpactMatrix = Object.fromEntries(
+    (gridEventEffectData.events || []).map((event) => [String(event.id), event])
+);
 
 const gridColumns = 4;
 
@@ -8,7 +12,11 @@ let draggedData = null;
 let sourceCell = null;
 let droppedOnGrid = false;
 let activeTooltip = null;
+let touchTapState = null;
 let simulationDateTime = null;
+let simulationInterval = null;
+let simulationRunning = false;
+let simulationSpeed = 1;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 
@@ -33,7 +41,7 @@ function updateSimulationDisplay() {
     const dayNightStatusElement = document.getElementById('day-night-status');
     const eventStatusElement = document.getElementById('simulation-event-status');
 
-    if (!simulationDateTimeElement || !dayNightStatusElement || !eventStatusElement || !simulationDateTime) {
+    if (!simulationDateTimeElement || !dayNightStatusElement || !simulationDateTime) {
         return;
     }
 
@@ -47,18 +55,27 @@ function updateSimulationDisplay() {
 
     const currentHour = simulationDateTime.getHours();
 
-    if (currentHour >= 7 && currentHour <= 9) {
-        eventStatusElement.textContent = 'Morning traffic event active.';
-    } else if (currentHour >= 17 && currentHour <= 19) {
-        eventStatusElement.textContent = 'Evening traffic event active.';
-    } else if (isNightTime(simulationDateTime)) {
-        eventStatusElement.textContent = 'Night rules active.';
-    } else {
-        eventStatusElement.textContent = 'No time-based event active.';
+    if (eventStatusElement) {
+        if (currentHour >= 7 && currentHour <= 9) {
+            eventStatusElement.textContent = 'Morning traffic event active.';
+        } else if (currentHour >= 17 && currentHour <= 19) {
+            eventStatusElement.textContent = 'Evening traffic event active.';
+        } else if (isNightTime(simulationDateTime)) {
+            eventStatusElement.textContent = 'Night rules active.';
+        } else {
+            eventStatusElement.textContent = 'No time-based event active.';
+        }
     }
 }
 
 function startSimulation() {
+    const button = document.getElementById('start-simulation');
+
+    if (simulationRunning) {
+        stopSimulation();
+        return;
+    }
+
     const dateInput = document.getElementById('simulation-date');
     const timeInput = document.getElementById('simulation-time');
 
@@ -75,7 +92,54 @@ function startSimulation() {
     }
 
     simulationDateTime = new Date(`${selectedDate}T${selectedTime}`);
+
+    simulationRunning = true;
+
+    button.textContent = 'Stop Simulation';
+    button.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+    button.classList.add('bg-red-600', 'hover:bg-red-700');
+
     updateSimulationDisplay();
+
+    simulationInterval = setInterval(() => {
+        if (!simulationRunning || simulationSpeed === 0) {
+            return;
+        }
+
+        simulationDateTime = new Date(
+            simulationDateTime.getTime() + (simulationSpeed * 60000)
+        );
+
+        updateSimulationDisplay();
+    }, 1000);
+}
+
+function stopSimulation() {
+    const button = document.getElementById('start-simulation');
+
+    clearInterval(simulationInterval);
+
+    simulationInterval = null;
+    simulationRunning = false;
+
+    button.textContent = 'Start Simulation';
+
+    button.classList.remove('bg-red-600', 'hover:bg-red-700');
+    button.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+}
+
+function bindSimulationSpeedControls() {
+    document.querySelectorAll('.sim-speed').forEach((button) => {
+        button.addEventListener('click', () => {
+            simulationSpeed = Number(button.dataset.speed);
+
+            document.querySelectorAll('.sim-speed').forEach((btn) => {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+            });
+
+            button.classList.add('bg-indigo-600', 'text-white');
+        });
+    });
 }
 
 function bindSimulationSettings() {
@@ -90,8 +154,73 @@ function bindSimulationSettings() {
 
 function selectedFacilityIds() {
     return Array.from(document.querySelectorAll('.grid-cell'))
-        .map((cell) => cell.dataset.facilityId)
+        .filter((cell) => cell.dataset.itemType === 'facility')
+        .map((cell) => cell.dataset.itemId)
         .filter(Boolean);
+}
+
+function selectedEvents() {
+    return Array.from(document.querySelectorAll('.grid-cell'))
+        .filter((cell) => cell.dataset.itemType === 'event')
+        .map((cell) => ({
+            cellIndex: cell.dataset.index,
+            event: eventImpactMatrix[String(cell.dataset.itemId)],
+        }))
+        .filter((item) => item.event);
+}
+
+function setDragPayload(event, payload) {
+    draggedData = payload;
+
+    if (!event.dataTransfer) return;
+
+    event.dataTransfer.effectAllowed = 'copyMove';
+    event.dataTransfer.setData('application/json', JSON.stringify(payload));
+    event.dataTransfer.setData('text/plain', payload.name || '');
+}
+
+function getDropPayload(event) {
+    if (draggedData) return draggedData;
+
+    const payload = event.dataTransfer?.getData('application/json');
+    if (!payload) return null;
+
+    try {
+        return JSON.parse(payload);
+    } catch {
+        return null;
+    }
+}
+
+function emptyCategoryTotals() {
+    return Object.fromEntries(effectCategories.map((category) => [category.id, 0]));
+}
+
+function facilityCategoryTotals() {
+    const totals = emptyCategoryTotals();
+    const facilityIds = selectedFacilityIds();
+
+    facilityIds.forEach((facilityId) => {
+        const scores = facilityScoreMatrix[facilityId] || {};
+
+        effectCategories.forEach((category) => {
+            totals[category.id] += Number(scores[category.id] ?? 0);
+        });
+    });
+
+    return totals;
+}
+
+function eventCategoryTotals() {
+    const totals = emptyCategoryTotals();
+
+    selectedEvents().forEach(({ event }) => {
+        if (!event?.categoryId) return;
+
+        totals[event.categoryId] += Number(event.score ?? 0);
+    });
+
+    return totals;
 }
 
 function updateStatus(totalScore, facilityCount) {
@@ -104,21 +233,14 @@ function updateStatus(totalScore, facilityCount) {
 }
 
 function updateEffectView() {
-    const totals = Object.fromEntries(effectCategories.map((category) => [category.id, 0]));
+    const facilityTotals = facilityCategoryTotals();
+    const eventTotals = eventCategoryTotals();
     const facilityIds = selectedFacilityIds();
-
-    facilityIds.forEach((facilityId) => {
-        const scores = facilityScoreMatrix[facilityId] || {};
-
-        effectCategories.forEach((category) => {
-            totals[category.id] += Number(scores[category.id] ?? 0);
-        });
-    });
 
     let totalScore = 0;
 
     effectCategories.forEach((category) => {
-        const categoryScore = totals[category.id];
+        const categoryScore = facilityTotals[category.id] + eventTotals[category.id];
         const scoreElement = document.getElementById(`effect-category-score-${category.id}`);
 
         totalScore += categoryScore;
@@ -150,6 +272,78 @@ function updateEffectView() {
     updateStatus(totalScore, facilityIds.length);
 }
 
+function updateEventEffectView() {
+    const totals = eventCategoryTotals();
+    const eventSelections = selectedEvents();
+
+    let totalScore = 0;
+
+    effectCategories.forEach((category) => {
+        const categoryScore = totals[category.id];
+        const scoreElement = document.getElementById(`event-effect-category-score-${category.id}`);
+
+        totalScore += categoryScore;
+
+        if (!scoreElement) return;
+
+        scoreElement.textContent = formatScore(categoryScore);
+        scoreElement.className = [
+            'text-sm font-bold',
+            scoreColorClass(categoryScore),
+        ].join(' ');
+    });
+
+    const totalElement = document.getElementById('event-effect-total-score');
+
+    if (totalElement) {
+        totalElement.textContent = formatScore(totalScore);
+        totalElement.className = [
+            'text-3xl font-bold',
+            scoreColorClass(totalScore),
+        ].join(' ');
+    }
+
+    document
+        .getElementById('event-effect-empty-state')
+        ?.classList
+        .toggle('hidden', eventSelections.length > 0);
+
+    renderEventEffectList(eventSelections);
+}
+
+function renderEventEffectList(eventSelections) {
+    const list = document.getElementById('event-effect-list');
+    if (!list) return;
+
+    list.replaceChildren();
+
+    eventSelections.forEach(({ cellIndex, event }) => {
+        const score = Number(event.score ?? 0);
+        const item = document.createElement('div');
+        const header = document.createElement('div');
+        const name = document.createElement('div');
+        const scoreElement = document.createElement('div');
+        const meta = document.createElement('div');
+
+        item.className = 'rounded-md border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-900/20';
+        header.className = 'flex items-start justify-between gap-3';
+        name.className = 'text-sm font-semibold text-gray-900 dark:text-gray-100';
+        scoreElement.className = [
+            'text-sm font-bold',
+            scoreColorClass(score),
+        ].join(' ');
+        meta.className = 'mt-1 text-xs text-gray-500 dark:text-gray-400';
+
+        name.textContent = event.name;
+        scoreElement.textContent = formatScore(score);
+        meta.textContent = `Cell ${cellIndex} - ${event.categoryName || 'No category'} - ${event.date || ''} ${event.startTime || ''}`;
+
+        header.append(name, scoreElement);
+        item.append(header, meta);
+        list.append(item);
+    });
+}
+
 function getSurroundingCells(cell) {
     const index = Number(cell.dataset.index);
     const allCells = Array.from(document.querySelectorAll('.grid-cell'));
@@ -175,7 +369,9 @@ function getLocalScores(cell) {
     let facilityCount = 0;
 
     localCells.forEach((localCell) => {
-        const facilityId = localCell.dataset.facilityId;
+        const facilityId = localCell.dataset.itemType === 'facility'
+            ? localCell.dataset.itemId
+            : null;
 
         if (!facilityId) return;
 
@@ -234,12 +430,33 @@ function positionTooltip(tooltip, x, y) {
 }
 
 function updateTooltipContent(cell, tooltip) {
-    const facilityName = cell.getAttribute('aria-label') || 'Unknown function';
+    const itemName = cell.getAttribute('aria-label') || 'Unknown item';
+    const isEvent = cell.dataset.itemType === 'event';
+
+    if (isEvent) {
+        const event = eventImpactMatrix[String(cell.dataset.itemId)];
+
+        tooltip.innerHTML = `
+            <div class="mb-2 font-bold">${itemName}</div>
+            <div class="mb-2 text-gray-300">${event?.date || ''} ${event?.startTime || ''} - ${event?.endTime || ''}</div>
+            <div class="space-y-1">
+                <div class="flex justify-between gap-3">
+                    <span>${event?.categoryName || 'No category'}</span>
+                    <span class="${Number(event?.score ?? 0) > 0 ? 'text-green-300' : Number(event?.score ?? 0) < 0 ? 'text-red-300' : 'text-gray-300'}">
+                        ${formatScore(Number(event?.score ?? 0))}
+                    </span>
+                </div>
+            </div>
+        `;
+
+        return;
+    }
+
     const localData = getLocalScores(cell);
     const total = localData.scores.reduce((sum, item) => sum + item.score, 0);
 
     tooltip.innerHTML = `
-        <div class="mb-2 font-bold">${facilityName}</div>
+        <div class="mb-2 font-bold">${itemName}</div>
 
         <div class="mb-2 text-gray-300">
             Local quality-of-life impact
@@ -299,6 +516,19 @@ function createFacilityCellContent(facility) {
     return wrapper;
 }
 
+function createEventCellContent(event) {
+    const wrapper = document.createElement('div');
+    const label = document.createElement('div');
+
+    wrapper.className = 'relative flex h-full w-full items-center justify-center px-1';
+    label.className = 'pointer-events-none line-clamp-3 break-words text-center text-[0.65rem] font-semibold leading-tight text-gray-900 dark:text-gray-100 sm:text-xs';
+    label.textContent = event.name;
+
+    wrapper.append(label);
+
+    return wrapper;
+}
+
 function removeCellContent(cell) {
     const index = cell.dataset.index;
     const label = document.createElement('span');
@@ -307,36 +537,75 @@ function removeCellContent(cell) {
     label.textContent = index;
 
     cell.replaceChildren(label);
-    delete cell.dataset.facilityId;
+    delete cell.dataset.itemId;
+    delete cell.dataset.itemType;
     cell.removeAttribute('aria-label');
-    cell.classList.remove('group', 'border-solid', 'bg-blue-50', 'dark:bg-blue-900/20');
+    cell.classList.remove(
+        'group',
+        'border-solid',
+        'bg-blue-50',
+        'dark:bg-blue-900/20',
+        'bg-amber-50',
+        'dark:bg-amber-900/20',
+    );
     cell.classList.add('border-dashed');
     cell.removeAttribute('draggable');
 
     updateEffectView();
+    updateEventEffectView();
 }
 
-function fillCell(cell, facility) {
-    cell.replaceChildren(createFacilityCellContent(facility));
-    cell.dataset.facilityId = facility.id;
-    cell.setAttribute('aria-label', facility.name);
+function fillCell(cell, item) {
+    const isEvent = item.type === 'event';
+
+    cell.replaceChildren(isEvent ? createEventCellContent(item) : createFacilityCellContent(item));
+    cell.dataset.itemId = item.id;
+    cell.dataset.itemType = item.type;
+    cell.setAttribute('aria-label', item.name);
     cell.classList.remove('border-dashed');
-    cell.classList.add('group', 'border-solid', 'bg-blue-50', 'dark:bg-blue-900/20');
+    cell.classList.add('group', 'border-solid');
+    cell.classList.toggle('bg-blue-50', !isEvent);
+    cell.classList.toggle('dark:bg-blue-900/20', !isEvent);
+    cell.classList.toggle('bg-amber-50', isEvent);
+    cell.classList.toggle('dark:bg-amber-900/20', isEvent);
     cell.setAttribute('draggable', 'true');
 
     updateEffectView();
+    updateEventEffectView();
 }
 
 function bindLibraryItems() {
     document.querySelectorAll('.zoning-item').forEach((item) => {
-        item.addEventListener('dragstart', () => {
+        item.addEventListener('dragstart', (event) => {
             sourceCell = null;
             droppedOnGrid = false;
-            draggedData = {
+            setDragPayload(event, {
+                type: 'facility',
                 id: item.dataset.id,
                 name: item.dataset.name,
                 icon: item.dataset.icon,
-            };
+            });
+        });
+    });
+}
+
+function bindEventItems() {
+    document.querySelectorAll('.event-item').forEach((item) => {
+        item.addEventListener('dragstart', (event) => {
+            sourceCell = null;
+            droppedOnGrid = false;
+            setDragPayload(event, {
+                type: 'event',
+                id: item.dataset.id,
+                name: item.dataset.name,
+                categoryId: item.dataset.categoryId,
+                categoryName: item.dataset.category,
+                score: Number(item.dataset.score ?? 0),
+                status: item.dataset.status,
+                date: item.dataset.date,
+                startTime: item.dataset.startTime,
+                endTime: item.dataset.endTime,
+            });
         });
     });
 }
@@ -344,31 +613,37 @@ function bindLibraryItems() {
 function bindGridCells() {
     document.querySelectorAll('.grid-cell').forEach((cell) => {
         cell.addEventListener('dragstart', (event) => {
-            if (!cell.dataset.facilityId) {
+            if (!cell.dataset.itemId) {
                 event.preventDefault();
                 return;
             }
 
             sourceCell = cell;
             droppedOnGrid = false;
-            draggedData = {
-                id: cell.dataset.facilityId,
-                icon: cell.querySelector('.text-2xl').innerText,
-                name: cell.getAttribute('aria-label'),
-            };
+            const payload = cell.dataset.itemType === 'event'
+                ? {
+                    type: 'event',
+                    id: cell.dataset.itemId,
+                    name: cell.getAttribute('aria-label'),
+                    score: eventImpactMatrix[String(cell.dataset.itemId)]?.score ?? 0,
+                }
+                : {
+                    type: 'facility',
+                    id: cell.dataset.itemId,
+                    icon: cell.querySelector('.text-2xl').innerText,
+                    name: cell.getAttribute('aria-label'),
+                };
 
+            setDragPayload(event, payload);
             cell.style.opacity = '0.5';
         });
 
         cell.addEventListener('dragend', () => {
             cell.style.opacity = '1';
 
-            if (sourceCell && !droppedOnGrid) {
-                removeCellContent(sourceCell);
-            }
-
             droppedOnGrid = false;
             sourceCell = null;
+            draggedData = null;
         });
 
         cell.addEventListener('dragover', (event) => {
@@ -384,7 +659,8 @@ function bindGridCells() {
             event.preventDefault();
             cell.classList.remove('bg-indigo-50', 'border-indigo-400');
 
-            if (!draggedData) return;
+            const payload = getDropPayload(event);
+            if (!payload) return;
 
             droppedOnGrid = true;
 
@@ -392,20 +668,21 @@ function bindGridCells() {
                 removeCellContent(sourceCell);
             }
 
-            fillCell(cell, draggedData);
+            fillCell(cell, payload);
             sourceCell = null;
+            draggedData = null;
         });
 
         cell.addEventListener('mouseenter', (event) => {
             if (isTouchDevice()) return;
-            if (cell.dataset.facilityId) {
+            if (cell.dataset.itemId) {
                 showCellTooltip(cell, event.clientX, event.clientY);
             }
         });
 
         cell.addEventListener('mousemove', (event) => {
             if (isTouchDevice()) return;
-            if (!cell.dataset.facilityId) return;
+            if (!cell.dataset.itemId) return;
             const tooltip = getOrCreateTooltip();
             if (!tooltip.classList.contains('hidden')) {
                 positionTooltip(tooltip, event.clientX, event.clientY);
@@ -417,19 +694,75 @@ function bindGridCells() {
             hideCellTooltip();
         });
 
+        // ── Mobile: tap to show, tap same cell to hide ─────────────────────
+        // The touch drag polyfill needs the original touch event to drag
+        // filled cells out of the grid.
         cell.addEventListener('touchstart', (event) => {
-            if (!cell.dataset.facilityId) return;
-
-            event.preventDefault();
+            if (!cell.dataset.itemId || !event.touches[0]) return;
 
             const touch = event.touches[0];
+            touchTapState = {
+                cell,
+                x: touch.clientX,
+                y: touch.clientY,
+                startedAt: Date.now(),
+                moved: false,
+            };
+
+            hideCellTooltip();
+        }, { passive: true });
+
+        cell.addEventListener('touchmove', (event) => {
+            if (!touchTapState || touchTapState.cell !== cell || !event.touches[0]) return;
+
+            const touch = event.touches[0];
+            const moved = Math.abs(touch.clientX - touchTapState.x) > 8
+                || Math.abs(touch.clientY - touchTapState.y) > 8;
+
+            if (moved) {
+                touchTapState.moved = true;
+            }
+        }, { passive: true });
+
+        cell.addEventListener('touchend', (event) => {
+            if (!touchTapState || touchTapState.cell !== cell) return;
+
+            const wasTap = !touchTapState.moved
+                && Date.now() - touchTapState.startedAt < 350;
+            const x = touchTapState.x;
+            const y = touchTapState.y;
+
+            touchTapState = null;
+
+            if (!wasTap) return;
 
             if (activeTooltip === cell) {
                 hideCellTooltip();
             } else {
-                showCellTooltip(cell, touch.clientX, touch.clientY);
+                showCellTooltip(cell, x, y);
             }
-        }, { passive: false });
+        }, { passive: true });
+    });
+}
+
+function bindDropOutsideGrid() {
+    document.addEventListener('dragover', (event) => {
+        if (!sourceCell) return;
+        if (event.target.closest('.grid-cell')) return;
+
+        event.preventDefault();
+    });
+
+    document.addEventListener('drop', (event) => {
+        if (!sourceCell) return;
+        if (event.target.closest('.grid-cell')) return;
+
+        event.preventDefault();
+        removeCellContent(sourceCell);
+        sourceCell = null;
+        draggedData = null;
+        droppedOnGrid = false;
+        hideCellTooltip();
     });
 }
 
@@ -640,34 +973,15 @@ function bindExportButton() {
 
 document.addEventListener('DOMContentLoaded', () => {
     bindLibraryItems();
+    bindEventItems();
     bindGridCells();
+    bindDropOutsideGrid();
     bindSearch();
     bindClearButton();
     bindOutsideTap();
     bindExportButton();
     bindSimulationSettings();
+    bindSimulationSpeedControls();
     updateEffectView();
-
-    console.log('Simulation JS loaded');
-
-document.getElementById('start-simulation')?.addEventListener('click', () => {
-    console.log('Button clicked');
-
-    const date = document.getElementById('simulation-date').value;
-    const time = document.getElementById('simulation-time').value;
-
-    console.log(date, time);
-
-    const simulationDateTime = new Date(`${date}T${time}`);
-
-    document.getElementById('simulation-datetime').textContent =
-        simulationDateTime.toLocaleString();
-
-    const hour = simulationDateTime.getHours();
-
-    document.getElementById('day-night-status').textContent =
-        hour >= 18 || hour < 6
-            ? 'Night Mode'
-            : 'Day Mode';
-});
+    updateEventEffectView();
 });

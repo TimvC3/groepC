@@ -6,11 +6,16 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class EnsureUserIsAdmin
+class CityPlannerMiddleware
 {
+    /**
+     * Handle an incoming request.
+     *
+     * @param  Closure(Request): (Response)  $next
+     */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->role !== 'admin') {
+        if ($request->user()?->role !== 'city_planner') {
             abort(403);
         }
 
