@@ -9,6 +9,9 @@ let sourceCell = null;
 let droppedOnGrid = false;
 let activeTooltip = null;
 let simulationDateTime = null;
+let simulationInterval = null;
+let simulationRunning = false;
+let simulationSpeed = 1;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 
@@ -33,7 +36,7 @@ function updateSimulationDisplay() {
     const dayNightStatusElement = document.getElementById('day-night-status');
     const eventStatusElement = document.getElementById('simulation-event-status');
 
-    if (!simulationDateTimeElement || !dayNightStatusElement || !eventStatusElement || !simulationDateTime) {
+    if (!simulationDateTimeElement || !dayNightStatusElement || !simulationDateTime) {
         return;
     }
 
@@ -47,18 +50,27 @@ function updateSimulationDisplay() {
 
     const currentHour = simulationDateTime.getHours();
 
-    if (currentHour >= 7 && currentHour <= 9) {
-        eventStatusElement.textContent = 'Morning traffic event active.';
-    } else if (currentHour >= 17 && currentHour <= 19) {
-        eventStatusElement.textContent = 'Evening traffic event active.';
-    } else if (isNightTime(simulationDateTime)) {
-        eventStatusElement.textContent = 'Night rules active.';
-    } else {
-        eventStatusElement.textContent = 'No time-based event active.';
+    if (eventStatusElement) {
+        if (currentHour >= 7 && currentHour <= 9) {
+            eventStatusElement.textContent = 'Morning traffic event active.';
+        } else if (currentHour >= 17 && currentHour <= 19) {
+            eventStatusElement.textContent = 'Evening traffic event active.';
+        } else if (isNightTime(simulationDateTime)) {
+            eventStatusElement.textContent = 'Night rules active.';
+        } else {
+            eventStatusElement.textContent = 'No time-based event active.';
+        }
     }
 }
 
 function startSimulation() {
+    const button = document.getElementById('start-simulation');
+
+    if (simulationRunning) {
+        stopSimulation();
+        return;
+    }
+
     const dateInput = document.getElementById('simulation-date');
     const timeInput = document.getElementById('simulation-time');
 
@@ -75,7 +87,54 @@ function startSimulation() {
     }
 
     simulationDateTime = new Date(`${selectedDate}T${selectedTime}`);
+
+    simulationRunning = true;
+
+    button.textContent = 'Stop Simulation';
+    button.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+    button.classList.add('bg-red-600', 'hover:bg-red-700');
+
     updateSimulationDisplay();
+
+    simulationInterval = setInterval(() => {
+        if (!simulationRunning || simulationSpeed === 0) {
+            return;
+        }
+
+        simulationDateTime = new Date(
+            simulationDateTime.getTime() + (simulationSpeed * 60000)
+        );
+
+        updateSimulationDisplay();
+    }, 1000);
+}
+
+function stopSimulation() {
+    const button = document.getElementById('start-simulation');
+
+    clearInterval(simulationInterval);
+
+    simulationInterval = null;
+    simulationRunning = false;
+
+    button.textContent = 'Start Simulation';
+
+    button.classList.remove('bg-red-600', 'hover:bg-red-700');
+    button.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+}
+
+function bindSimulationSpeedControls() {
+    document.querySelectorAll('.sim-speed').forEach((button) => {
+        button.addEventListener('click', () => {
+            simulationSpeed = Number(button.dataset.speed);
+
+            document.querySelectorAll('.sim-speed').forEach((btn) => {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+            });
+
+            button.classList.add('bg-indigo-600', 'text-white');
+        });
+    });
 }
 
 function bindSimulationSettings() {
@@ -469,28 +528,9 @@ document.addEventListener('DOMContentLoaded', () => {
     bindClearButton();
     bindOutsideTap();
     bindSimulationSettings();
+    bindSimulationSpeedControls();
     updateEffectView();
 
     console.log('Simulation JS loaded');
 
-document.getElementById('start-simulation')?.addEventListener('click', () => {
-    console.log('Button clicked');
-
-    const date = document.getElementById('simulation-date').value;
-    const time = document.getElementById('simulation-time').value;
-
-    console.log(date, time);
-
-    const simulationDateTime = new Date(`${date}T${time}`);
-
-    document.getElementById('simulation-datetime').textContent =
-        simulationDateTime.toLocaleString();
-
-    const hour = simulationDateTime.getHours();
-
-    document.getElementById('day-night-status').textContent =
-        hour >= 18 || hour < 6
-            ? 'Night Mode'
-            : 'Day Mode';
-});
 });

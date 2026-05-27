@@ -94,6 +94,27 @@
                                     Start Simulation
                                 </button>
                             </div>
+                            <div class="mt-4 flex items-center justify-end gap-2">
+                                <button class="sim-speed px-3 py-1 border rounded-md" data-speed="-10">
+                                    <<
+                                </button>
+
+                                <button class="sim-speed px-3 py-1 border rounded-md" data-speed="-2">
+                                    <
+                                </button>
+
+                                <button class="sim-speed px-3 py-1 border rounded-md" data-speed="0">
+                                    ⏸
+                                </button>
+
+                                <button class="sim-speed px-3 py-1 border rounded-md" data-speed="2">
+                                    >
+                                </button>
+
+                                <button class="sim-speed px-3 py-1 border rounded-md" data-speed="10">
+                                    >>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="mt-4 text-sm text-gray-600 dark:text-gray-300">
