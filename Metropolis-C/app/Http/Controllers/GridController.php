@@ -23,23 +23,24 @@ class GridController extends Controller
             ->get()
             ->map(fn (Event $event) => [
                 'event' => $event,
-                'occurrence' => $event->nextOccurrenceAt(),
+                'occurrence' => [
+                    'starts_at' => $event->startsAt(),
+                    'ends_at' => $event->endsAt(),
+                ],
             ])
-            ->filter(fn (array $item) => $item['occurrence'] !== null)
             ->sortBy(fn (array $item) => $item['occurrence']['starts_at']->timestamp)
-            ->take(3)
             ->values();
 
         $eventEffectData = [
             'events' => $upcomingEvents->map(fn (array $item) => [
                 'id' => $item['event']->id,
                 'name' => $item['event']->name,
-                'status' => $item['event']->statusAt(),
+                'eventDate' => $item['event']->event_date?->format('Y-m-d'),
                 'date' => $item['occurrence']['starts_at']->format('d-m-Y'),
                 'startTime' => $item['occurrence']['starts_at']->format('H:i'),
                 'endTime' => $item['occurrence']['ends_at']->format('H:i'),
-                'categoryId' => $item['event']->affectedCategory()?->id,
-                'categoryName' => $item['event']->affectedCategory()?->name,
+                'recurrenceType' => $item['event']->recurrence_type->value,
+                'impacts' => $item['event']->impactScores(),
                 'score' => $item['event']->impactScore(),
             ])->values(),
         ];

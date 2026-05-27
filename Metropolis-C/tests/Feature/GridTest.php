@@ -79,7 +79,9 @@ class GridTest extends TestCase
             ->assertViewHas('eventEffectData', function (array $eventEffectData) use ($event, $mobility): bool {
                 $eventData = $eventEffectData['events']->firstWhere('id', $event->id);
 
-                return $eventData['categoryId'] === $mobility->id
+                $impact = collect($eventData['impacts'])->firstWhere('category_id', $mobility->id);
+
+                return $impact
                     && $eventData['score'] === -4;
             });
     }
