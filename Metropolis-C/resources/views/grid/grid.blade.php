@@ -74,7 +74,7 @@
                         <div class="grid grid-cols-4 justify-center gap-1 rounded-2xl border-4 border-gray-100 p-2 dark:border-gray-700 dark:bg-gray-900/50 sm:rounded-3xl">
                             @for ($i = 1; $i <= 12; $i++)
                                 <div
-                                    class="grid-cell flex h-16 w-16 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-1 text-center transition-all dark:border-gray-600 min-[380px]:h-20 min-[380px]:w-20 sm:h-24 sm:w-24 sm:rounded-xl"
+                                    class="grid-cell flex h-16 w-16 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-1 text-center transition-all dark:border-gray-600 xs:h-20 xs:w-20 sm:h-24 sm:w-24 sm:rounded-xl"
                                     data-index="{{ $i }}"
                                 >
                                     <span class="font-mono text-xs text-gray-400">{{ $i }}</span>
