@@ -791,6 +791,24 @@ function hideCellTooltip() {
     activeTooltip = null;
 }
 
+function toggleCellLock(cell) {
+    const isLocked = cell.dataset.locked === "true";
+    cell.dataset.locked = isLocked ? "false" : "true";
+
+    updateLockUI(cell);
+}
+
+function updateLockUI(cell) {
+    const isLocked = cell.dataset.locked === "true";
+
+    if (isLocked) {
+        cell.classList.add('ring-2', 'ring-green-500');
+        cell.setAttribute('title', 'Locked');
+    } else {
+        cell.classList.remove('ring-2', 'ring-green-500');
+        cell.setAttribute('title', 'Unlocked');
+    }
+}
 function showCellTooltip(cell, x, y) {
     const tooltip = getOrCreateTooltip();
     activeTooltip = cell;
@@ -826,6 +844,8 @@ function createEventCellContent(event) {
 }
 
 function removeCellContent(cell) {
+    if (cell.dataset.locked === "true") return;
+
     const index = cell.dataset.index;
     const label = document.createElement('span');
 
@@ -833,20 +853,24 @@ function removeCellContent(cell) {
     label.textContent = index;
 
     cell.replaceChildren(label);
+
     delete cell.dataset.itemId;
     delete cell.dataset.itemType;
     cell.removeAttribute('aria-label');
+
     cell.classList.remove(
         'group',
         'border-solid',
         'bg-blue-50',
         'dark:bg-blue-900/20',
         'bg-amber-50',
-        'dark:bg-amber-900/20',
+        'dark:bg-amber-900/20'
     );
+
     cell.classList.add('border-dashed');
     cell.removeAttribute('draggable');
 
+    updateLockUI(cell);
     updateEffectView();
     updateEventEffectView();
 }
@@ -854,7 +878,14 @@ function removeCellContent(cell) {
 function fillCell(cell, item) {
     const isEvent = item.type === 'event';
 
-    cell.replaceChildren(isEvent ? createEventCellContent(item) : createFacilityCellContent(item));
+    cell.replaceChildren(
+        isEvent ? createEventCellContent(item) : createFacilityCellContent(item)
+    );
+
+    if (cell.dataset.locked !== "true") {
+        cell.dataset.locked = cell.dataset.locked || "false";
+    }
+
     cell.dataset.itemId = item.id;
     cell.dataset.itemType = item.type;
     cell.setAttribute('aria-label', item.name);
@@ -865,7 +896,7 @@ function fillCell(cell, item) {
     cell.classList.toggle('bg-amber-50', isEvent);
     cell.classList.toggle('dark:bg-amber-900/20', isEvent);
     cell.setAttribute('draggable', 'true');
-
+    updateLockUI(cell);
     updateEffectView();
     updateEventEffectView();
 }
@@ -972,14 +1003,21 @@ function updateUpcomingEventList() {
 
 function bindGridCells() {
     document.querySelectorAll('.grid-cell').forEach((cell) => {
+
         cell.addEventListener('dragstart', (event) => {
             if (!cell.dataset.itemId) {
                 event.preventDefault();
                 return;
             }
 
+            if (cell.dataset.locked === "true") {
+                event.preventDefault();
+                return;
+            }
+
             sourceCell = cell;
             droppedOnGrid = false;
+
             const payload = cell.dataset.itemType === 'event'
                 ? {
                     type: 'event',
@@ -990,7 +1028,7 @@ function bindGridCells() {
                 : {
                     type: 'facility',
                     id: cell.dataset.itemId,
-                    icon: cell.querySelector('.text-2xl').innerText,
+                    icon: cell.querySelector('.text-2xl')?.innerText || '',
                     name: cell.getAttribute('aria-label'),
                 };
 
@@ -1000,7 +1038,6 @@ function bindGridCells() {
 
         cell.addEventListener('dragend', () => {
             cell.style.opacity = '1';
-
             droppedOnGrid = false;
             sourceCell = null;
             draggedData = null;
@@ -1019,6 +1056,8 @@ function bindGridCells() {
             event.preventDefault();
             cell.classList.remove('bg-indigo-50', 'border-indigo-400');
 
+            if (cell.dataset.locked === "true") return;
+
             const payload = getDropPayload(event);
             if (!payload) return;
 
@@ -1029,6 +1068,7 @@ function bindGridCells() {
             }
 
             fillCell(cell, payload);
+
             sourceCell = null;
             draggedData = null;
         });
@@ -1043,6 +1083,7 @@ function bindGridCells() {
         cell.addEventListener('mousemove', (event) => {
             if (isTouchDevice()) return;
             if (!cell.dataset.itemId) return;
+
             const tooltip = getOrCreateTooltip();
             if (!tooltip.classList.contains('hidden')) {
                 positionTooltip(tooltip, event.clientX, event.clientY);
@@ -1054,13 +1095,11 @@ function bindGridCells() {
             hideCellTooltip();
         });
 
-        // ── Mobile: tap to show, tap same cell to hide ─────────────────────
-        // The touch drag polyfill needs the original touch event to drag
-        // filled cells out of the grid.
         cell.addEventListener('touchstart', (event) => {
             if (!cell.dataset.itemId || !event.touches[0]) return;
 
             const touch = event.touches[0];
+
             touchTapState = {
                 cell,
                 x: touch.clientX,
@@ -1076,19 +1115,23 @@ function bindGridCells() {
             if (!touchTapState || touchTapState.cell !== cell || !event.touches[0]) return;
 
             const touch = event.touches[0];
-            const moved = Math.abs(touch.clientX - touchTapState.x) > 8
-                || Math.abs(touch.clientY - touchTapState.y) > 8;
+
+            const moved =
+                Math.abs(touch.clientX - touchTapState.x) > 8 ||
+                Math.abs(touch.clientY - touchTapState.y) > 8;
 
             if (moved) {
                 touchTapState.moved = true;
             }
         }, { passive: true });
 
-        cell.addEventListener('touchend', (event) => {
+        cell.addEventListener('touchend', () => {
             if (!touchTapState || touchTapState.cell !== cell) return;
 
-            const wasTap = !touchTapState.moved
-                && Date.now() - touchTapState.startedAt < 350;
+            const wasTap =
+                !touchTapState.moved &&
+                Date.now() - touchTapState.startedAt < 350;
+
             const x = touchTapState.x;
             const y = touchTapState.y;
 
@@ -1102,6 +1145,10 @@ function bindGridCells() {
                 showCellTooltip(cell, x, y);
             }
         }, { passive: true });
+
+        cell.addEventListener('dblclick', () => {
+            toggleCellLock(cell);
+        });
     });
 }
 
@@ -1116,6 +1163,8 @@ function bindDropOutsideGrid() {
     document.addEventListener('drop', (event) => {
         if (!sourceCell) return;
         if (event.target.closest('.grid-cell')) return;
+
+        if (sourceCell?.dataset.locked === "true") return;
 
         event.preventDefault();
         removeCellContent(sourceCell);
