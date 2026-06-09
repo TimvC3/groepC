@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\FacilityCondition;
 
 class Facility extends Model
 {
@@ -38,15 +39,15 @@ class Facility extends Model
         return $this->hasMany(FacilityCondition::class);
     }
 
-    // public requiredNeighbours(): HasMany
-    // {
-    //     return $this->conditions()
-    //         ->where('condition_type', 'required_neighbour');
-    // }
+    public function requiredNeighbours(): HasMany
+    {
+        return $this->conditions()
+            ->where('condition_type', 'required_neighbour');
+    }
 
-    // public forbiddenNeighbours(): HasMany
-    // {
-    //     return $this->conditions()
-    //         ->where('condition_type', 'forbidden_neighbour');
-    // }
+    public function forbiddenNeighbours(): HasMany
+    {
+        return $this->conditions()
+            ->where('condition_type', 'forbidden_neighbour');
+    }
 }
