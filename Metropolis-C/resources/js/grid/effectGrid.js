@@ -32,6 +32,70 @@ function scoreColorClass(score) {
     return 'text-gray-500 dark:text-gray-400';
 }
 
+function isApprovedCell(cell) {
+    return cell?.dataset?.approved === 'true';
+}
+
+function showGridMessage(message, type = 'error') {
+    document.getElementById('grid-action-message')?.remove();
+
+    const messageElement = document.createElement('div');
+    messageElement.id = 'grid-action-message';
+    messageElement.setAttribute('role', 'alert');
+
+    messageElement.className = [
+        'fixed bottom-6 right-6 z-50 max-w-sm rounded-lg px-4 py-3 text-sm font-semibold shadow-lg',
+        type === 'error'
+            ? 'border border-red-200 bg-red-50 text-red-700'
+            : 'border border-green-200 bg-green-50 text-green-700',
+    ].join(' ');
+
+    messageElement.textContent = message;
+    document.body.appendChild(messageElement);
+
+    const statusElement = document.getElementById('effect-status');
+
+    if (statusElement) {
+        statusElement.textContent = message;
+    }
+
+    window.setTimeout(() => {
+        messageElement.remove();
+    }, 3500);
+}
+
+function approvedMessage() {
+    showGridMessage('This destination has already been approved and can no longer be changed or removed.');
+}
+
+function applyApprovedStyle(cell) {
+    if (!isApprovedCell(cell)) return;
+
+    cell.classList.remove(
+        'border-dashed',
+        'border-gray-300',
+        'dark:border-gray-600',
+        'bg-blue-50',
+        'dark:bg-blue-900/20',
+        'bg-amber-50',
+        'dark:bg-amber-900/20',
+        'bg-indigo-50',
+        'border-indigo-400',
+        'border-red-500',
+        'bg-red-50'
+    );
+
+    cell.classList.add(
+        'border-solid',
+        'border-green-500',
+        'bg-green-50',
+        'dark:bg-green-900/20',
+        'cursor-not-allowed'
+    );
+
+    cell.title = 'Approved destination: this cell can no longer be changed or removed.';
+}
+
 function isNightTime(dateTime) {
     const hour = dateTime.getHours();
 
@@ -826,6 +890,10 @@ function createEventCellContent(event) {
 }
 
 function removeCellContent(cell) {
+    if (isApprovedCell(cell)) {
+        approvedMessage();
+        return false;
+    }
     const index = cell.dataset.index;
     const label = document.createElement('span');
 
@@ -849,9 +917,14 @@ function removeCellContent(cell) {
 
     updateEffectView();
     updateEventEffectView();
+    return true;
 }
 
 function fillCell(cell, item) {
+        if (isApprovedCell(cell)) {
+        approvedMessage();
+        return false;
+    }
     const isEvent = item.type === 'event';
 
     cell.replaceChildren(isEvent ? createEventCellContent(item) : createFacilityCellContent(item));
@@ -868,6 +941,7 @@ function fillCell(cell, item) {
 
     updateEffectView();
     updateEventEffectView();
+    return true;
 }
 
 function bindLibraryItems() {
@@ -972,7 +1046,16 @@ function updateUpcomingEventList() {
 
 function bindGridCells() {
     document.querySelectorAll('.grid-cell').forEach((cell) => {
+        applyApprovedStyle(cell);
         cell.addEventListener('dragstart', (event) => {
+                        if (isApprovedCell(cell)) {
+                event.preventDefault();
+                approvedMessage();
+                sourceCell = null;
+                draggedData = null;
+                droppedOnGrid = true;
+                return;
+            }
             if (!cell.dataset.itemId) {
                 event.preventDefault();
                 return;
@@ -990,7 +1073,7 @@ function bindGridCells() {
                 : {
                     type: 'facility',
                     id: cell.dataset.itemId,
-                    icon: cell.querySelector('.text-2xl').innerText,
+                    icon: cell.querySelector('.text-2xl')?.innerText ?? '',
                     name: cell.getAttribute('aria-label'),
                 };
 
@@ -1008,19 +1091,49 @@ function bindGridCells() {
 
         cell.addEventListener('dragover', (event) => {
             event.preventDefault();
+
+            if (isApprovedCell(cell)) {
+                event.dataTransfer.dropEffect = 'none';
+                cell.classList.add('border-red-500', 'bg-red-50');
+                return;
+            }
+
             cell.classList.add('bg-indigo-50', 'border-indigo-400');
         });
 
         cell.addEventListener('dragleave', () => {
-            cell.classList.remove('bg-indigo-50', 'border-indigo-400');
+            cell.classList.remove(
+                'bg-indigo-50',
+                'border-indigo-400',
+                'border-red-500',
+                'bg-red-50'
+            );
+
+            applyApprovedStyle(cell);
         });
 
         cell.addEventListener('drop', (event) => {
             event.preventDefault();
-            cell.classList.remove('bg-indigo-50', 'border-indigo-400');
+
+            cell.classList.remove(
+                'bg-indigo-50',
+                'border-indigo-400',
+                'border-red-500',
+                'bg-red-50'
+            );
+
+            applyApprovedStyle(cell);
 
             const payload = getDropPayload(event);
             if (!payload) return;
+
+            if (isApprovedCell(cell)) {
+                droppedOnGrid = true;
+                approvedMessage();
+                sourceCell = null;
+                draggedData = null;
+                return;
+            }
 
             droppedOnGrid = true;
 
@@ -1142,7 +1255,20 @@ function bindSearch() {
 
 function bindClearButton() {
     document.getElementById('clear-grid')?.addEventListener('click', () => {
-        document.querySelectorAll('.grid-cell').forEach((cell) => removeCellContent(cell));
+        let blockedApprovedCells = 0;
+
+        document.querySelectorAll('.grid-cell').forEach((cell) => {
+            if (isApprovedCell(cell)) {
+                blockedApprovedCells += 1;
+                return;
+            }
+
+            removeCellContent(cell);
+        });
+
+        if (blockedApprovedCells > 0) {
+            approvedMessage();
+        }
     });
 }
 
