@@ -32,4 +32,21 @@ class Facility extends Model
  
         return $score?->score;
     }
+
+    public function conditions(): HasMany
+    {
+        return $this->hasMany(FacilityCondition::class);
+    }
+
+    // public requiredNeighbours(): HasMany
+    // {
+    //     return $this->conditions()
+    //         ->where('condition_type', 'required_neighbour');
+    // }
+
+    // public forbiddenNeighbours(): HasMany
+    // {
+    //     return $this->conditions()
+    //         ->where('condition_type', 'forbidden_neighbour');
+    // }
 }
