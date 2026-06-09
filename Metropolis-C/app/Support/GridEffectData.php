@@ -17,6 +17,7 @@ class GridEffectData
                     'name' => $category->name,
                 ])
                 ->values(),
+
             'scoreMatrix' => $facilities
                 ->mapWithKeys(fn (Facility $facility) => [
                     $facility->id => $categories
@@ -27,6 +28,16 @@ class GridEffectData
                         ])
                         ->all(),
                 ]),
+
+            'neighbourRules' => $facilities
+                ->filter(fn (Facility $facility) => $facility->required_neighbour_facility_id)
+                ->mapWithKeys(fn (Facility $facility) => [
+                    $facility->id => [
+                        'requiredNeighbourId' => (int) $facility->required_neighbour_facility_id,
+                        'requiredNeighbourName' => $facility->requiredNeighbour?->name ?? 'Required neighbour',
+                    ],
+                ])
+                ->all(),
         ];
     }
 }

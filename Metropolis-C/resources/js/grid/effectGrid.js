@@ -1,6 +1,7 @@
 const gridEffectData = window.gridEffectData || {};
 const effectCategories = gridEffectData.categories || [];
 const facilityScoreMatrix = gridEffectData.scoreMatrix || {};
+const neighbourRules = gridEffectData.neighbourRules || {};
 
 const gridColumns = 4;
 
@@ -100,6 +101,76 @@ function getSurroundingCells(cell) {
 
         return otherIndex >= 1 && otherIndex <= totalCells && isAroundCell;
     });
+}
+
+function getHorizontalVerticalNeighbourCells(cell) {
+    const index = Number(cell.dataset.index);
+    const allCells = Array.from(document.querySelectorAll('.grid-cell'));
+    const totalCells = allCells.length;
+
+    const row = Math.floor((index - 1) / gridColumns);
+    const column = (index - 1) % gridColumns;
+
+    return allCells.filter((otherCell) => {
+        const otherIndex = Number(otherCell.dataset.index);
+        const otherRow = Math.floor((otherIndex - 1) / gridColumns);
+        const otherColumn = (otherIndex - 1) % gridColumns;
+
+        const isDirectNeighbour =
+            Math.abs(otherRow - row) + Math.abs(otherColumn - column) === 1;
+
+        return otherIndex >= 1 && otherIndex <= totalCells && isDirectNeighbour;
+    });
+}
+
+function getNeighbourRule(facilityId) {
+    return neighbourRules[String(facilityId)] || neighbourRules[facilityId] || null;
+}
+
+function requiredNeighbourIsPresent(cell, facilityId) {
+    const rule = getNeighbourRule(facilityId);
+
+    if (!rule) return true;
+
+    return getHorizontalVerticalNeighbourCells(cell).some((neighbourCell) => {
+        return String(neighbourCell.dataset.facilityId) === String(rule.requiredNeighbourId);
+    });
+}
+
+function showPlacementFeedback(message, type = 'error') {
+    document.getElementById('placement-feedback')?.remove();
+
+    const feedback = document.createElement('div');
+    feedback.id = 'placement-feedback';
+    feedback.textContent = message;
+    feedback.setAttribute('role', 'alert');
+
+    feedback.className = [
+        'fixed',
+        'right-4',
+        'bottom-4',
+        'z-50',
+        'rounded-lg',
+        'px-4',
+        'py-3',
+        'text-sm',
+        'font-semibold',
+        'shadow-lg',
+    ].join(' ');
+
+    if (type === 'error') {
+        feedback.style.backgroundColor = '#fee2e2';
+        feedback.style.color = '#991b1b';
+        feedback.style.border = '1px solid #fecaca';
+    } else {
+        feedback.style.backgroundColor = '#dcfce7';
+        feedback.style.color = '#166534';
+        feedback.style.border = '1px solid #bbf7d0';
+    }
+
+    document.body.appendChild(feedback);
+
+    setTimeout(() => feedback.remove(), 3000);
 }
 
 function getLocalScores(cell) {
@@ -318,6 +389,19 @@ function bindGridCells() {
             cell.classList.remove('bg-indigo-50', 'border-indigo-400');
 
             if (!draggedData) return;
+
+            const rule = getNeighbourRule(draggedData.id);
+
+            if (!requiredNeighbourIsPresent(cell, draggedData.id)) {
+                droppedOnGrid = true;
+
+                showPlacementFeedback(
+                    `${draggedData.name} must be placed next to ${rule.requiredNeighbourName}.`
+                );
+
+                sourceCell = null;
+                return;
+            }
 
             droppedOnGrid = true;
 
