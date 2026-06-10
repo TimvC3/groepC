@@ -1,10 +1,14 @@
+import { calculateFacilityEffects } from './facilityScoring.js';
+
 const gridEffectData = window.gridEffectData || {};
 const effectCategories = gridEffectData.categories || [];
 const facilityScoreMatrix = gridEffectData.scoreMatrix || {};
+const facilityEffectData = gridEffectData.facilities || {};
 const gridEventEffectData = window.gridEventEffectData || {};
 const eventImpactMatrix = Object.fromEntries(
     (gridEventEffectData.events || []).map((event) => [String(event.id), event])
 );
+const gridConditionData = window.gridConditionData || {};
 
 const gridColumns = 4;
 const simulationStorageKey = 'metropolis.simulationDateTime';
@@ -19,6 +23,7 @@ let simulationInterval = null;
 let simulationRunning = false;
 let simulationSpeed = 1;
 let lastSimulationSpeed = 1;
+let placementSequence = 0;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 
@@ -430,6 +435,141 @@ function selectedFacilityIds() {
         .filter(Boolean);
 }
 
+function selectedFacilityPlacements() {
+    return Array.from(document.querySelectorAll('.grid-cell'))
+        .filter((cell) => cell.dataset.itemType === 'facility')
+        .map((cell) => ({
+            index: Number(cell.dataset.index),
+            facilityId: String(cell.dataset.itemId),
+            placementOrder: Number(cell.dataset.placementOrder || cell.dataset.index),
+        }));
+}
+
+function currentGridState() {
+    return new Map(
+        Array.from(document.querySelectorAll('.grid-cell'))
+            .filter((cell) => cell.dataset.itemId)
+            .map((cell) => [
+                Number(cell.dataset.index),
+                {
+                    type: cell.dataset.itemType,
+                    id: String(cell.dataset.itemId),
+                    name: cell.getAttribute('aria-label') || '',
+                },
+            ])
+    );
+}
+
+function neighbouringIndexes(index) {
+    const zeroBasedIndex = index - 1;
+    const row = Math.floor(zeroBasedIndex / gridColumns);
+    const column = zeroBasedIndex % gridColumns;
+    const neighbours = [];
+
+    if (row > 0) neighbours.push(index - gridColumns);
+    if (row < 2) neighbours.push(index + gridColumns);
+    if (column > 0) neighbours.push(index - 1);
+    if (column < gridColumns - 1) neighbours.push(index + 1);
+
+    return neighbours;
+}
+
+function conditionViolations(state) {
+    const violations = [];
+
+    state.forEach((item, index) => {
+        if (item.type !== 'facility') return;
+
+        const facilityConditions = gridConditionData[item.id]?.conditions || [];
+        const neighbouringFacilityIds = neighbouringIndexes(index)
+            .map((neighbourIndex) => state.get(neighbourIndex))
+            .filter((neighbour) => neighbour?.type === 'facility')
+            .map((neighbour) => neighbour.id);
+
+        facilityConditions.forEach((condition) => {
+            const hasNeighbour = neighbouringFacilityIds.includes(
+                String(condition.neighbourFacilityId)
+            );
+
+            if (condition.type === 'required_neighbour' && !hasNeighbour) {
+                violations.push(
+                    `${item.name} requires ${condition.neighbourFacilityName} directly next to it.`
+                );
+            }
+
+            if (condition.type === 'forbidden_neighbour' && hasNeighbour) {
+                violations.push(
+                    `${item.name} cannot be directly next to ${condition.neighbourFacilityName}.`
+                );
+            }
+        });
+    });
+
+    return violations;
+}
+
+function proposedGridState(targetCell, item, originalCell = null) {
+    const state = currentGridState();
+
+    if (originalCell && originalCell !== targetCell) {
+        state.delete(Number(originalCell.dataset.index));
+    }
+
+    state.set(Number(targetCell.dataset.index), {
+        type: item.type,
+        id: String(item.id),
+        name: item.name || '',
+    });
+
+    return state;
+}
+
+function setConditionStatus(message, type = 'neutral') {
+    const status = document.getElementById('condition-status');
+    if (!status) return;
+
+    const colorClasses = {
+        neutral: 'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300',
+        success: 'border-green-200 bg-green-50 text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300',
+        error: 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300',
+    };
+
+    status.className = `mt-4 w-full max-w-md rounded-lg border px-4 py-3 text-sm ${colorClasses[type]}`;
+    status.textContent = message;
+}
+
+function updateConditionStatus() {
+    const state = currentGridState();
+    const placedFacilities = Array.from(state.values())
+        .filter((item) => item.type === 'facility');
+
+    if (placedFacilities.length === 0) {
+        setConditionStatus(
+            'Function conditions are active. Place a function to evaluate its neighbour rules.'
+        );
+        return;
+    }
+
+    const violations = conditionViolations(state);
+
+    if (violations.length > 0) {
+        setConditionStatus(violations[0], 'error');
+        return;
+    }
+
+    const appliedConditionCount = placedFacilities.reduce(
+        (total, item) => total + (gridConditionData[item.id]?.conditions?.length || 0),
+        0
+    );
+
+    setConditionStatus(
+        appliedConditionCount > 0
+            ? `${appliedConditionCount} neighbour condition(s) applied successfully.`
+            : 'The placed functions have no neighbour conditions.',
+        'success'
+    );
+}
+
 function selectedEvents() {
     return Array.from(document.querySelectorAll('.grid-cell'))
         .filter((cell) => cell.dataset.itemType === 'event')
@@ -468,18 +608,12 @@ function emptyCategoryTotals() {
 }
 
 function facilityCategoryTotals() {
-    const totals = emptyCategoryTotals();
-    const facilityIds = selectedFacilityIds();
-
-    facilityIds.forEach((facilityId) => {
-        const scores = facilityScoreMatrix[facilityId] || {};
-
-        effectCategories.forEach((category) => {
-            totals[category.id] += Number(scores[category.id] ?? 0);
-        });
+    return calculateFacilityEffects({
+        categories: effectCategories,
+        facilities: facilityEffectData,
+        placements: selectedFacilityPlacements(),
+        totalCells: document.querySelectorAll('.grid-cell').length,
     });
-
-    return totals;
 }
 
 function eventCategoryTotals() {
@@ -502,12 +636,37 @@ function updateStatus(totalScore, facilityCount) {
     if (!statusElement) return;
 
     statusElement.textContent = facilityCount === 0
-        ? 'Geen faciliteiten geselecteerd. Totale score is 0.'
-        : `${facilityCount} faciliteiten geselecteerd. Totale score is ${formatScore(totalScore)}.`;
+        ? 'No functions selected. The Quality of Life score is 0.'
+        : `${facilityCount} function(s) selected. The Quality of Life score is ${formatScore(totalScore)}.`;
+}
+
+function renderFacilityAdjustments(adjustments) {
+    const list = document.getElementById('facility-adjustment-list');
+    const emptyState = document.getElementById('facility-adjustment-empty');
+    if (!list || !emptyState) return;
+
+    list.replaceChildren();
+    emptyState.classList.toggle('hidden', adjustments.length > 0);
+
+    adjustments.forEach((adjustment) => {
+        const row = document.createElement('div');
+        const reason = document.createElement('span');
+        const score = document.createElement('span');
+
+        row.className = 'flex items-start justify-between gap-3 rounded-md border border-gray-200 px-3 py-2 text-xs dark:border-gray-700';
+        reason.className = 'text-gray-600 dark:text-gray-300';
+        score.className = `shrink-0 font-bold ${scoreColorClass(adjustment.amount)}`;
+        reason.textContent = `${adjustment.reason} (${adjustment.categoryName})`;
+        score.textContent = formatScore(adjustment.amount);
+
+        row.append(reason, score);
+        list.append(row);
+    });
 }
 
 function updateEffectView() {
-    const facilityTotals = facilityCategoryTotals();
+    const facilityEffects = facilityCategoryTotals();
+    const facilityTotals = facilityEffects.totals;
     const eventTotals = eventCategoryTotals();
     const facilityIds = selectedFacilityIds();
 
@@ -544,6 +703,8 @@ function updateEffectView() {
         .toggle('hidden', facilityIds.length > 0 || activeEventNames().length > 0);
 
     updateStatus(totalScore, facilityIds.length);
+    renderFacilityAdjustments(facilityEffects.adjustments);
+    updateConditionStatus();
     updateActiveEventDisplay();
 }
 
@@ -835,6 +996,7 @@ function removeCellContent(cell) {
     cell.replaceChildren(label);
     delete cell.dataset.itemId;
     delete cell.dataset.itemType;
+    delete cell.dataset.placementOrder;
     cell.removeAttribute('aria-label');
     cell.classList.remove(
         'group',
@@ -857,6 +1019,13 @@ function fillCell(cell, item) {
     cell.replaceChildren(isEvent ? createEventCellContent(item) : createFacilityCellContent(item));
     cell.dataset.itemId = item.id;
     cell.dataset.itemType = item.type;
+    if (!isEvent) {
+        const placementOrder = Number(item.placementOrder) || ++placementSequence;
+        placementSequence = Math.max(placementSequence, placementOrder);
+        cell.dataset.placementOrder = String(placementOrder);
+    } else {
+        delete cell.dataset.placementOrder;
+    }
     cell.setAttribute('aria-label', item.name);
     cell.classList.remove('border-dashed');
     cell.classList.add('group', 'border-solid');
@@ -992,6 +1161,7 @@ function bindGridCells() {
                     id: cell.dataset.itemId,
                     icon: cell.querySelector('.text-2xl').innerText,
                     name: cell.getAttribute('aria-label'),
+                    placementOrder: Number(cell.dataset.placementOrder),
                 };
 
             setDragPayload(event, payload);
@@ -1021,6 +1191,16 @@ function bindGridCells() {
 
             const payload = getDropPayload(event);
             if (!payload) return;
+
+            const violations = conditionViolations(
+                proposedGridState(cell, payload, sourceCell)
+            );
+
+            if (violations.length > 0) {
+                droppedOnGrid = false;
+                setConditionStatus(`Placement blocked: ${violations[0]}`, 'error');
+                return;
+            }
 
             droppedOnGrid = true;
 
@@ -1118,6 +1298,16 @@ function bindDropOutsideGrid() {
         if (event.target.closest('.grid-cell')) return;
 
         event.preventDefault();
+
+        const state = currentGridState();
+        state.delete(Number(sourceCell.dataset.index));
+        const violations = conditionViolations(state);
+
+        if (violations.length > 0) {
+            setConditionStatus(`Removal blocked: ${violations[0]}`, 'error');
+            return;
+        }
+
         removeCellContent(sourceCell);
         sourceCell = null;
         draggedData = null;

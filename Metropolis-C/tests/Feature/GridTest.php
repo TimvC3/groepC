@@ -68,6 +68,7 @@ class GridTest extends TestCase
             ->assertSee('Event Effects')
             ->assertSee('Road Closure')
             ->assertSee('Quality Of Life Score')
+            ->assertSee('Bonuses and Penalties')
             ->assertSee('id="effect-status"', false)
             ->assertSee('aria-live="polite"', false)
             ->assertSee('window.gridEffectData', false)

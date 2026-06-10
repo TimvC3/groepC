@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Mail\NewFacilityCreated;
 use App\Models\Category;
 use App\Models\Facility;
-use Illuminate\Http\Request;
 use App\Models\FacilityScore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -23,7 +23,7 @@ class FacilityController extends Controller
 
     public function edit(Facility $facility): View
     {
-        $facility->load(['category', 'scores.category']);
+        $facility->load(['category', 'scores.category', 'conditions.neighbourFacility']);
 
         return $this->facilitiesView($facility);
     }
@@ -31,14 +31,15 @@ class FacilityController extends Controller
     private function facilitiesView(?Facility $editingFacility = null): View
     {
         $categories = Category::orderBy('sort_order')->get();
- 
+
         $facilities = Facility::with([
             'category',
             'scores.category',
+            'conditions.neighbourFacility',
         ])
-        ->orderBy('sort_order')
-        ->get();
- 
+            ->orderBy('sort_order')
+            ->get();
+
         return view('grid.facilities', compact('facilities', 'categories', 'editingFacility'));
     }
 
@@ -120,9 +121,9 @@ class FacilityController extends Controller
         $validated = $request->validate([
             'score' => ['required', 'integer', 'min:-5', 'max:5'],
         ]);
- 
+
         $facilityScore->update($validated);
- 
+
         return response()->json([
             'score' => $facilityScore->score,
         ]);

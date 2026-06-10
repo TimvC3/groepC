@@ -13,12 +13,22 @@ class GridController extends Controller
     {
         $categories = Category::orderBy('sort_order')->get();
 
-        $facilities = Facility::with(['category', 'scores.category'])
+        $facilities = Facility::with(['category', 'scores.category', 'conditions.neighbourFacility'])
             ->orderBy('sort_order')
             ->get();
 
         $groupedFacilities = $facilities->groupBy('category.name');
         $effectData = GridEffectData::from($categories, $facilities);
+        $conditionData = $facilities->mapWithKeys(fn (Facility $facility) => [
+            (string) $facility->id => [
+                'name' => $facility->name,
+                'conditions' => $facility->conditions->map(fn ($condition) => [
+                    'type' => $condition->condition_type,
+                    'neighbourFacilityId' => (string) $condition->neighbour_facility_id,
+                    'neighbourFacilityName' => $condition->neighbourFacility->name,
+                ])->values(),
+            ],
+        ]);
         $upcomingEvents = Event::with('categories')
             ->get()
             ->map(fn (Event $event) => [
@@ -55,6 +65,7 @@ class GridController extends Controller
             'facilities',
             'groupedFacilities',
             'effectData',
+            'conditionData',
             'upcomingEvents',
             'eventEffectData',
         ));
