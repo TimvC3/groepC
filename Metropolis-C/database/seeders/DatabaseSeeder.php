@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -26,13 +25,19 @@ class DatabaseSeeder extends Seeder
             'password' => 'Password',
             'role' => 'admin',
         ]);
+        User::factory()->create([
+            'name' => 'Policy Maker',
+            'email' => 'policy.maker@example.com',
+            'password' => 'Password',
+            'role' => 'policy_maker',
+        ]);
         $this->call([
             CategorySeeder::class,
+            EventSeeder::class,
             FacilitySeeder::class,
             FacilityScoreSeeder::class,
             ZoningDesignationSeeder::class,
         ]);
 
-        
     }
 }

@@ -33,7 +33,27 @@ class EventController extends Controller
             ->orderBy('start_time')
             ->get();
 
-        return view('events.index', compact('events', 'categories', 'editingEvent'));
+        $groupedEvents = $events
+            ->map(fn (Event $event) => [
+                'event' => $event,
+                'status' => 'planned',
+                'occurrence' => $event->nextOccurrenceAt(),
+            ])
+            ->groupBy('status');
+
+        $upcomingEvents = Event::with('categories')
+            ->get()
+            ->map(fn (Event $event) => [
+                'event' => $event,
+                'occurrence' => [
+                    'starts_at' => $event->startsAt(),
+                    'ends_at' => $event->endsAt(),
+                ],
+            ])
+            ->sortBy(fn (array $item) => $item['occurrence']['starts_at']->timestamp)
+            ->values();
+
+        return view('events.index', compact('events', 'groupedEvents', 'categories', 'editingEvent', 'upcomingEvents'));
     }
 
     public function store(StoreEventRequest $request): RedirectResponse
@@ -46,7 +66,8 @@ class EventController extends Controller
                 'event_type' => $validated['event_type'],
                 'event_date' => $validated['event_date'],
                 'start_time' => $validated['start_time'],
-                'is_recurring' => $validated['is_recurring'] ?? false,
+                'end_time' => $validated['end_time'],
+                'recurrence_type' => $validated['recurrence_type'],
             ]);
 
             $event->categories()->sync($this->categoryScores($validated));
@@ -69,7 +90,8 @@ class EventController extends Controller
                 'event_type' => $validated['event_type'],
                 'event_date' => $validated['event_date'],
                 'start_time' => $validated['start_time'],
-                'is_recurring' => $validated['is_recurring'] ?? false,
+                'end_time' => $validated['end_time'],
+                'recurrence_type' => $validated['recurrence_type'] ?? 'none',
             ]);
 
             $event->categories()->sync($this->categoryScores($validated));
@@ -82,14 +104,11 @@ class EventController extends Controller
 
     private function categoryScores(array $validated): array
     {
-        $syncData = [];
-
-        Category::orderBy('sort_order')->each(function (Category $category) use (&$syncData, $validated) {
-            $syncData[$category->id] = [
-                'score' => (int) ($validated['scores'][$category->id] ?? 0),
-            ];
-        });
-
-        return $syncData;
+        return collect($validated['scores'])
+            ->mapWithKeys(fn ($score, $categoryId) => [
+                (int) $categoryId => ['score' => (int) $score],
+            ])
+            ->filter(fn (array $data) => $data['score'] !== 0)
+            ->all();
     }
 }

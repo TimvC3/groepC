@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\NewFacilityCreated;
 use App\Models\Category;
 use App\Models\Facility;
+use App\Models\FacilityRestriction;
 use App\Models\FacilityScore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -41,7 +42,9 @@ class FacilityController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        return view('grid.facilities', compact('facilities', 'categories', 'editingFacility'));
+        $restrictions = FacilityRestriction::with(['facility1', 'facility2'])->get();
+
+        return view('grid.facilities', compact('facilities', 'categories', 'editingFacility', 'restrictions'));
     }
 
     public function store(Request $request): RedirectResponse
