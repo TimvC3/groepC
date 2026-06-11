@@ -6,7 +6,6 @@
     $canApproveDestinations = in_array($userRole, [
         'admin',
         'policy_maker',
-        'municipal_policy_maker',
     ], true);
 @endphp
 

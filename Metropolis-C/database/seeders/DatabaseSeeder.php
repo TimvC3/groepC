@@ -25,6 +25,12 @@ class DatabaseSeeder extends Seeder
             'password' => 'Password',
             'role' => 'admin',
         ]);
+        User::factory()->create([
+            'name' => 'Policy Maker',
+            'email' => 'policy.maker@example.com',
+            'password' => 'Password',
+            'role' => 'policy_maker',
+        ]);
         $this->call([
             CategorySeeder::class,
             EventSeeder::class,
