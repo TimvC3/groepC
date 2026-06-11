@@ -1,226 +1,267 @@
 <x-app-layout>
-    <div class="py-8">
-        <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 gap-6 xl:grid-cols-[18rem_minmax(25rem,1fr)_20rem] xl:gap-8">
-                <aside class="order-1 xl:order-none xl:row-span-2">
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="text-2xl font-bold">Zoning Library</h3>
+    @php
+        $userRole = auth()->user()?->role;
 
-                        <div class="mt-4">
-                            <label for="designation-search" class="sr-only">Zoek faciliteiten</label>
-                            <input
-                                id="designation-search"
-                                type="search"
-                                placeholder="Search..."
-                                class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm dark:bg-gray-900"
-                            >
-                        </div>
 
-                        <div class="mt-6 flex gap-3 overflow-x-auto pb-2 xl:block xl:max-h-[65vh] xl:space-y-6 xl:overflow-y-auto xl:pr-1">
-                            @foreach ($groupedFacilities as $category => $facilities)
-                                <section class="category-section min-w-56 flex-none xl:min-w-0">
-                                    <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">{{ $category }}</h4>
+    $canApproveDestinations = in_array($userRole, [
+        'admin',
+        'policy_maker',
+        'municipal_policy_maker',
+    ], true);
 
-                                    <div class="mt-3 flex gap-3 xl:grid xl:grid-cols-1">
-                                        @foreach ($facilities as $facility)
-                                            <div
-                                                class="zoning-item w-44 flex-none cursor-grab rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm transition hover:border-indigo-400 active:cursor-grabbing dark:border-gray-700 dark:bg-gray-900 xl:w-full"
-                                                draggable="true"
-                                                data-id="{{ $facility->id }}"
-                                                data-name="{{ $facility->name }}"
-                                                data-category="{{ $facility->category->name }}"
-                                                data-icon="{{ $facility->icon }}"
-                                            >
-                                                <div class="pointer-events-none flex items-start gap-3">
-                                                    <div class="text-3xl">{{ $facility->icon }}</div>
-                                                    <div>
-                                                        <div class="font-semibold text-gray-900 dark:text-gray-100">{{ $facility->name }}</div>
-                                                        <div class="text-sm text-gray-500">{{ $facility->category->name }}</div>
+    $events = $eventEffectData['events'] ?? [];
+@endphp
+
+<div class="py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:gap-8">
+
+            <aside class="xl:col-span-1 space-y-6">
+                <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                    <h3 class="text-2xl font-bold">Zoning Library</h3>
+
+                    <div class="mt-4">
+                        <label for="designation-search" class="sr-only">Zoek faciliteiten</label>
+                        <input
+                            id="designation-search"
+                            type="search"
+                            placeholder="Search..."
+                            class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm dark:bg-gray-900"
+                        >
+                    </div>
+
+                    <div class="mt-6 flex gap-3 overflow-x-auto pb-2 xl:block xl:max-h-[45vh] xl:space-y-6 xl:overflow-y-auto xl:pr-1">
+                        @foreach ($groupedFacilities as $category => $facilities)
+                            <section class="category-section min-w-56 flex-none xl:min-w-0">
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">
+                                    {{ $category }}
+                                </h4>
+
+                                <div class="mt-3 flex gap-3 xl:grid xl:grid-cols-1">
+                                    @foreach ($facilities as $facility)
+                                        <div
+                                            class="zoning-item w-44 flex-none cursor-grab active:cursor-grabbing rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4 shadow-sm transition hover:border-indigo-400 xl:w-full"
+                                            draggable="true"
+                                            data-id="{{ $facility->id }}"
+                                            data-name="{{ $facility->name }}"
+                                            data-category="{{ $facility->category->name }}"
+                                            data-icon="{{ $facility->icon }}"
+                                        >
+                                            <div class="flex items-start gap-3 pointer-events-none">
+                                                <div class="text-3xl">
+                                                    {{ $facility->icon }}
+                                                </div>
+
+                                                <div>
+                                                    <div class="font-semibold text-gray-900 dark:text-gray-100">
+                                                        {{ $facility->name }}
+                                                    </div>
+                                                    <div class="text-sm text-gray-500">
+                                                        {{ $facility->category->name }}
                                                     </div>
                                                 </div>
                                             </div>
-                                        @endforeach
-                                    </div>
-                                </section>
-                            @endforeach
-                        </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endforeach
                     </div>
-                </aside>
+                </div>
 
-                <section class="order-2 xl:col-start-2 xl:row-start-1">
-                    <div class="flex flex-col items-center rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 sm:p-6">
-                        <div class="mb-6 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <h3 class="text-2xl font-bold">City Grid</h3>
+                @if (count($events) > 0)
+                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                        <h3 class="text-2xl font-bold">Events</h3>
 
-                            <div class="flex flex-wrap gap-2">
-                                <button
-                                    id="export-pdf"
-                                    type="button"
-                                    class="flex-1 rounded-md border px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 sm:flex-none"
-                                >
-                                    Export PDF
-                                </button>
+                        <div class="mt-4 space-y-3">
+                            @foreach ($events as $event)
+                                @php
+                                    $eventId = data_get($event, 'id');
+                                    $eventName = data_get($event, 'name');
+                                    $eventDate = data_get($event, 'eventDate') ?? data_get($event, 'date');
+                                    $startTime = data_get($event, 'startTime');
+                                    $endTime = data_get($event, 'endTime');
+                                    $status = data_get($event, 'status', 'planned');
+                                    $impacts = collect(data_get($event, 'impacts', []));
+                                    $firstImpact = $impacts->first();
+                                    $eventScore = $impacts->sum(fn ($impact) => (int) data_get($impact, 'score', 0));
+                                @endphp
 
-                                <button
-                                    id="clear-grid"
-                                    type="button"
-                                    class="flex-1 rounded-md border px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 sm:flex-none"
-                                >
-                                    Clear
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-4 justify-center gap-1 rounded-2xl border-4 border-gray-100 p-2 dark:border-gray-700 dark:bg-gray-900/50 sm:rounded-3xl">
-                            @for ($i = 1; $i <= 12; $i++)
                                 <div
-                                    class="grid-cell flex h-16 w-16 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-1 text-center transition-all dark:border-gray-600 xs:h-20 xs:w-20 sm:h-24 sm:w-24 sm:rounded-xl"
-                                    data-index="{{ $i }}"
+                                    class="event-item cursor-grab active:cursor-grabbing rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm transition hover:border-amber-400 dark:border-amber-900/40 dark:bg-amber-900/20"
+                                    draggable="true"
+                                    data-id="{{ $eventId }}"
+                                    data-name="{{ $eventName }}"
+                                    data-category-id="{{ data_get($firstImpact, 'category_id') }}"
+                                    data-category="{{ data_get($firstImpact, 'category_name') }}"
+                                    data-score="{{ $eventScore }}"
+                                    data-status="{{ $status }}"
+                                    data-date="{{ $eventDate }}"
+                                    data-start-time="{{ $startTime }}"
+                                    data-end-time="{{ $endTime }}"
                                 >
-                                    <span class="font-mono text-xs text-gray-400">{{ $i }}</span>
-                                </div>
-                            @endfor
-                        </div>
-
-                        <div class="mt-6 w-full max-w-3xl rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
-                            <div class="flex flex-col gap-4 lg:flex-row lg:items-end">
-                                <div class="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <div>
-                                        <label class="mb-1 block text-sm font-medium" for="simulation-date">Start Date</label>
-                                        <input
-                                            id="simulation-date"
-                                            type="date"
-                                            class="w-full rounded-md border border-gray-300 px-4 py-2 dark:bg-gray-900"
-                                        >
-                                    </div>
-
-                                    <div>
-                                        <label class="mb-1 block text-sm font-medium" for="simulation-time">Start Time</label>
-                                        <input
-                                            id="simulation-time"
-                                            type="time"
-                                            class="w-full rounded-md border border-gray-300 px-4 py-2 dark:bg-gray-900"
-                                        >
-                                    </div>
-                                </div>
-
-                                <div class="flex flex-col gap-3 sm:flex-row lg:w-72 lg:flex-col">
-                                    <button
-                                        id="start-simulation"
-                                        type="button"
-                                        class="w-full rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
-                                    >
-                                        Start Simulation
-                                    </button>
-                                    <span class="hidden bg-amber-600 hover:bg-amber-700 bg-green-600 hover:bg-green-700"></span>
-
-                                    <div class="flex items-center justify-between gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
-                                        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Speed</span>
-                                        <div class="flex gap-1">
-                                            <button class="sim-speed rounded-md border px-2 py-1 text-xs" data-speed="0.5" type="button">0.5x</button>
-                                            <button class="sim-speed rounded-md border bg-indigo-600 px-2 py-1 text-xs text-white" data-speed="1" type="button">1x</button>
-                                            <button class="sim-speed rounded-md border px-2 py-1 text-xs" data-speed="2" type="button">2x</button>
-                                            <button class="sim-speed rounded-md border px-2 py-1 text-xs" data-speed="5" type="button">5x</button>
+                                    <div class="pointer-events-none">
+                                        <div class="font-semibold text-gray-900 dark:text-gray-100">
+                                            {{ $eventName }}
+                                        </div>
+                                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                            {{ $eventDate }} {{ $startTime }} - {{ $endTime }}
+                                        </div>
+                                        <div class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                                            Score: {{ $eventScore > 0 ? '+' . $eventScore : $eventScore }}
                                         </div>
                                     </div>
                                 </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </aside>
+
+            <section class="xl:col-span-2">
+                <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex flex-col items-center">
+                    <div class="flex justify-between items-center mb-6 w-full max-w-md">
+                        <div>
+                            <h3 class="text-2xl font-bold">City Grid</h3>
+
+                            @if ($canApproveDestinations)
+                                <p class="mt-1 text-xs text-green-700 dark:text-green-300">
+                                    You are allowed to approve destinations.
+                                </p>
+                            @else
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    You can view the grid, but you cannot approve destinations.
+                                </p>
+                            @endif
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button
+                                id="export-pdf"
+                                type="button"
+                                class="px-4 py-2 text-sm border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                Export PDF
+                            </button>
+
+                            <button
+                                id="clear-grid"
+                                type="button"
+                                class="px-4 py-2 text-sm border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-1 justify-center border-4 border-gray-100 dark:border-gray-700 p-2 rounded-3xl dark:bg-gray-900/50">
+                        @for ($i = 1; $i <= 12; $i++)
+                            <div
+                                class="grid-cell h-16 w-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all sm:h-24 sm:w-24"
+                                data-index="{{ $i }}"
+                            >
+                                <span class="text-gray-400 text-xs font-mono">
+                                    {{ $i }}
+                                </span>
+                            </div>
+                        @endfor
+                    </div>
+                </div>
+
+                <section class="mt-6">
+                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <h3 class="text-2xl font-bold">Simulation</h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    Select a date and time to start the city simulation.
+                                </p>
                             </div>
 
-                            <div class="mt-4 grid gap-2 text-sm text-gray-600 dark:text-gray-300 md:grid-cols-3">
-                                <div>
-                                    <span class="block text-xs font-bold uppercase tracking-wider text-gray-500">Current Time</span>
-                                    <span id="simulation-datetime" class="font-semibold text-gray-900 dark:text-gray-100">Not started</span>
-                                </div>
+                            <button
+                                id="start-simulation"
+                                type="button"
+                                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                            >
+                                Start Simulation
+                            </button>
+                        </div>
 
-                                <div>
-                                    <span class="block text-xs font-bold uppercase tracking-wider text-gray-500">Mode</span>
-                                    <span id="day-night-status" class="font-semibold text-indigo-600">Day Mode</span>
-                                </div>
+                        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="simulation-date" class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Date
+                                </label>
+                                <input
+                                    id="simulation-date"
+                                    type="date"
+                                    class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:bg-gray-900"
+                                >
+                            </div>
 
-                                <div>
-                                    <span class="block text-xs font-bold uppercase tracking-wider text-gray-500">Active Events</span>
-                                    <span id="simulation-event-status" class="font-semibold text-gray-900 dark:text-gray-100">No dragged event active at simulation time</span>
-                                </div>
+                            <div>
+                                <label for="simulation-time" class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Time
+                                </label>
+                                <input
+                                    id="simulation-time"
+                                    type="time"
+                                    class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:bg-gray-900"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <button type="button" data-speed="0" class="sim-speed rounded-md border px-3 py-1 text-sm">Pause</button>
+                            <button type="button" data-speed="1" class="sim-speed rounded-md border px-3 py-1 text-sm bg-indigo-600 text-white">1x</button>
+                            <button type="button" data-speed="5" class="sim-speed rounded-md border px-3 py-1 text-sm">5x</button>
+                            <button type="button" data-speed="10" class="sim-speed rounded-md border px-3 py-1 text-sm">10x</button>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+                                <div class="text-xs font-bold uppercase text-gray-500">Current time</div>
+                                <div id="simulation-datetime" class="mt-1 text-sm font-semibold">Not started</div>
+                            </div>
+
+                            <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+                                <div class="text-xs font-bold uppercase text-gray-500">Day/Night</div>
+                                <div id="day-night-status" class="mt-1 text-sm font-semibold">No simulation time selected</div>
+                            </div>
+
+                            <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+                                <div class="text-xs font-bold uppercase text-gray-500">Active event</div>
+                                <div id="simulation-event-status" class="mt-1 text-sm font-semibold">No dragged event active at simulation time</div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <aside class="order-3 xl:col-start-3 xl:row-start-1">
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="text-2xl font-bold">Upcoming Events</h3>
-
-                        <div class="mt-4 flex gap-3 overflow-x-auto pb-2 xl:grid xl:max-h-[38vh] xl:overflow-y-auto xl:pr-1" data-upcoming-events-list>
-                            @forelse ($upcomingEvents as $upcomingEvent)
-                                @php
-                                    $event = $upcomingEvent->event;
-                                    $occurrence = $upcomingEvent->occurrence;
-                                    $impactScores = $event->impactScores();
-                                @endphp
-
-                                <div
-                                    class="event-item hidden w-64 flex-none cursor-grab rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm transition hover:border-indigo-400 active:cursor-grabbing dark:border-gray-700 dark:bg-gray-900 xl:w-full"
-                                    draggable="true"
-                                    data-upcoming-event-card
-                                    data-id="{{ $event->id }}"
-                                    data-name="{{ $event->name }}"
-                                    data-event-date="{{ $event->event_date?->format('Y-m-d') }}"
-                                    data-recurrence-type="{{ $event->recurrence_type->value }}"
-                                    data-date="{{ $occurrence['starts_at']->format('d-m-Y') }}"
-                                    data-start-time="{{ $occurrence['starts_at']->format('H:i') }}"
-                                    data-end-time="{{ $occurrence['ends_at']->format('H:i') }}"
-                                    data-score="{{ $event->impactScore() }}"
-                                >
-                                    <div class="pointer-events-none flex items-start justify-between gap-3">
-                                        <div>
-                                            <div class="font-semibold text-gray-900 dark:text-gray-100">{{ $event->name }}</div>
-                                            <div class="text-sm text-gray-500" data-upcoming-date-line>
-                                                {{ $occurrence['starts_at']->format('d-m-Y') }}
-                                                {{ $occurrence['starts_at']->format('H:i') }}
-                                            </div>
-                                            <div class="mt-1 space-y-1 text-xs text-gray-500">
-                                                @foreach ($impactScores as $impact)
-                                                    <div>
-                                                        {{ $impact['category_name'] }}
-                                                        {{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        </div>
-
-                                        <span
-                                            class="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold capitalize text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                            data-upcoming-status-badge
-                                        >
-                                            planned
-                                        </span>
-                                    </div>
-                                </div>
-                            @empty
-                                <p class="text-sm text-gray-500">No upcoming events found.</p>
-                            @endforelse
-
-                            <p class="w-64 flex-none text-sm text-gray-500 xl:w-full" data-upcoming-empty-message>
-                                Select and start a simulation date and time to see upcoming events.
-                            </p>
-                        </div>
-                    </div>
-                </aside>
-
-                <section class="order-4 xl:col-start-2 xl:row-start-2">
-                    <div class="flex flex-col rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <div class="mb-6 flex w-full items-center justify-between">
+                <section class="mt-6">
+                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex flex-col">
+                        <div class="flex justify-between items-center mb-6 w-full">
                             <h3 class="text-2xl font-bold">Effect View</h3>
+
                             <div class="text-right">
-                                <div class="text-xs font-bold uppercase tracking-wider text-gray-500">Quality Of Life Score</div>
-                                <div id="effect-total-score" class="text-3xl font-bold text-gray-900 dark:text-gray-100">0</div>
+                                <div class="text-xs font-bold uppercase tracking-wider text-gray-500">
+                                    Totale score
+                                </div>
+                                <div
+                                    id="effect-total-score"
+                                    class="text-3xl font-bold text-gray-900 dark:text-gray-100"
+                                >
+                                    0
+                                </div>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             @foreach ($effectData['categories'] as $category)
-                                <div class="flex items-center justify-between rounded-md border border-gray-200 px-4 py-3 dark:border-gray-700">
-                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ $category['name'] }}</span>
+                                <div class="flex items-center justify-between rounded-md border border-gray-200 dark:border-gray-700 px-4 py-3">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                        {{ $category['name'] }}
+                                    </span>
+
                                     <span
                                         id="effect-category-score-{{ $category['id'] }}"
                                         class="text-sm font-bold text-gray-500 dark:text-gray-400"
@@ -234,30 +275,41 @@
                         <p id="effect-empty-state" class="mt-4 text-sm text-gray-500" aria-live="polite">
                             Drag facilities in the grid to see the score change.
                         </p>
-                        <div id="effect-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+                        <div
+                            id="effect-status"
+                            class="sr-only"
+                            aria-live="polite"
+                            aria-atomic="true"
+                        ></div>
                     </div>
                 </section>
 
-                <section class="order-5 xl:col-start-3 xl:row-start-2">
-                    <div class="flex flex-col rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <div class="mb-6 flex w-full items-center justify-between">
+                <section class="mt-6">
+                    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex flex-col">
+                        <div class="flex justify-between items-center mb-6 w-full">
                             <h3 class="text-2xl font-bold">Event Effects</h3>
+
                             <div class="text-right">
-                                <div class="text-xs font-bold uppercase tracking-wider text-gray-500">Total</div>
-                                <div id="event-effect-total-score" class="text-3xl font-bold text-gray-900 dark:text-gray-100">0</div>
+                                <div class="text-xs font-bold uppercase tracking-wider text-gray-500">
+                                    Event score
+                                </div>
+                                <div
+                                    id="event-effect-total-score"
+                                    class="text-3xl font-bold text-gray-900 dark:text-gray-100"
+                                >
+                                    0
+                                </div>
                             </div>
                         </div>
 
-                        <div id="event-effect-list" class="space-y-3"></div>
-
-                        <p id="event-effect-empty-state" class="text-sm text-gray-500" aria-live="polite">
-                            Drag upcoming events in the grid to see their separate category influence.
-                        </p>
-
-                        <div class="mt-5 grid grid-cols-1 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             @foreach ($effectData['categories'] as $category)
-                                <div class="flex items-center justify-between rounded-md border border-gray-200 px-4 py-3 dark:border-gray-700">
-                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ $category['name'] }}</span>
+                                <div class="flex items-center justify-between rounded-md border border-gray-200 dark:border-gray-700 px-4 py-3">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                        {{ $category['name'] }}
+                                    </span>
+
                                     <span
                                         id="event-effect-category-score-{{ $category['id'] }}"
                                         class="text-sm font-bold text-gray-500 dark:text-gray-400"
@@ -267,11 +319,89 @@
                                 </div>
                             @endforeach
                         </div>
+
+                        <p id="event-effect-empty-state" class="mt-4 text-sm text-gray-500" aria-live="polite">
+                            Drag events in the grid to see event effects.
+                        </p>
+
+                        <div id="event-effect-list" class="mt-4 space-y-3"></div>
                     </div>
                 </section>
-            </div>
+
+                @if (count($events) > 0)
+                    <section class="mt-6">
+                        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                            <h3 class="text-2xl font-bold">Upcoming Events</h3>
+
+                            <p data-upcoming-empty-message class="mt-3 text-sm text-gray-500">
+                                Select a simulation date and time to see upcoming events.
+                            </p>
+
+                            <div data-upcoming-events-list class="mt-4 space-y-3">
+                                @foreach ($events as $event)
+                                    @php
+                                        $eventId = data_get($event, 'id');
+                                        $eventName = data_get($event, 'name');
+                                        $eventDate = data_get($event, 'eventDate') ?? data_get($event, 'date');
+                                        $startTime = data_get($event, 'startTime');
+                                        $endTime = data_get($event, 'endTime');
+                                    @endphp
+
+                                    <div
+                                        data-upcoming-event-card
+                                        data-id="{{ $eventId }}"
+                                        data-date="{{ $eventDate }}"
+                                        data-start-time="{{ $startTime }}"
+                                        data-end-time="{{ $endTime }}"
+                                        class="hidden rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900"
+                                    >
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div>
+                                                <div class="font-semibold text-gray-900 dark:text-gray-100">
+                                                    {{ $eventName }}
+                                                </div>
+                                                <div data-upcoming-date-line class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                    {{ $eventDate }} {{ $startTime }} - {{ $endTime }}
+                                                </div>
+                                            </div>
+
+                                            <span
+                                                data-upcoming-status-badge
+                                                class="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                            >
+                                                planned
+                                            </span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </section>
+                @endif
+            </section>
         </div>
     </div>
+</div>
+
+@push('scripts') <script>
+window.gridEffectData = {{ Illuminate\Support\Js::from($effectData) }};
+window.gridEventEffectData = {{ Illuminate\Support\Js::from($eventEffectData ?? ['events' => []]) }};
+window.approvedGridCells = {{ Illuminate\Support\Js::from($approvedGridCells ?? []) }};
+window.approveCellUrl = @json(route('grid.approve-cell'));
+window.gridPermissions = {
+canApproveDestinations: @json($canApproveDestinations),
+}; </script>
+
+
+<script
+    src="https://cdn.jsdelivr.net/npm/@dragdroptouch/drag-drop-touch@latest/dist/drag-drop-touch.esm.min.js?autoload"
+    type="module">
+</script>
+
+@vite('resources/js/grid/effectGrid.js')
+
+
+@endpush
 
     <script>
         window.gridEffectData = {{ Illuminate\Support\Js::from($effectData) }};
@@ -279,13 +409,6 @@
         window.gridRestrictions = {{ Illuminate\Support\Js::from($restrictions) }};
     </script>
 
-    @push('scripts')
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-        <script
-            src="https://cdn.jsdelivr.net/npm/@dragdroptouch/drag-drop-touch@latest/dist/drag-drop-touch.esm.min.js?autoload"
-            type="module">
-        </script>
-        @vite('resources/js/grid/effectGrid.js')
-    @endpush
 </x-app-layout>
+

@@ -16,6 +16,7 @@ require __DIR__.'/auth.php';
 Route::middleware(['auth'])->group(function () {
     Route::get('/grid', [GridController::class, 'index'])->name('grid');
     Route::redirect('/dashboard', '/grid')->name('dashboard');
+    Route::post('/grid/approve-cell', [GridController::class, 'approveCell'])->name('grid.approve-cell');
 
     Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities');
     Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])->name('facilities.scores.update');
