@@ -6,6 +6,7 @@ use App\Models\ApprovedGridCell;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Facility;
+use App\Models\FacilityRestriction;
 use App\Support\GridEffectData;
 use Illuminate\Http\Request;
 
@@ -60,12 +61,15 @@ $facilities = Facility::with(['category', 'scores.category'])
                 ],
             ]);
 
+        $restrictions = FacilityRestriction::all(['facility_id_1', 'facility_id_2']);
+
         return view('grid.grid', compact(
             'categories',
             'facilities',
             'groupedFacilities',
             'effectData',
             'eventEffectData',
+            'restrictions',
             'approvedGridCells',
         ));
     }

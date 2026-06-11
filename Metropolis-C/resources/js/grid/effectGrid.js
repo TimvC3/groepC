@@ -5,6 +5,7 @@ const gridEventEffectData = window.gridEventEffectData || {};
 const eventImpactMatrix = Object.fromEntries(
     (gridEventEffectData.events || []).map((event) => [String(event.id), event])
 );
+const facilityRestrictions = window.gridRestrictions || [];
 
 const gridPermissions = window.gridPermissions || {};
 const approvedGridCells = window.approvedGridCells || {};
@@ -1225,6 +1226,49 @@ function fillCell(cell, item) {
     return true;
 }
 
+function getAdjacentFacilities(targetCell) {
+    return getSurroundingCells(targetCell)
+        .filter((c) => c !== targetCell && c.dataset.itemType === 'facility')
+        .map((c) => ({ id: c.dataset.itemId, name: c.getAttribute('aria-label') || `Facility ${c.dataset.itemId}` }));
+}
+
+function findRestrictionConflicts(targetCell, facilityId) {
+    return getAdjacentFacilities(targetCell).filter(({ id }) =>
+        facilityRestrictions.some((r) =>
+            (String(r.facility_id_1) === String(facilityId) && String(r.facility_id_2) === String(id))
+            || (String(r.facility_id_2) === String(facilityId) && String(r.facility_id_1) === String(id))
+        )
+    );
+}
+
+function showRestrictionError(conflicts, droppedName) {
+    const conflictNames = conflicts.map((c) => c.name).join(', ');
+
+    let errorEl = document.getElementById('restriction-error');
+
+    if (!errorEl) {
+        errorEl = document.createElement('div');
+        errorEl.id = 'restriction-error';
+        errorEl.className = 'fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-lg dark:border-red-900/50 dark:bg-red-900/20';
+        document.body.appendChild(errorEl);
+    }
+
+    errorEl.innerHTML = `
+        <div class="flex items-start gap-3">
+            <div class="flex-1">
+                <p class="text-sm font-semibold text-red-800 dark:text-red-300">Placement not allowed</p>
+                <p class="mt-1 text-sm text-red-700 dark:text-red-400">
+                    <strong>${droppedName}</strong> cannot be placed next to: ${conflictNames}
+                </p>
+            </div>
+            <button onclick="document.getElementById('restriction-error').remove()" class="text-lg leading-none text-red-400 hover:text-red-600">&times;</button>
+        </div>
+    `;
+
+    clearTimeout(errorEl._hideTimeout);
+    errorEl._hideTimeout = setTimeout(() => errorEl?.remove(), 4000);
+}
+
 function bindLibraryItems() {
     document.querySelectorAll('.zoning-item').forEach((item) => {
         item.addEventListener('dragstart', (event) => {
@@ -1419,6 +1463,17 @@ function bindGridCells() {
             }
 
             droppedOnGrid = true;
+
+            if (payload.type === 'facility') {
+                const conflicts = findRestrictionConflicts(cell, payload.id);
+
+                if (conflicts.length > 0) {
+                    showRestrictionError(conflicts, payload.name);
+                    sourceCell = null;
+                    draggedData = null;
+                    return;
+                }
+            }
 
             if (sourceCell && sourceCell !== cell) {
                 removeCellContent(sourceCell);

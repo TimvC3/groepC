@@ -403,6 +403,11 @@ canApproveDestinations: @json($canApproveDestinations),
 
 @endpush
 
+    <script>
+        window.gridEffectData = {{ Illuminate\Support\Js::from($effectData) }};
+        window.gridEventEffectData = {{ Illuminate\Support\Js::from($eventEffectData) }};
+        window.gridRestrictions = {{ Illuminate\Support\Js::from($restrictions) }};
+    </script>
 
 
 </x-app-layout>

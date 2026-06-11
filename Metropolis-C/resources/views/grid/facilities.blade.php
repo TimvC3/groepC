@@ -24,6 +24,12 @@
                 </div>
             @endif
 
+            @if (session('error'))
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             @if (auth()->user()?->role === 'admin')
                 <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
                     <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
@@ -220,6 +226,122 @@
                         </form>
                     </section>
                 </div>
+
+                <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+                    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            {{ __('Placement Restrictions') }}
+                        </h3>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                            {{ __('Facilities that cannot be placed directly next to each other on the grid.') }}
+                        </p>
+                    </div>
+
+                    <div class="p-6 space-y-6">
+                        <form method="POST" action="{{ route('facilities.restrictions.store') }}" class="flex flex-wrap items-end gap-3">
+                            @csrf
+
+                            <div class="flex-1 min-w-40">
+                                <label for="restriction_facility_1" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {{ __('Facility A') }}
+                                </label>
+                                <select
+                                    id="restriction_facility_1"
+                                    name="facility_id_1"
+                                    required
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                >
+                                    <option value="">{{ __('Select facility') }}</option>
+                                    @foreach ($facilities as $facility)
+                                        <option value="{{ $facility->id }}">{{ $facility->name }}</option>
+                                    @endforeach
+                                </select>
+                                @error('facility_id_1')
+                                    <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div class="flex-1 min-w-40">
+                                <label for="restriction_facility_2" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {{ __('Facility B') }}
+                                </label>
+                                <select
+                                    id="restriction_facility_2"
+                                    name="facility_id_2"
+                                    required
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                >
+                                    <option value="">{{ __('Select facility') }}</option>
+                                    @foreach ($facilities as $facility)
+                                        <option value="{{ $facility->id }}">{{ $facility->name }}</option>
+                                    @endforeach
+                                </select>
+                                @error('facility_id_2')
+                                    <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <button
+                                type="submit"
+                                class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                            >
+                                {{ __('Add Restriction') }}
+                            </button>
+                        </form>
+
+                        @if ($restrictions->isNotEmpty())
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-900">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                                                {{ __('Facility A') }}
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                                                {{ __('Facility B') }}
+                                            </th>
+                                            <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">
+                                                {{ __('Actions') }}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                        @foreach ($restrictions as $restriction)
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                                <td class="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
+                                                    <span class="mr-1">{{ $restriction->facility1->icon }}</span>
+                                                    {{ $restriction->facility1->name }}
+                                                </td>
+                                                <td class="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
+                                                    <span class="mr-1">{{ $restriction->facility2->icon }}</span>
+                                                    {{ $restriction->facility2->name }}
+                                                </td>
+                                                <td class="px-6 py-3 text-right">
+                                                    <form
+                                                        method="POST"
+                                                        action="{{ route('facilities.restrictions.destroy', $restriction) }}"
+                                                        onsubmit="return confirm('Remove this restriction?')"
+                                                    >
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button
+                                                            type="submit"
+                                                            class="text-sm text-red-600 transition hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                                        >
+                                                            {{ __('Remove') }}
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('No restrictions configured yet.') }}</p>
+                        @endif
+                    </div>
+                </section>
             @endif
 
             <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
