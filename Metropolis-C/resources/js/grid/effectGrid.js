@@ -1000,6 +1000,24 @@ function getNeighbourRule(facilityId) {
     return neighbourRules[String(facilityId)] || neighbourRules[facilityId] || null;
 }
 
+function directNeighbourIndexes(index, totalCells) {
+    const row = Math.floor((index - 1) / gridColumns);
+    const column = (index - 1) % gridColumns;
+    const indexes = [];
+
+    for (let otherIndex = 1; otherIndex <= totalCells; otherIndex += 1) {
+        const otherRow = Math.floor((otherIndex - 1) / gridColumns);
+        const otherColumn = (otherIndex - 1) % gridColumns;
+        const isDirectNeighbour = Math.abs(otherRow - row) + Math.abs(otherColumn - column) === 1;
+
+        if (isDirectNeighbour) {
+            indexes.push(String(otherIndex));
+        }
+    }
+
+    return indexes;
+}
+
 function requiredNeighbourIsPresent(cell, facilityId) {
     const rule = getNeighbourRule(facilityId);
 
@@ -1009,6 +1027,73 @@ function requiredNeighbourIsPresent(cell, facilityId) {
         return neighbourCell.dataset.itemType === 'facility'
             && String(neighbourCell.dataset.itemId) === String(rule.requiredNeighbourId);
     });
+}
+
+function facilityNameById(facilityId) {
+    return Array.from(document.querySelectorAll('.zoning-item'))
+        .find((item) => String(item.dataset.id) === String(facilityId))
+        ?.dataset
+        ?.name;
+}
+
+function placementSnapshot(targetCell, payload) {
+    const snapshot = new Map();
+
+    document.querySelectorAll('.grid-cell').forEach((gridCell) => {
+        if (gridCell.dataset.itemType !== 'facility') return;
+
+        snapshot.set(String(gridCell.dataset.index), {
+            id: gridCell.dataset.itemId,
+            name: gridCell.getAttribute('aria-label') || facilityNameById(gridCell.dataset.itemId),
+        });
+    });
+
+    if (sourceCell && sourceCell !== targetCell) {
+        snapshot.delete(String(sourceCell.dataset.index));
+    }
+
+    if (payload.type === 'facility') {
+        snapshot.set(String(targetCell.dataset.index), {
+            id: payload.id,
+            name: payload.name,
+        });
+    } else {
+        snapshot.delete(String(targetCell.dataset.index));
+    }
+
+    return snapshot;
+}
+
+function requiredNeighbourViolationsForPlacement(targetCell, payload) {
+    const snapshot = placementSnapshot(targetCell, payload);
+    const totalCells = document.querySelectorAll('.grid-cell').length;
+
+    return Array.from(snapshot.entries())
+        .map(([cellIndex, facility]) => {
+            const rule = getNeighbourRule(facility.id);
+
+            if (!rule) return null;
+
+            const hasRequiredNeighbour = directNeighbourIndexes(Number(cellIndex), totalCells)
+                .some((neighbourIndex) => {
+                    return String(snapshot.get(neighbourIndex)?.id) === String(rule.requiredNeighbourId);
+                });
+
+            if (hasRequiredNeighbour) return null;
+
+            return {
+                facilityName: facility.name || facilityNameById(facility.id) || 'This function',
+                requiredNeighbourName: rule.requiredNeighbourName || 'the required neighbour',
+            };
+        })
+        .filter(Boolean);
+}
+
+function showRequiredNeighbourViolation(violation) {
+    showPlacementFeedback(
+        `${violation.facilityName} cannot be placed here. It must be placed directly next to ${violation.requiredNeighbourName} horizontally or vertically.`,
+        'error'
+    );
 }
 
 function showRequiredNeighbourMessage(facility) {
@@ -1527,8 +1612,10 @@ function bindGridCells() {
             droppedOnGrid = true;
 
             if (payload.type === 'facility') {
-                if (!requiredNeighbourIsPresent(cell, payload.id)) {
-                    showRequiredNeighbourMessage(payload);
+                const requiredNeighbourViolations = requiredNeighbourViolationsForPlacement(cell, payload);
+
+                if (requiredNeighbourViolations.length > 0) {
+                    showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
                     sourceCell = null;
                     draggedData = null;
                     return;
