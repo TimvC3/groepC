@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\NewFacilityCreated;
 use App\Models\Category;
 use App\Models\Facility;
+use App\Models\FacilityRestriction;
 use Illuminate\Http\Request;
 use App\Models\FacilityScore;
 use Illuminate\Http\JsonResponse;
@@ -31,15 +32,17 @@ class FacilityController extends Controller
     private function facilitiesView(?Facility $editingFacility = null): View
     {
         $categories = Category::orderBy('sort_order')->get();
- 
+
         $facilities = Facility::with([
             'category',
             'scores.category',
         ])
         ->orderBy('sort_order')
         ->get();
- 
-        return view('grid.facilities', compact('facilities', 'categories', 'editingFacility'));
+
+        $restrictions = FacilityRestriction::with(['facility1', 'facility2'])->get();
+
+        return view('grid.facilities', compact('facilities', 'categories', 'editingFacility', 'restrictions'));
     }
 
     public function store(Request $request): RedirectResponse

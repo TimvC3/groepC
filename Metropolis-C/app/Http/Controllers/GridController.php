@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Facility;
+use App\Models\FacilityRestriction;
 use App\Support\GridEffectData;
 
 class GridController extends Controller
@@ -50,6 +51,8 @@ class GridController extends Controller
             'occurrence' => $item['occurrence'],
         ]);
 
+        $restrictions = FacilityRestriction::all(['facility_id_1', 'facility_id_2']);
+
         return view('grid.grid', compact(
             'categories',
             'facilities',
@@ -57,6 +60,7 @@ class GridController extends Controller
             'effectData',
             'upcomingEvents',
             'eventEffectData',
+            'restrictions',
         ));
     }
 }

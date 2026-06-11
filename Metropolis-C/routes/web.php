@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\FacilityController;
+use App\Http\Controllers\FacilityRestrictionController;
 use App\Http\Controllers\GridController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\EventController;
@@ -31,6 +32,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
     Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])
         ->name('facilities.scores.update');
+
+    Route::post('/facilities/restrictions', [FacilityRestrictionController::class, 'store'])->name('facilities.restrictions.store');
+    Route::delete('/facilities/restrictions/{restriction}', [FacilityRestrictionController::class, 'destroy'])->name('facilities.restrictions.destroy');
 
     Route::redirect('/functions', '/facilities')->name('functions.index');
 });
