@@ -59,6 +59,9 @@
                                             {{ __('Slug') }}
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                                            {{ __('Required Neighbour') }}
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
                                             {{ __('Last Updated') }}
                                         </th>
                                         <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">
@@ -82,6 +85,9 @@
                                                 {{ $facility->slug }}
                                             </td>
                                             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                {{ $facility->requiredNeighbour?->name ?? '-' }}
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                                 {{ $facility->updated_at?->format('M j, Y') }}
                                             </td>
                                             <td class="px-6 py-4 text-right text-sm font-medium">
@@ -95,7 +101,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">
+                                            <td colspan="7" class="px-6 py-6 text-center text-sm text-gray-500">
                                                 {{ __('No facilities found.') }}
                                             </td>
                                         </tr>
@@ -177,6 +183,39 @@
                                     class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
                                 >
                                 @error('icon')
+                                    <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="required_neighbour_facility_id" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {{ __('Required Neighbour') }}
+                                </label>
+
+                                <select
+                                    id="required_neighbour_facility_id"
+                                    name="required_neighbour_facility_id"
+                                    class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                >
+                                    <option value="">{{ __('No required neighbour') }}</option>
+
+                                    @foreach ($facilities as $facilityOption)
+                                        @continue($isEditing && $editingFacility?->id === $facilityOption->id)
+
+                                        <option
+                                            value="{{ $facilityOption->id }}"
+                                            @selected((int) old('required_neighbour_facility_id', $editingFacility?->required_neighbour_facility_id) === $facilityOption->id)
+                                        >
+                                            {{ $facilityOption->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {{ __('When this function is placed, this neighbour must be directly next to it horizontally or vertically.') }}
+                                </p>
+
+                                @error('required_neighbour_facility_id')
                                     <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                                 @enderror
                             </div>

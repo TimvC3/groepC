@@ -383,32 +383,24 @@
     </div>
 </div>
 
-@push('scripts') <script>
-window.gridEffectData = {{ Illuminate\Support\Js::from($effectData) }};
-window.gridEventEffectData = {{ Illuminate\Support\Js::from($eventEffectData ?? ['events' => []]) }};
-window.approvedGridCells = {{ Illuminate\Support\Js::from($approvedGridCells ?? []) }};
-window.approveCellUrl = @json(route('grid.approve-cell'));
-window.gridPermissions = {
-canApproveDestinations: @json($canApproveDestinations),
-}; </script>
-
-
-<script
-    src="https://cdn.jsdelivr.net/npm/@dragdroptouch/drag-drop-touch@latest/dist/drag-drop-touch.esm.min.js?autoload"
-    type="module">
-</script>
-
-@vite('resources/js/grid/effectGrid.js')
-
-
-@endpush
-
+@push('scripts')
     <script>
         window.gridEffectData = {{ Illuminate\Support\Js::from($effectData) }};
-        window.gridEventEffectData = {{ Illuminate\Support\Js::from($eventEffectData) }};
+        window.gridEventEffectData = {{ Illuminate\Support\Js::from($eventEffectData ?? ['events' => []]) }};
         window.gridRestrictions = {{ Illuminate\Support\Js::from($restrictions) }};
+        window.approvedGridCells = {{ Illuminate\Support\Js::from($approvedGridCells ?? []) }};
+        window.approveCellUrl = @json(route('grid.approve-cell'));
+        window.gridPermissions = {
+            canApproveDestinations: @json($canApproveDestinations),
+        };
     </script>
 
+    <script
+        src="https://cdn.jsdelivr.net/npm/@dragdroptouch/drag-drop-touch@latest/dist/drag-drop-touch.esm.min.js?autoload"
+        type="module">
+    </script>
+
+    @vite('resources/js/grid/effectGrid.js')
+@endpush
 
 </x-app-layout>
-

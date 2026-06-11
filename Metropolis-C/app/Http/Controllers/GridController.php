@@ -16,9 +16,9 @@ class GridController extends Controller
     {
         $categories = Category::orderBy('sort_order')->get();
 
-$facilities = Facility::with(['category', 'scores.category'])
-    ->orderBy('sort_order')
-    ->get();
+        $facilities = Facility::with(['category', 'scores.category', 'requiredNeighbour'])
+            ->orderBy('sort_order')
+            ->get();
 
         $groupedFacilities = $facilities->groupBy('category.name');
         $effectData = GridEffectData::from($categories, $facilities);

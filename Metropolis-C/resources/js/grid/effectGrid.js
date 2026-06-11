@@ -1,6 +1,7 @@
-const gridEffectData = window.gridEffectData || {};
+﻿const gridEffectData = window.gridEffectData || {};
 const effectCategories = gridEffectData.categories || [];
 const facilityScoreMatrix = gridEffectData.scoreMatrix || {};
+const neighbourRules = gridEffectData.neighbourRules || {};
 const gridEventEffectData = window.gridEventEffectData || {};
 const eventImpactMatrix = Object.fromEntries(
     (gridEventEffectData.events || []).map((event) => [String(event.id), event])
@@ -27,6 +28,7 @@ let simulationRunning = false;
 let simulationSpeed = 1;
 let lastSimulationSpeed = 1;
 let lastApprovedFeedbackAt = 0;
+let lastNeighbourFeedbackAt = 0;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 const canApproveDestinations = Boolean(gridPermissions.canApproveDestinations);
@@ -977,6 +979,144 @@ function getSurroundingCells(cell) {
     });
 }
 
+function getHorizontalVerticalNeighbourCells(cell) {
+    const index = Number(cell.dataset.index);
+    const allCells = Array.from(document.querySelectorAll('.grid-cell'));
+    const totalCells = allCells.length;
+    const row = Math.floor((index - 1) / gridColumns);
+    const column = (index - 1) % gridColumns;
+
+    return allCells.filter((otherCell) => {
+        const otherIndex = Number(otherCell.dataset.index);
+        const otherRow = Math.floor((otherIndex - 1) / gridColumns);
+        const otherColumn = (otherIndex - 1) % gridColumns;
+        const isDirectNeighbour = Math.abs(otherRow - row) + Math.abs(otherColumn - column) === 1;
+
+        return otherIndex >= 1 && otherIndex <= totalCells && isDirectNeighbour;
+    });
+}
+
+function getNeighbourRule(facilityId) {
+    return neighbourRules[String(facilityId)] || neighbourRules[facilityId] || null;
+}
+
+function directNeighbourIndexes(index, totalCells) {
+    const row = Math.floor((index - 1) / gridColumns);
+    const column = (index - 1) % gridColumns;
+    const indexes = [];
+
+    for (let otherIndex = 1; otherIndex <= totalCells; otherIndex += 1) {
+        const otherRow = Math.floor((otherIndex - 1) / gridColumns);
+        const otherColumn = (otherIndex - 1) % gridColumns;
+        const isDirectNeighbour = Math.abs(otherRow - row) + Math.abs(otherColumn - column) === 1;
+
+        if (isDirectNeighbour) {
+            indexes.push(String(otherIndex));
+        }
+    }
+
+    return indexes;
+}
+
+function requiredNeighbourIsPresent(cell, facilityId) {
+    const rule = getNeighbourRule(facilityId);
+
+    if (!rule) return true;
+
+    return getHorizontalVerticalNeighbourCells(cell).some((neighbourCell) => {
+        return neighbourCell.dataset.itemType === 'facility'
+            && String(neighbourCell.dataset.itemId) === String(rule.requiredNeighbourId);
+    });
+}
+
+function facilityNameById(facilityId) {
+    return Array.from(document.querySelectorAll('.zoning-item'))
+        .find((item) => String(item.dataset.id) === String(facilityId))
+        ?.dataset
+        ?.name;
+}
+
+function placementSnapshot(targetCell, payload) {
+    const snapshot = new Map();
+
+    document.querySelectorAll('.grid-cell').forEach((gridCell) => {
+        if (gridCell.dataset.itemType !== 'facility') return;
+
+        snapshot.set(String(gridCell.dataset.index), {
+            id: gridCell.dataset.itemId,
+            name: gridCell.getAttribute('aria-label') || facilityNameById(gridCell.dataset.itemId),
+        });
+    });
+
+    if (sourceCell && sourceCell !== targetCell) {
+        snapshot.delete(String(sourceCell.dataset.index));
+    }
+
+    if (payload.type === 'facility') {
+        snapshot.set(String(targetCell.dataset.index), {
+            id: payload.id,
+            name: payload.name,
+        });
+    } else {
+        snapshot.delete(String(targetCell.dataset.index));
+    }
+
+    return snapshot;
+}
+
+function requiredNeighbourViolationsForPlacement(targetCell, payload) {
+    const snapshot = placementSnapshot(targetCell, payload);
+    const totalCells = document.querySelectorAll('.grid-cell').length;
+
+    return Array.from(snapshot.entries())
+        .map(([cellIndex, facility]) => {
+            const rule = getNeighbourRule(facility.id);
+
+            if (!rule) return null;
+
+            const hasRequiredNeighbour = directNeighbourIndexes(Number(cellIndex), totalCells)
+                .some((neighbourIndex) => {
+                    return String(snapshot.get(neighbourIndex)?.id) === String(rule.requiredNeighbourId);
+                });
+
+            if (hasRequiredNeighbour) return null;
+
+            return {
+                facilityName: facility.name || facilityNameById(facility.id) || 'This function',
+                requiredNeighbourName: rule.requiredNeighbourName || 'the required neighbour',
+            };
+        })
+        .filter(Boolean);
+}
+
+function showRequiredNeighbourViolation(violation) {
+    showPlacementFeedback(
+        `${violation.facilityName} cannot be placed here. It must be placed directly next to ${violation.requiredNeighbourName} horizontally or vertically.`,
+        'error'
+    );
+}
+
+function showRequiredNeighbourMessage(facility) {
+    const rule = getNeighbourRule(facility.id);
+    const requiredNeighbourName = rule?.requiredNeighbourName || 'the required neighbour';
+
+    showPlacementFeedback(
+        `${facility.name} cannot be placed here. It must be placed directly next to ${requiredNeighbourName} horizontally or vertically.`,
+        'error'
+    );
+}
+
+function showRequiredNeighbourToast(facility) {
+    const now = Date.now();
+
+    if (now - lastNeighbourFeedbackAt < 2000) {
+        return;
+    }
+
+    lastNeighbourFeedbackAt = now;
+    showRequiredNeighbourMessage(facility);
+}
+
 function getLocalScores(cell) {
     const localCells = getSurroundingCells(cell);
     const totals = Object.fromEntries(effectCategories.map((category) => [category.id, 0]));
@@ -1428,6 +1568,13 @@ function bindGridCells() {
                 return;
             }
 
+            if (draggedData?.type === 'facility' && !requiredNeighbourIsPresent(cell, draggedData.id)) {
+                event.dataTransfer.dropEffect = 'move';
+                cell.classList.add('bg-red-50', 'border-red-400');
+                showRequiredNeighbourToast(draggedData);
+                return;
+            }
+
             event.dataTransfer.dropEffect = 'move';
             cell.classList.add('bg-indigo-50', 'border-indigo-400');
         });
@@ -1465,6 +1612,15 @@ function bindGridCells() {
             droppedOnGrid = true;
 
             if (payload.type === 'facility') {
+                const requiredNeighbourViolations = requiredNeighbourViolationsForPlacement(cell, payload);
+
+                if (requiredNeighbourViolations.length > 0) {
+                    showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
+                    sourceCell = null;
+                    draggedData = null;
+                    return;
+                }
+
                 const conflicts = findRestrictionConflicts(cell, payload.id);
 
                 if (conflicts.length > 0) {
