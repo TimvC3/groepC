@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CityPlannerMiddleware;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\EnsureUserIsLibraryManager;
 use App\Http\Middleware\EnsureUserIsPolicyMaker;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
             'city-planner' => CityPlannerMiddleware::class,
+            'library-manager' => EnsureUserIsLibraryManager::class,
             'policy-maker' => EnsureUserIsPolicyMaker::class,
         ]);
     })

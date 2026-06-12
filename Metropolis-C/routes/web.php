@@ -27,7 +27,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth', 'policy-maker'])->group(function () {
+Route::middleware(['auth', 'library-manager'])->group(function () {
     Route::post('/facilities/{facility}/conditions', [FacilityConditionController::class, 'store'])
         ->name('facilities.conditions.store');
 

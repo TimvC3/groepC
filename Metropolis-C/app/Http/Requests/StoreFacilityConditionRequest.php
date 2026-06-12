@@ -9,7 +9,7 @@ class StoreFacilityConditionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->role === 'policy_maker';
+        return $this->user()?->role === 'library_manager';
     }
 
     public function rules(): array

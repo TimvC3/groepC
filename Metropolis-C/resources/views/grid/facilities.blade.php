@@ -383,7 +383,7 @@
                 </section>
             @endif
 
-            @if (auth()->user()?->role === 'policy_maker')
+            @if (auth()->user()?->role === 'library_manager')
                 <section class="overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800">
                 <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -527,8 +527,8 @@
                         {{ __('Facility Score Matrix') }}
                     </h3>
                     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                        @if (auth()->user()?->role === 'policy_maker')
-                            {{ __('Facility scores are read-only for policy makers.') }}
+                        @if (in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true))
+                            {{ __('Facility scores are read-only for this role.') }}
                         @else
                             {{ __('Click a score to edit its value from -5 to 5.') }}
                         @endif
@@ -589,14 +589,14 @@
                                         <td class="px-4 py-4 text-center">
                                             @if (! is_null($score))
                                                 <span
-                                                    @if (auth()->user()?->role !== 'policy_maker')
+                                                    @if (! in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true))
                                                         data-score-id="{{ $facilityScore->id }}"
                                                         data-score="{{ $score }}"
                                                         title="Click to edit"
                                                     @endif
                                                     @class([
                                                         'inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold select-none transition',
-                                                        'cursor-pointer hover:ring-2 hover:ring-indigo-300' => auth()->user()?->role !== 'policy_maker',
+                                                        'cursor-pointer hover:ring-2 hover:ring-indigo-300' => ! in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true),
                                                         'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' => $score > 0,
                                                         'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300' => $score < 0,
                                                         'text-gray-500 dark:bg-gray-700 dark:text-gray-400' => $score === 0,
@@ -618,7 +618,7 @@
     </div>
 
     @push('scripts')
-        @if (auth()->user()?->role !== 'policy_maker')
+        @if (! in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true))
             @vite('resources/js/facilities/scoreEditor.js')
         @endif
     @endpush

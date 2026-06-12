@@ -145,7 +145,7 @@ class FacilityController extends Controller
 
     public function update(Request $request, FacilityScore $facilityScore): JsonResponse
     {
-        abort_if($request->user()?->role === 'policy_maker', 403);
+        abort_if(in_array($request->user()?->role, ['policy_maker', 'library_manager'], true), 403);
 
         $validated = $request->validate([
             'score' => ['required', 'integer', 'min:-5', 'max:5'],

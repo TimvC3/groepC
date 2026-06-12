@@ -13,10 +13,10 @@ class FacilityConditionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_policy_maker_can_create_update_and_delete_a_condition(): void
+    public function test_library_manager_can_create_update_and_delete_a_condition(): void
     {
         [$library, $park, $factory] = $this->createFacilities();
-        $user = $this->policyMaker();
+        $user = $this->libraryManager();
 
         $this->actingAs($user)
             ->post(route('facilities.conditions.store', $library), [
@@ -58,7 +58,7 @@ class FacilityConditionTest extends TestCase
     public function test_condition_cannot_target_the_same_facility_or_be_duplicated(): void
     {
         [$library, $park] = $this->createFacilities();
-        $user = $this->policyMaker();
+        $user = $this->libraryManager();
 
         $this->actingAs($user)
             ->post(route('facilities.conditions.store', $library), [
@@ -81,10 +81,10 @@ class FacilityConditionTest extends TestCase
             ->assertSessionHasErrors('neighbour_facility_id');
     }
 
-    public function test_facilities_page_shows_condition_management_to_policy_maker(): void
+    public function test_facilities_page_shows_condition_management_to_library_manager(): void
     {
         [$library, $park] = $this->createFacilities();
-        $user = $this->policyMaker();
+        $user = $this->libraryManager();
 
         FacilityCondition::create([
             'facility_id' => $library->id,
@@ -105,6 +105,7 @@ class FacilityConditionTest extends TestCase
     {
         [$library, $park] = $this->createFacilities();
         $cityPlanner = User::factory()->create(['role' => 'city_planner']);
+        $policyMaker = $this->policyMaker();
 
         $this->actingAs($cityPlanner)
             ->post(route('facilities.conditions.store', $library), [
@@ -117,22 +118,34 @@ class FacilityConditionTest extends TestCase
             ->get(route('facilities'))
             ->assertOk()
             ->assertDontSee('Function Conditions');
+
+        $this->actingAs($policyMaker)
+            ->post(route('facilities.conditions.store', $library), [
+                'condition_type' => 'required_neighbour',
+                'neighbour_facility_id' => $park->id,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($policyMaker)
+            ->get(route('facilities'))
+            ->assertOk()
+            ->assertDontSee('Function Conditions');
     }
 
-    public function test_policy_maker_cannot_edit_facility_values(): void
+    public function test_library_manager_cannot_edit_facility_values(): void
     {
         [$library] = $this->createFacilities();
         $score = $library->scores()->create([
             'category_id' => $library->category_id,
             'score' => 3,
         ]);
-        $policyMaker = $this->policyMaker();
+        $libraryManager = $this->libraryManager();
 
-        $this->actingAs($policyMaker)
+        $this->actingAs($libraryManager)
             ->patchJson(route('facilities.scores.update', $score), ['score' => 5])
             ->assertForbidden();
 
-        $this->actingAs($policyMaker)
+        $this->actingAs($libraryManager)
             ->patch(route('facilities.update', $library), [
                 'name' => 'Changed Library',
                 'category_id' => $library->category_id,
@@ -141,7 +154,7 @@ class FacilityConditionTest extends TestCase
             ])
             ->assertForbidden();
 
-        $this->actingAs($policyMaker)
+        $this->actingAs($libraryManager)
             ->get(route('facilities'))
             ->assertOk()
             ->assertDontSee('data-score-id=', false)
@@ -209,6 +222,16 @@ class FacilityConditionTest extends TestCase
             'email' => 'policy.maker@example.com',
             'password' => 'Password',
             'role' => 'policy_maker',
+        ]);
+    }
+
+    private function libraryManager(): User
+    {
+        return User::factory()->create([
+            'name' => 'Library Manager',
+            'email' => 'library.manager@example.com',
+            'password' => 'Password',
+            'role' => 'library_manager',
         ]);
     }
 }
