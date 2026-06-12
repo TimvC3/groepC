@@ -3,6 +3,7 @@
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FacilityConditionController;
 use App\Http\Controllers\FacilityController;
+use App\Http\Controllers\FacilityRestrictionController;
 use App\Http\Controllers\GridController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +17,7 @@ require __DIR__.'/auth.php';
 Route::middleware(['auth'])->group(function () {
     Route::get('/grid', [GridController::class, 'index'])->name('grid');
     Route::redirect('/dashboard', '/grid')->name('dashboard');
+    Route::post('/grid/approve-cell', [GridController::class, 'approveCell'])->name('grid.approve-cell');
 
     Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities');
     Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])->name('facilities.scores.update');
@@ -43,6 +45,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
     Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])
         ->name('facilities.scores.update');
+
+    Route::post('/facilities/restrictions', [FacilityRestrictionController::class, 'store'])->name('facilities.restrictions.store');
+    Route::delete('/facilities/restrictions/{restriction}', [FacilityRestrictionController::class, 'destroy'])->name('facilities.restrictions.destroy');
 
     Route::redirect('/functions', '/facilities')->name('functions.index');
 });

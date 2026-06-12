@@ -1,14 +1,22 @@
-const gridEffectData = window.gridEffectData || {};
+﻿const gridEffectData = window.gridEffectData || {};
 const effectCategories = gridEffectData.categories || [];
 const facilityScoreMatrix = gridEffectData.scoreMatrix || {};
+const neighbourRules = gridEffectData.neighbourRules || {};
 const gridEventEffectData = window.gridEventEffectData || {};
 const eventImpactMatrix = Object.fromEntries(
     (gridEventEffectData.events || []).map((event) => [String(event.id), event])
 );
 const gridConditionData = window.gridConditionData || {};
+const facilityRestrictions = window.gridRestrictions || [];
+
+const gridPermissions = window.gridPermissions || {};
+const approvedGridCells = window.approvedGridCells || {};
+const approveCellUrl = window.approveCellUrl || '';
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
 const gridColumns = 4;
 const simulationStorageKey = 'metropolis.simulationDateTime';
+const approvedStorageKey = 'metropolis.approvedCells';
 
 let draggedData = null;
 let sourceCell = null;
@@ -20,8 +28,11 @@ let simulationInterval = null;
 let simulationRunning = false;
 let simulationSpeed = 1;
 let lastSimulationSpeed = 1;
+let lastApprovedFeedbackAt = 0;
+let lastNeighbourFeedbackAt = 0;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
+const canApproveDestinations = Boolean(gridPermissions.canApproveDestinations);
 
 function formatScore(score) {
     return score > 0 ? `+${score}` : String(score);
@@ -31,6 +42,323 @@ function scoreColorClass(score) {
     if (score > 0) return 'text-green-700 dark:text-green-300';
     if (score < 0) return 'text-red-600 dark:text-red-300';
     return 'text-gray-500 dark:text-gray-400';
+}
+
+function showPlacementFeedback(message, type = 'error') {
+    document.getElementById('placement-feedback')?.remove();
+
+    const feedback = document.createElement('div');
+    feedback.id = 'placement-feedback';
+    feedback.textContent = message;
+    feedback.setAttribute('role', 'alert');
+
+    feedback.style.position = 'fixed';
+    feedback.style.right = '20px';
+    feedback.style.bottom = '20px';
+    feedback.style.zIndex = '999999';
+    feedback.style.maxWidth = '360px';
+    feedback.style.padding = '14px 18px';
+    feedback.style.borderRadius = '10px';
+    feedback.style.fontSize = '14px';
+    feedback.style.fontWeight = '700';
+    feedback.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.25)';
+
+    if (type === 'error') {
+        feedback.style.backgroundColor = '#fee2e2';
+        feedback.style.color = '#991b1b';
+        feedback.style.border = '1px solid #fecaca';
+    } else {
+        feedback.style.backgroundColor = '#dcfce7';
+        feedback.style.color = '#166534';
+        feedback.style.border = '1px solid #bbf7d0';
+    }
+
+    document.body.appendChild(feedback);
+
+    const statusElement = document.getElementById('effect-status');
+
+    if (statusElement) {
+        statusElement.textContent = message;
+    }
+
+    setTimeout(() => {
+        feedback.remove();
+    }, 4000);
+}
+
+function isApprovedCell(cell) {
+    return cell?.dataset?.approved === 'true';
+}
+
+function approvedMessage() {
+    const now = Date.now();
+
+    if (now - lastApprovedFeedbackAt < 1200) {
+        return;
+    }
+
+    lastApprovedFeedbackAt = now;
+
+    showPlacementFeedback(
+        'This destination has already been approved and can no longer be changed or removed.',
+        'error'
+    );
+}
+
+let approvedCells = { ...approvedGridCells };
+
+function loadApprovedCells() {
+    return approvedCells;
+}
+
+function saveApprovedCells(cells) {
+    approvedCells = { ...cells };
+}
+
+function storeApprovedCell(cell) {
+    approvedCells[cell.dataset.index] = {
+        itemId: cell.dataset.itemId,
+        itemType: cell.dataset.itemType,
+        name: cell.getAttribute('aria-label'),
+    };
+}
+
+function removeStoredApprovedCell(cell) {
+    delete approvedCells[cell.dataset.index];
+}
+
+function getApprovedItem(approvedCell) {
+    if (approvedCell.itemType === 'facility') {
+        const libraryItem = Array.from(document.querySelectorAll('.zoning-item'))
+            .find((item) => String(item.dataset.id) === String(approvedCell.itemId));
+
+        return {
+            type: 'facility',
+            id: approvedCell.itemId,
+            name: approvedCell.name,
+            icon: libraryItem?.dataset.icon || '✓',
+        };
+    }
+
+    if (approvedCell.itemType === 'event') {
+        const event = eventImpactMatrix[String(approvedCell.itemId)];
+
+        return {
+            ...(event || {}),
+            type: 'event',
+            id: approvedCell.itemId,
+            name: approvedCell.name,
+        };
+    }
+
+    return null;
+}
+
+function renderApprovedCell(cell, approvedCell) {
+    const item = getApprovedItem(approvedCell);
+    if (!item) return;
+
+    const isEvent = item.type === 'event';
+
+    cell.replaceChildren(isEvent ? createEventCellContent(item) : createFacilityCellContent(item));
+
+    cell.dataset.itemId = approvedCell.itemId;
+    cell.dataset.itemType = approvedCell.itemType;
+    cell.dataset.approved = 'true';
+
+    cell.setAttribute('aria-label', approvedCell.name);
+    cell.classList.remove('border-dashed');
+    cell.classList.add('group', 'border-solid');
+    cell.classList.toggle('bg-blue-50', !isEvent);
+    cell.classList.toggle('dark:bg-blue-900/20', !isEvent);
+    cell.classList.toggle('bg-amber-50', isEvent);
+    cell.classList.toggle('dark:bg-amber-900/20', isEvent);
+    cell.setAttribute('draggable', 'true');
+
+    updateApprovalUI(cell);
+}
+
+function restoreApprovedCellsFromStorage() {
+    const cells = loadApprovedCells();
+
+    document.querySelectorAll('.grid-cell').forEach((cell) => {
+        const approvedCell = cells[cell.dataset.index];
+
+        if (!approvedCell) return;
+
+        renderApprovedCell(cell, approvedCell);
+    });
+}
+
+function createApprovedBadge() {
+    const badge = document.createElement('span');
+
+    badge.className = [
+        'approved-badge',
+        'mt-1',
+        'rounded-full',
+        'border',
+        'border-green-600',
+        'bg-green-100',
+        'px-2',
+        'py-0.5',
+        'text-[10px]',
+        'font-bold',
+        'uppercase',
+        'tracking-wide',
+        'text-green-700',
+    ].join(' ');
+
+    badge.textContent = 'Approved';
+
+    return badge;
+}
+
+function createApproveButton(cell) {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.className = [
+        'approve-cell-button',
+        'mt-2',
+        'rounded-md',
+        'bg-green-600',
+        'px-2',
+        'py-1',
+        'text-xs',
+        'font-semibold',
+        'text-white',
+        'shadow-sm',
+        'hover:bg-green-700',
+        'focus:outline-none',
+        'focus:ring-2',
+        'focus:ring-green-500',
+    ].join(' ');
+
+    button.textContent = 'Approve';
+
+    button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        approveCell(cell);
+    });
+
+    return button;
+}
+
+function applyApprovedStyle(cell) {
+    cell.classList.remove(
+        'border-dashed',
+        'border-gray-300',
+        'dark:border-gray-600',
+        'border-indigo-400',
+        'bg-indigo-50',
+        'border-red-400',
+        'bg-red-50'
+    );
+
+    cell.classList.add(
+        'border-solid',
+        'border-green-500',
+        'bg-green-50',
+        'dark:bg-green-900/20',
+        'cursor-not-allowed'
+    );
+
+    cell.title = 'Approved destination: this cell can no longer be changed or removed.';
+}
+
+function removeApprovedStyle(cell) {
+    cell.classList.remove(
+        'border-green-500',
+        'bg-green-50',
+        'dark:bg-green-900/20',
+        'cursor-not-allowed'
+    );
+
+    cell.title = '';
+}
+
+function getCellContentWrapper(cell) {
+    return cell.querySelector('.relative');
+}
+
+function updateApprovalUI(cell) {
+    cell.querySelector('.approved-badge')?.remove();
+    cell.querySelector('.approve-cell-button')?.remove();
+
+    if (!cell.dataset.itemId) {
+        delete cell.dataset.approved;
+        removeApprovedStyle(cell);
+        return;
+    }
+
+    const wrapper = getCellContentWrapper(cell);
+
+    if (isApprovedCell(cell)) {
+        applyApprovedStyle(cell);
+
+        if (wrapper) {
+            wrapper.append(createApprovedBadge());
+        }
+
+        return;
+    }
+
+    removeApprovedStyle(cell);
+
+    if (canApproveDestinations && wrapper) {
+        wrapper.append(createApproveButton(cell));
+    }
+}
+
+async function approveCell(cell) {
+    if (!canApproveDestinations) {
+        showPlacementFeedback('You are not authorized to approve destinations.', 'error');
+        return;
+    }
+
+    if (!cell.dataset.itemId) {
+        showPlacementFeedback('Only a cell with a destination can be approved.', 'error');
+        return;
+    }
+
+    if (!approveCellUrl) {
+        showPlacementFeedback('Approve route is missing.', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(approveCellUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+                cell_index: cell.dataset.index,
+                item_type: cell.dataset.itemType,
+                item_id: cell.dataset.itemId,
+                item_name: cell.getAttribute('aria-label'),
+            }),
+        });
+
+        if (!response.ok) {
+            showPlacementFeedback('This destination could not be approved.', 'error');
+            return;
+        }
+
+        cell.dataset.approved = 'true';
+        storeApprovedCell(cell);
+        updateApprovalUI(cell);
+
+        showPlacementFeedback('Destination approved. This cell can no longer be changed or removed.', 'success');
+    } catch {
+        showPlacementFeedback('This destination could not be approved.', 'error');
+    }
 }
 
 function isNightTime(dateTime) {
@@ -163,8 +491,7 @@ function nextEventOccurrenceAt(event, dateTime = selectedSimulationDateTime()) {
 
             const endsAt = new Date(candidateDate);
             endsAt.setMinutes(endMinutes);
-
-            if (endMinutes <= startMinutes) {
+                        if (endMinutes <= startMinutes) {
                 endsAt.setDate(endsAt.getDate() + 1);
             }
 
@@ -619,7 +946,6 @@ function eventCategoryTotals() {
             });
         });
 
-
     return totals;
 }
 
@@ -778,6 +1104,144 @@ function getSurroundingCells(cell) {
 
         return otherIndex >= 1 && otherIndex <= totalCells && isAroundCell;
     });
+}
+
+function getHorizontalVerticalNeighbourCells(cell) {
+    const index = Number(cell.dataset.index);
+    const allCells = Array.from(document.querySelectorAll('.grid-cell'));
+    const totalCells = allCells.length;
+    const row = Math.floor((index - 1) / gridColumns);
+    const column = (index - 1) % gridColumns;
+
+    return allCells.filter((otherCell) => {
+        const otherIndex = Number(otherCell.dataset.index);
+        const otherRow = Math.floor((otherIndex - 1) / gridColumns);
+        const otherColumn = (otherIndex - 1) % gridColumns;
+        const isDirectNeighbour = Math.abs(otherRow - row) + Math.abs(otherColumn - column) === 1;
+
+        return otherIndex >= 1 && otherIndex <= totalCells && isDirectNeighbour;
+    });
+}
+
+function getNeighbourRule(facilityId) {
+    return neighbourRules[String(facilityId)] || neighbourRules[facilityId] || null;
+}
+
+function directNeighbourIndexes(index, totalCells) {
+    const row = Math.floor((index - 1) / gridColumns);
+    const column = (index - 1) % gridColumns;
+    const indexes = [];
+
+    for (let otherIndex = 1; otherIndex <= totalCells; otherIndex += 1) {
+        const otherRow = Math.floor((otherIndex - 1) / gridColumns);
+        const otherColumn = (otherIndex - 1) % gridColumns;
+        const isDirectNeighbour = Math.abs(otherRow - row) + Math.abs(otherColumn - column) === 1;
+
+        if (isDirectNeighbour) {
+            indexes.push(String(otherIndex));
+        }
+    }
+
+    return indexes;
+}
+
+function requiredNeighbourIsPresent(cell, facilityId) {
+    const rule = getNeighbourRule(facilityId);
+
+    if (!rule) return true;
+
+    return getHorizontalVerticalNeighbourCells(cell).some((neighbourCell) => {
+        return neighbourCell.dataset.itemType === 'facility'
+            && String(neighbourCell.dataset.itemId) === String(rule.requiredNeighbourId);
+    });
+}
+
+function facilityNameById(facilityId) {
+    return Array.from(document.querySelectorAll('.zoning-item'))
+        .find((item) => String(item.dataset.id) === String(facilityId))
+        ?.dataset
+        ?.name;
+}
+
+function placementSnapshot(targetCell, payload) {
+    const snapshot = new Map();
+
+    document.querySelectorAll('.grid-cell').forEach((gridCell) => {
+        if (gridCell.dataset.itemType !== 'facility') return;
+
+        snapshot.set(String(gridCell.dataset.index), {
+            id: gridCell.dataset.itemId,
+            name: gridCell.getAttribute('aria-label') || facilityNameById(gridCell.dataset.itemId),
+        });
+    });
+
+    if (sourceCell && sourceCell !== targetCell) {
+        snapshot.delete(String(sourceCell.dataset.index));
+    }
+
+    if (payload.type === 'facility') {
+        snapshot.set(String(targetCell.dataset.index), {
+            id: payload.id,
+            name: payload.name,
+        });
+    } else {
+        snapshot.delete(String(targetCell.dataset.index));
+    }
+
+    return snapshot;
+}
+
+function requiredNeighbourViolationsForPlacement(targetCell, payload) {
+    const snapshot = placementSnapshot(targetCell, payload);
+    const totalCells = document.querySelectorAll('.grid-cell').length;
+
+    return Array.from(snapshot.entries())
+        .map(([cellIndex, facility]) => {
+            const rule = getNeighbourRule(facility.id);
+
+            if (!rule) return null;
+
+            const hasRequiredNeighbour = directNeighbourIndexes(Number(cellIndex), totalCells)
+                .some((neighbourIndex) => {
+                    return String(snapshot.get(neighbourIndex)?.id) === String(rule.requiredNeighbourId);
+                });
+
+            if (hasRequiredNeighbour) return null;
+
+            return {
+                facilityName: facility.name || facilityNameById(facility.id) || 'This function',
+                requiredNeighbourName: rule.requiredNeighbourName || 'the required neighbour',
+            };
+        })
+        .filter(Boolean);
+}
+
+function showRequiredNeighbourViolation(violation) {
+    showPlacementFeedback(
+        `${violation.facilityName} cannot be placed here. It must be placed directly next to ${violation.requiredNeighbourName} horizontally or vertically.`,
+        'error'
+    );
+}
+
+function showRequiredNeighbourMessage(facility) {
+    const rule = getNeighbourRule(facility.id);
+    const requiredNeighbourName = rule?.requiredNeighbourName || 'the required neighbour';
+
+    showPlacementFeedback(
+        `${facility.name} cannot be placed here. It must be placed directly next to ${requiredNeighbourName} horizontally or vertically.`,
+        'error'
+    );
+}
+
+function showRequiredNeighbourToast(facility) {
+    const now = Date.now();
+
+    if (now - lastNeighbourFeedbackAt < 2000) {
+        return;
+    }
+
+    lastNeighbourFeedbackAt = now;
+    showRequiredNeighbourMessage(facility);
 }
 
 function getLocalScores(cell) {
@@ -953,6 +1417,11 @@ function createEventCellContent(event) {
 }
 
 function removeCellContent(cell) {
+    if (isApprovedCell(cell)) {
+        approvedMessage();
+        return false;
+    }
+
     const index = cell.dataset.index;
     const label = document.createElement('span');
 
@@ -962,6 +1431,8 @@ function removeCellContent(cell) {
     cell.replaceChildren(label);
     delete cell.dataset.itemId;
     delete cell.dataset.itemType;
+    delete cell.dataset.approved;
+
     cell.removeAttribute('aria-label');
     cell.classList.remove(
         'group',
@@ -970,22 +1441,43 @@ function removeCellContent(cell) {
         'dark:bg-blue-900/20',
         'bg-amber-50',
         'dark:bg-amber-900/20',
+        'border-green-500',
+        'bg-green-50',
+        'dark:bg-green-900/20',
+        'cursor-not-allowed'
     );
     cell.classList.add('border-dashed');
     cell.removeAttribute('draggable');
 
+    removeStoredApprovedCell(cell);
+    updateApprovalUI(cell);
     updateEffectView();
     updateEventEffectView();
-}
 
+    return true;
+}
 function fillCell(cell, item) {
+    if (isApprovedCell(cell)) {
+        approvedMessage();
+        return false;
+    }
+
     const isEvent = item.type === 'event';
 
     cell.replaceChildren(isEvent ? createEventCellContent(item) : createFacilityCellContent(item));
+
     cell.dataset.itemId = item.id;
     cell.dataset.itemType = item.type;
+    delete cell.dataset.approved;
+
     cell.setAttribute('aria-label', item.name);
-    cell.classList.remove('border-dashed');
+    cell.classList.remove(
+        'border-dashed',
+        'border-green-500',
+        'bg-green-50',
+        'dark:bg-green-900/20',
+        'cursor-not-allowed'
+    );
     cell.classList.add('group', 'border-solid');
     cell.classList.toggle('bg-blue-50', !isEvent);
     cell.classList.toggle('dark:bg-blue-900/20', !isEvent);
@@ -993,8 +1485,55 @@ function fillCell(cell, item) {
     cell.classList.toggle('dark:bg-amber-900/20', isEvent);
     cell.setAttribute('draggable', 'true');
 
+    removeStoredApprovedCell(cell);
+    updateApprovalUI(cell);
     updateEffectView();
     updateEventEffectView();
+
+    return true;
+}
+
+function getAdjacentFacilities(targetCell) {
+    return getSurroundingCells(targetCell)
+        .filter((c) => c !== targetCell && c.dataset.itemType === 'facility')
+        .map((c) => ({ id: c.dataset.itemId, name: c.getAttribute('aria-label') || `Facility ${c.dataset.itemId}` }));
+}
+
+function findRestrictionConflicts(targetCell, facilityId) {
+    return getAdjacentFacilities(targetCell).filter(({ id }) =>
+        facilityRestrictions.some((r) =>
+            (String(r.facility_id_1) === String(facilityId) && String(r.facility_id_2) === String(id))
+            || (String(r.facility_id_2) === String(facilityId) && String(r.facility_id_1) === String(id))
+        )
+    );
+}
+
+function showRestrictionError(conflicts, droppedName) {
+    const conflictNames = conflicts.map((c) => c.name).join(', ');
+
+    let errorEl = document.getElementById('restriction-error');
+
+    if (!errorEl) {
+        errorEl = document.createElement('div');
+        errorEl.id = 'restriction-error';
+        errorEl.className = 'fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-lg dark:border-red-900/50 dark:bg-red-900/20';
+        document.body.appendChild(errorEl);
+    }
+
+    errorEl.innerHTML = `
+        <div class="flex items-start gap-3">
+            <div class="flex-1">
+                <p class="text-sm font-semibold text-red-800 dark:text-red-300">Placement not allowed</p>
+                <p class="mt-1 text-sm text-red-700 dark:text-red-400">
+                    <strong>${droppedName}</strong> cannot be placed next to: ${conflictNames}
+                </p>
+            </div>
+            <button onclick="document.getElementById('restriction-error').remove()" class="text-lg leading-none text-red-400 hover:text-red-600">&times;</button>
+        </div>
+    `;
+
+    clearTimeout(errorEl._hideTimeout);
+    errorEl._hideTimeout = setTimeout(() => errorEl?.remove(), 4000);
 }
 
 function bindLibraryItems() {
@@ -1002,6 +1541,7 @@ function bindLibraryItems() {
         item.addEventListener('dragstart', (event) => {
             sourceCell = null;
             droppedOnGrid = false;
+
             setDragPayload(event, {
                 type: 'facility',
                 id: item.dataset.id,
@@ -1017,6 +1557,7 @@ function bindEventItems() {
         item.addEventListener('dragstart', (event) => {
             sourceCell = null;
             droppedOnGrid = false;
+
             setDragPayload(event, {
                 type: 'event',
                 id: item.dataset.id,
@@ -1099,14 +1640,26 @@ function updateUpcomingEventList() {
 
 function bindGridCells() {
     document.querySelectorAll('.grid-cell').forEach((cell) => {
+        updateApprovalUI(cell);
+
         cell.addEventListener('dragstart', (event) => {
             if (!cell.dataset.itemId) {
                 event.preventDefault();
                 return;
             }
 
+            if (isApprovedCell(cell)) {
+                event.preventDefault();
+                approvedMessage();
+                sourceCell = null;
+                draggedData = null;
+                droppedOnGrid = true;
+                return;
+            }
+
             sourceCell = cell;
             droppedOnGrid = false;
+
             const payload = cell.dataset.itemType === 'event'
                 ? {
                     type: 'event',
@@ -1117,7 +1670,7 @@ function bindGridCells() {
                 : {
                     type: 'facility',
                     id: cell.dataset.itemId,
-                    icon: cell.querySelector('.text-2xl').innerText,
+                    icon: cell.querySelector('.text-2xl')?.innerText ?? '',
                     name: cell.getAttribute('aria-label'),
                 };
 
@@ -1135,19 +1688,53 @@ function bindGridCells() {
 
         cell.addEventListener('dragover', (event) => {
             event.preventDefault();
+
+            if (isApprovedCell(cell)) {
+                event.dataTransfer.dropEffect = 'move';
+                cell.classList.add('bg-red-50', 'border-red-400');
+                return;
+            }
+
+            if (draggedData?.type === 'facility' && !requiredNeighbourIsPresent(cell, draggedData.id)) {
+                event.dataTransfer.dropEffect = 'move';
+                cell.classList.add('bg-red-50', 'border-red-400');
+                showRequiredNeighbourToast(draggedData);
+                return;
+            }
+
+            event.dataTransfer.dropEffect = 'move';
             cell.classList.add('bg-indigo-50', 'border-indigo-400');
         });
 
         cell.addEventListener('dragleave', () => {
-            cell.classList.remove('bg-indigo-50', 'border-indigo-400');
+            cell.classList.remove(
+                'bg-indigo-50',
+                'border-indigo-400',
+                'bg-red-50',
+                'border-red-400'
+            );
         });
 
         cell.addEventListener('drop', (event) => {
             event.preventDefault();
-            cell.classList.remove('bg-indigo-50', 'border-indigo-400');
+
+            cell.classList.remove(
+                'bg-indigo-50',
+                'border-indigo-400',
+                'bg-red-50',
+                'border-red-400'
+            );
 
             const payload = getDropPayload(event);
             if (!payload) return;
+
+            if (isApprovedCell(cell)) {
+                droppedOnGrid = true;
+                approvedMessage();
+                sourceCell = null;
+                draggedData = null;
+                return;
+            }
 
             const violations = conditionViolations(
                 proposedGridState(cell, payload, sourceCell)
@@ -1161,17 +1748,39 @@ function bindGridCells() {
 
             droppedOnGrid = true;
 
+            if (payload.type === 'facility') {
+                const requiredNeighbourViolations = requiredNeighbourViolationsForPlacement(cell, payload);
+
+                if (requiredNeighbourViolations.length > 0) {
+                    showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
+                    sourceCell = null;
+                    draggedData = null;
+                    return;
+                }
+
+                const conflicts = findRestrictionConflicts(cell, payload.id);
+
+                if (conflicts.length > 0) {
+                    showRestrictionError(conflicts, payload.name);
+                    sourceCell = null;
+                    draggedData = null;
+                    return;
+                }
+            }
+
             if (sourceCell && sourceCell !== cell) {
                 removeCellContent(sourceCell);
             }
 
             fillCell(cell, payload);
+
             sourceCell = null;
             draggedData = null;
         });
 
         cell.addEventListener('mouseenter', (event) => {
             if (isTouchDevice()) return;
+
             if (cell.dataset.itemId) {
                 showCellTooltip(cell, event.clientX, event.clientY);
             }
@@ -1180,7 +1789,9 @@ function bindGridCells() {
         cell.addEventListener('mousemove', (event) => {
             if (isTouchDevice()) return;
             if (!cell.dataset.itemId) return;
+
             const tooltip = getOrCreateTooltip();
+
             if (!tooltip.classList.contains('hidden')) {
                 positionTooltip(tooltip, event.clientX, event.clientY);
             }
@@ -1188,6 +1799,7 @@ function bindGridCells() {
 
         cell.addEventListener('mouseleave', () => {
             if (isTouchDevice()) return;
+
             hideCellTooltip();
         });
 
@@ -1198,6 +1810,7 @@ function bindGridCells() {
             if (!cell.dataset.itemId || !event.touches[0]) return;
 
             const touch = event.touches[0];
+
             touchTapState = {
                 cell,
                 x: touch.clientX,
@@ -1221,7 +1834,7 @@ function bindGridCells() {
             }
         }, { passive: true });
 
-        cell.addEventListener('touchend', (event) => {
+        cell.addEventListener('touchend', () => {
             if (!touchTapState || touchTapState.cell !== cell) return;
 
             const wasTap = !touchTapState.moved
@@ -1253,6 +1866,16 @@ function bindDropOutsideGrid() {
     document.addEventListener('drop', (event) => {
         if (!sourceCell) return;
         if (event.target.closest('.grid-cell')) return;
+
+        if (isApprovedCell(sourceCell)) {
+            event.preventDefault();
+            approvedMessage();
+            sourceCell = null;
+            draggedData = null;
+            droppedOnGrid = false;
+            hideCellTooltip();
+            return;
+        }
 
         event.preventDefault();
 
@@ -1289,13 +1912,27 @@ function bindSearch() {
 
 function bindClearButton() {
     document.getElementById('clear-grid')?.addEventListener('click', () => {
-        document.querySelectorAll('.grid-cell').forEach((cell) => removeCellContent(cell));
+        let blockedApprovedCell = false;
+
+        document.querySelectorAll('.grid-cell').forEach((cell) => {
+            if (isApprovedCell(cell)) {
+                blockedApprovedCell = true;
+                return;
+            }
+
+            removeCellContent(cell);
+        });
+
+        if (blockedApprovedCell) {
+            approvedMessage();
+        }
     });
 }
 
 function bindOutsideTap() {
     document.addEventListener('touchstart', (event) => {
         if (!activeTooltip) return;
+
         if (!event.target.closest('.grid-cell')) {
             hideCellTooltip();
         }
@@ -1338,7 +1975,6 @@ function exportToPDF() {
         return margin;
     }
 
-    // Header
     doc.setFontSize(22);
     doc.setFont(undefined, 'bold');
     doc.text('Metropolis Simulation Report', margin, 24);
@@ -1352,7 +1988,6 @@ function exportToPDF() {
     doc.setDrawColor(220, 220, 220);
     doc.line(margin, 37, pageWidth - margin, 37);
 
-    // Simulation Info
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
     doc.text('Simulation Info', margin, 46);
@@ -1372,7 +2007,6 @@ function exportToPDF() {
     doc.setDrawColor(220, 220, 220);
     doc.line(margin, 78, pageWidth - margin, 78);
 
-    // City Grid
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
     doc.text('City Grid', margin, 86);
@@ -1393,7 +2027,10 @@ function exportToPDF() {
         const itemId = cell.dataset.itemId;
         const itemType = cell.dataset.itemType;
 
-        if (itemId) {
+        if (isApprovedCell(cell)) {
+            doc.setFillColor(220, 252, 231);
+            doc.setDrawColor(22, 163, 74);
+        } else if (itemId) {
             if (itemType === 'event') {
                 doc.setFillColor(254, 243, 199);
                 doc.setDrawColor(217, 119, 6);
@@ -1408,16 +2045,19 @@ function exportToPDF() {
 
         doc.roundedRect(x, y, cellW, cellH, 1.5, 1.5, 'FD');
 
-        const facilityName = cell.getAttribute('aria-label');
+        const itemName = cell.getAttribute('aria-label');
 
-        if (facilityName) {
+        if (itemName) {
             doc.setFontSize(7);
             doc.setFont(undefined, 'bold');
             doc.setTextColor(30, 64, 175);
-            const lines = doc.splitTextToSize(facilityName, cellW - 6);
+
+            const label = isApprovedCell(cell) ? `${itemName} (approved)` : itemName;
+            const lines = doc.splitTextToSize(label, cellW - 6);
             const lineHeight = 3.5;
             const textBlockHeight = lines.length * lineHeight;
             const textY = y + (cellH - textBlockHeight) / 2 + lineHeight;
+
             doc.text(lines, x + cellW / 2, textY, { align: 'center' });
             doc.setFont(undefined, 'normal');
             doc.setTextColor(0, 0, 0);
@@ -1429,7 +2069,6 @@ function exportToPDF() {
         }
     });
 
-    // Simulation Effects
     const effectsStartY = gridStartY + gridRows * cellH + 12;
 
     doc.setDrawColor(220, 220, 220);
@@ -1551,8 +2190,10 @@ function exportToPDF() {
 
             scoreY += 6;
             doc.setTextColor(80, 80, 80);
+
             (event.impacts || []).forEach((impact) => {
                 scoreY = ensurePdfSpace(scoreY, 6);
+
                 const impactScore = active ? Number(impact.score ?? 0) : 0;
 
                 doc.setTextColor(80, 80, 80);
@@ -1570,7 +2211,6 @@ function exportToPDF() {
         });
     }
 
-    // Footer
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.text('Metropolis City Simulation', margin, 287);
@@ -1589,6 +2229,7 @@ function bindExportButton() {
 
 document.addEventListener('DOMContentLoaded', () => {
     hydrateSimulationMoment();
+    restoreApprovedCellsFromStorage();
     bindLibraryItems();
     bindEventItems();
     bindGridCells();
