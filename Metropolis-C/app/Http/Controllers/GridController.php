@@ -16,13 +16,36 @@ class GridController extends Controller
     {
         $categories = Category::orderBy('sort_order')->get();
 
+<<<<<<< HEAD
         $facilities = Facility::with(['category', 'scores.category'])
+=======
+        $facilities = Facility::with([
+            'category',
+            'scores.category',
+            'requiredNeighbour',
+            'conditions.neighbourFacility',
+        ])
+>>>>>>> 9b1fb50cbd837e928587d63b45472150bab40073
             ->orderBy('sort_order')
             ->get();
         $conditions = FacilityCondition::with('neighbourFacility')->get();
 
         $groupedFacilities = $facilities->groupBy('category.name');
+<<<<<<< HEAD
         $effectData = GridEffectData::from($categories, $facilities, $conditions);
+=======
+        $effectData = GridEffectData::from($categories, $facilities);
+        $conditionData = $facilities->mapWithKeys(fn (Facility $facility) => [
+            (string) $facility->id => [
+                'name' => $facility->name,
+                'conditions' => $facility->conditions->map(fn ($condition) => [
+                    'type' => $condition->condition_type,
+                    'neighbourFacilityId' => (string) $condition->neighbour_facility_id,
+                    'neighbourFacilityName' => $condition->neighbourFacility->name,
+                ])->values(),
+            ],
+        ]);
+>>>>>>> 9b1fb50cbd837e928587d63b45472150bab40073
 
         $eventEffectData = [
             'events' => Event::with('categories')
@@ -43,6 +66,9 @@ class GridController extends Controller
                         'endTime' => $this->formatTimeValue($event->end_time ?? null) ?? $this->formatTimeValue($event->start_time),
                         'recurrenceType' => $event->is_recurring ? ($event->recurrence_type ?? 'weekly') : 'none',
                         'status' => $event->status ?? 'planned',
+                        'score' => $event->categories->sum(
+                            fn ($category) => (int) ($category->pivot->score ?? 0)
+                        ),
                         'impacts' => $event->categories->map(fn ($category) => [
                             'category_id' => $category->id,
                             'category_name' => $category->name,
@@ -75,6 +101,7 @@ class GridController extends Controller
             'facilities',
             'groupedFacilities',
             'effectData',
+            'conditionData',
             'eventEffectData',
             'restrictions',
             'approvedGridCells',

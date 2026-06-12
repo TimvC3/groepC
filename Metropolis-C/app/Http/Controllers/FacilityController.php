@@ -24,7 +24,16 @@ class FacilityController extends Controller
 
     public function edit(Facility $facility): View
     {
+<<<<<<< HEAD
         $facility->load(['category', 'scores.category']);
+=======
+        $facility->load([
+            'category',
+            'scores.category',
+            'requiredNeighbour',
+            'conditions.neighbourFacility',
+        ]);
+>>>>>>> 9b1fb50cbd837e928587d63b45472150bab40073
 
         return $this->facilitiesView($facility);
     }
@@ -36,6 +45,11 @@ class FacilityController extends Controller
         $facilities = Facility::with([
             'category',
             'scores.category',
+<<<<<<< HEAD
+=======
+            'requiredNeighbour',
+            'conditions.neighbourFacility',
+>>>>>>> 9b1fb50cbd837e928587d63b45472150bab40073
         ])
             ->orderBy('sort_order')
             ->get();
@@ -135,6 +149,8 @@ class FacilityController extends Controller
 
     public function update(Request $request, FacilityScore $facilityScore): JsonResponse
     {
+        abort_if(in_array($request->user()?->role, ['policy_maker', 'library_manager'], true), 403);
+
         $validated = $request->validate([
             'score' => ['required', 'integer', 'min:-5', 'max:5'],
         ]);
