@@ -14,7 +14,6 @@ class Facility extends Model
         'slug',
         'icon',
         'sort_order',
-        'required_neighbour_facility_id',
     ];
 
     public function category(): BelongsTo
@@ -27,12 +26,9 @@ class Facility extends Model
         return $this->hasMany(FacilityScore::class);
     }
 
-    public function requiredNeighbour(): BelongsTo
+    public function conditions(): HasMany
     {
-        return $this->belongsTo(
-            Facility::class,
-            'required_neighbour_facility_id'
-        );
+        return $this->hasMany(FacilityCondition::class);
     }
 
     public function scoreFor(string $categorySlug): ?int

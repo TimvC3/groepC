@@ -1367,8 +1367,8 @@ function fillCell(cell, item) {
 }
 
 function getAdjacentFacilities(targetCell) {
-    return getSurroundingCells(targetCell)
-        .filter((c) => c !== targetCell && c.dataset.itemType === 'facility')
+    return getHorizontalVerticalNeighbourCells(targetCell)
+        .filter((c) => c.dataset.itemType === 'facility')
         .map((c) => ({ id: c.dataset.itemId, name: c.getAttribute('aria-label') || `Facility ${c.dataset.itemId}` }));
 }
 

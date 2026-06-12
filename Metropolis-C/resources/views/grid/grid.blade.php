@@ -244,7 +244,7 @@
 
                             <div class="text-right">
                                 <div class="text-xs font-bold uppercase tracking-wider text-gray-500">
-                                    Totale score
+                                    Total score
                                 </div>
                                 <div
                                     id="effect-total-score"

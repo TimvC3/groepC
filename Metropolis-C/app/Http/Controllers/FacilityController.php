@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\NewFacilityCreated;
 use App\Models\Category;
 use App\Models\Facility;
-use App\Models\FacilityRestriction;
+use App\Models\FacilityCondition;
 use App\Models\FacilityScore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -13,7 +13,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class FacilityController extends Controller
@@ -25,7 +24,7 @@ class FacilityController extends Controller
 
     public function edit(Facility $facility): View
     {
-        $facility->load(['category', 'scores.category', 'requiredNeighbour']);
+        $facility->load(['category', 'scores.category']);
 
         return $this->facilitiesView($facility);
     }
@@ -37,14 +36,21 @@ class FacilityController extends Controller
         $facilities = Facility::with([
             'category',
             'scores.category',
-            'requiredNeighbour',
         ])
             ->orderBy('sort_order')
             ->get();
 
-        $restrictions = FacilityRestriction::with(['facility1', 'facility2'])->get();
+        $conditions = FacilityCondition::with(['facility', 'neighbourFacility'])
+            ->orderBy('facility_id')
+            ->orderBy('condition_type')
+            ->get();
 
-        return view('grid.facilities', compact('facilities', 'categories', 'editingFacility', 'restrictions'));
+        return view('grid.facilities', compact(
+            'facilities',
+            'categories',
+            'editingFacility',
+            'conditions'
+        ));
     }
 
     public function store(Request $request): RedirectResponse
@@ -53,7 +59,6 @@ class FacilityController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'icon' => ['nullable', 'string', 'max:20'],
-            'required_neighbour_facility_id' => ['nullable', 'integer', 'exists:facilities,id'],
             'scores' => ['array'],
             'scores.*' => ['required', 'integer', 'min:-5', 'max:5'],
         ]);
@@ -64,7 +69,6 @@ class FacilityController extends Controller
                 'name' => $validated['name'],
                 'slug' => $this->uniqueSlug($validated['name']),
                 'icon' => $validated['icon'] ?? null,
-                'required_neighbour_facility_id' => $validated['required_neighbour_facility_id'] ?? null,
                 'sort_order' => (Facility::max('sort_order') ?? 0) + 1,
             ]);
 
@@ -85,7 +89,6 @@ class FacilityController extends Controller
             Mail::to($expertEmail)->send(new NewFacilityCreated($facility->load([
                 'category',
                 'scores.category',
-                'requiredNeighbour',
             ])));
         }
 
@@ -100,12 +103,6 @@ class FacilityController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'icon' => ['nullable', 'string', 'max:20'],
-            'required_neighbour_facility_id' => [
-                'nullable',
-                'integer',
-                'exists:facilities,id',
-                Rule::notIn([$facility->id]),
-            ],
             'scores' => ['array'],
             'scores.*' => ['required', 'integer', 'min:-5', 'max:5'],
         ]);
@@ -116,7 +113,6 @@ class FacilityController extends Controller
                 'name' => $validated['name'],
                 'slug' => $this->uniqueSlug($validated['name'], $facility),
                 'icon' => $validated['icon'] ?? null,
-                'required_neighbour_facility_id' => $validated['required_neighbour_facility_id'] ?? null,
             ]);
 
             Category::orderBy('sort_order')->each(function (Category $category) use ($facility, $validated) {

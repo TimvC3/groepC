@@ -1,10 +1,10 @@
 <?php
 
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\FacilityConditionController;
 use App\Http\Controllers\FacilityController;
-use App\Http\Controllers\FacilityRestrictionController;
 use App\Http\Controllers\GridController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\EventController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -19,8 +19,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/grid/approve-cell', [GridController::class, 'approveCell'])->name('grid.approve-cell');
 
     Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities');
-    Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])->name('facilities.scores.update');
-
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -34,10 +32,16 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])
         ->name('facilities.scores.update');
 
-    Route::post('/facilities/restrictions', [FacilityRestrictionController::class, 'store'])->name('facilities.restrictions.store');
-    Route::delete('/facilities/restrictions/{restriction}', [FacilityRestrictionController::class, 'destroy'])->name('facilities.restrictions.destroy');
-
     Route::redirect('/functions', '/facilities')->name('functions.index');
+});
+
+Route::middleware(['auth', 'library-manager'])->group(function () {
+    Route::post('/facility-conditions', [FacilityConditionController::class, 'store'])
+        ->name('facility-conditions.store');
+    Route::patch('/facility-conditions/{condition}', [FacilityConditionController::class, 'update'])
+        ->name('facility-conditions.update');
+    Route::delete('/facility-conditions/{condition}', [FacilityConditionController::class, 'destroy'])
+        ->name('facility-conditions.destroy');
 });
 
 Route::middleware(['auth', 'admin'])

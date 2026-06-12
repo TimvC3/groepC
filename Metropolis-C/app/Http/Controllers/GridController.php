@@ -6,7 +6,7 @@ use App\Models\ApprovedGridCell;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Facility;
-use App\Models\FacilityRestriction;
+use App\Models\FacilityCondition;
 use App\Support\GridEffectData;
 use Illuminate\Http\Request;
 
@@ -16,12 +16,13 @@ class GridController extends Controller
     {
         $categories = Category::orderBy('sort_order')->get();
 
-        $facilities = Facility::with(['category', 'scores.category', 'requiredNeighbour'])
+        $facilities = Facility::with(['category', 'scores.category'])
             ->orderBy('sort_order')
             ->get();
+        $conditions = FacilityCondition::with('neighbourFacility')->get();
 
         $groupedFacilities = $facilities->groupBy('category.name');
-        $effectData = GridEffectData::from($categories, $facilities);
+        $effectData = GridEffectData::from($categories, $facilities, $conditions);
 
         $eventEffectData = [
             'events' => Event::with('categories')
@@ -61,7 +62,13 @@ class GridController extends Controller
                 ],
             ]);
 
-        $restrictions = FacilityRestriction::all(['facility_id_1', 'facility_id_2']);
+        $restrictions = $conditions
+            ->where('condition_type', FacilityCondition::FORBIDDEN_NEIGHBOUR)
+            ->map(fn (FacilityCondition $condition) => [
+                'facility_id_1' => $condition->facility_id,
+                'facility_id_2' => $condition->neighbour_facility_id,
+            ])
+            ->values();
 
         return view('grid.grid', compact(
             'categories',

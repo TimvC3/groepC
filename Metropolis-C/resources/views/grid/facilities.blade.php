@@ -1,6 +1,8 @@
 <x-app-layout>
     @php
         $isEditing = isset($editingFacility) && $editingFacility;
+        $isAdmin = auth()->user()?->role === 'admin';
+        $isLibraryManager = auth()->user()?->role === 'library_manager';
     @endphp
 
     <x-slot name="header">
@@ -10,7 +12,9 @@
                     {{ __('Facilities') }}
                 </h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ __('Manage facilities and their impact scores.') }}
+                    {{ $isLibraryManager
+                        ? __('Manage required and forbidden neighbour conditions for functions.')
+                        : __('Manage facilities and their impact scores.') }}
                 </p>
             </div>
         </div>
@@ -30,7 +34,7 @@
                 </div>
             @endif
 
-            @if (auth()->user()?->role === 'admin')
+            @if ($isAdmin)
                 <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
                     <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                         <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
@@ -59,7 +63,7 @@
                                             {{ __('Slug') }}
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                                            {{ __('Required Neighbour') }}
+                                            {{ __('Conditions') }}
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
                                             {{ __('Last Updated') }}
@@ -85,7 +89,7 @@
                                                 {{ $facility->slug }}
                                             </td>
                                             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                                {{ $facility->requiredNeighbour?->name ?? '-' }}
+                                                {{ $conditions->where('facility_id', $facility->id)->count() }}
                                             </td>
                                             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                                 {{ $facility->updated_at?->format('M j, Y') }}
@@ -188,39 +192,6 @@
                             </div>
 
                             <div>
-                                <label for="required_neighbour_facility_id" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ __('Required Neighbour') }}
-                                </label>
-
-                                <select
-                                    id="required_neighbour_facility_id"
-                                    name="required_neighbour_facility_id"
-                                    class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                                >
-                                    <option value="">{{ __('No required neighbour') }}</option>
-
-                                    @foreach ($facilities as $facilityOption)
-                                        @continue($isEditing && $editingFacility?->id === $facilityOption->id)
-
-                                        <option
-                                            value="{{ $facilityOption->id }}"
-                                            @selected((int) old('required_neighbour_facility_id', $editingFacility?->required_neighbour_facility_id) === $facilityOption->id)
-                                        >
-                                            {{ $facilityOption->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {{ __('When this function is placed, this neighbour must be directly next to it horizontally or vertically.') }}
-                                </p>
-
-                                @error('required_neighbour_facility_id')
-                                    <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <div>
                                 <p class="block text-sm font-medium text-gray-700 dark:text-gray-200">
                                     {{ $isEditing ? __('Scores') : __('Initial Scores') }}
                                 </p>
@@ -266,119 +237,111 @@
                     </section>
                 </div>
 
+            @endif
+
+            @if ($isLibraryManager)
                 <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                     <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            {{ __('Placement Restrictions') }}
+                            {{ __('Function Conditions') }}
                         </h3>
                         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                            {{ __('Facilities that cannot be placed directly next to each other on the grid.') }}
+                            {{ __('Required neighbours must be present. Forbidden neighbours cannot be placed directly next to each other.') }}
                         </p>
                     </div>
 
                     <div class="p-6 space-y-6">
-                        <form method="POST" action="{{ route('facilities.restrictions.store') }}" class="flex flex-wrap items-end gap-3">
+                        <form method="POST" action="{{ route('facility-conditions.store') }}" class="grid gap-4 lg:grid-cols-4 lg:items-end">
                             @csrf
 
-                            <div class="flex-1 min-w-40">
-                                <label for="restriction_facility_1" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ __('Facility A') }}
+                            <div>
+                                <label for="condition_facility" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {{ __('Function') }}
                                 </label>
-                                <select
-                                    id="restriction_facility_1"
-                                    name="facility_id_1"
-                                    required
-                                    class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                                >
-                                    <option value="">{{ __('Select facility') }}</option>
+                                <select id="condition_facility" name="facility_id" required class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                                    <option value="">{{ __('Select function') }}</option>
                                     @foreach ($facilities as $facility)
-                                        <option value="{{ $facility->id }}">{{ $facility->name }}</option>
+                                        <option value="{{ $facility->id }}" @selected((int) old('facility_id') === $facility->id)>
+                                            {{ $facility->name }}
+                                        </option>
                                     @endforeach
                                 </select>
-                                @error('facility_id_1')
-                                    <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                                @enderror
                             </div>
 
-                            <div class="flex-1 min-w-40">
-                                <label for="restriction_facility_2" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ __('Facility B') }}
+                            <div>
+                                <label for="condition_type" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {{ __('Condition') }}
                                 </label>
-                                <select
-                                    id="restriction_facility_2"
-                                    name="facility_id_2"
-                                    required
-                                    class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                                >
-                                    <option value="">{{ __('Select facility') }}</option>
+                                <select id="condition_type" name="type" required class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                                    <option value="required_neighbour" @selected(old('type') === 'required_neighbour')>{{ __('Required neighbour') }}</option>
+                                    <option value="forbidden_neighbour" @selected(old('type') === 'forbidden_neighbour')>{{ __('Forbidden neighbour') }}</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="condition_related_facility" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {{ __('Neighbouring function') }}
+                                </label>
+                                <select id="condition_related_facility" name="related_facility_id" required class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                                    <option value="">{{ __('Select function') }}</option>
                                     @foreach ($facilities as $facility)
-                                        <option value="{{ $facility->id }}">{{ $facility->name }}</option>
+                                        <option value="{{ $facility->id }}" @selected((int) old('related_facility_id') === $facility->id)>
+                                            {{ $facility->name }}
+                                        </option>
                                     @endforeach
                                 </select>
-                                @error('facility_id_2')
-                                    <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                                @enderror
                             </div>
 
-                            <button
-                                type="submit"
-                                class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                            >
-                                {{ __('Add Restriction') }}
+                            <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                                {{ __('Add Condition') }}
                             </button>
                         </form>
 
-                        @if ($restrictions->isNotEmpty())
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                    <thead class="bg-gray-50 dark:bg-gray-900">
-                                        <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                                                {{ __('Facility A') }}
-                                            </th>
-                                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                                                {{ __('Facility B') }}
-                                            </th>
-                                            <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">
-                                                {{ __('Actions') }}
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                        @foreach ($restrictions as $restriction)
-                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                                <td class="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
-                                                    <span class="mr-1">{{ $restriction->facility1->icon }}</span>
-                                                    {{ $restriction->facility1->name }}
-                                                </td>
-                                                <td class="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
-                                                    <span class="mr-1">{{ $restriction->facility2->icon }}</span>
-                                                    {{ $restriction->facility2->name }}
-                                                </td>
-                                                <td class="px-6 py-3 text-right">
-                                                    <form
-                                                        method="POST"
-                                                        action="{{ route('facilities.restrictions.destroy', $restriction) }}"
-                                                        onsubmit="return confirm('Remove this restriction?')"
-                                                    >
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button
-                                                            type="submit"
-                                                            class="text-sm text-red-600 transition hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                                        >
-                                                            {{ __('Remove') }}
-                                                        </button>
-                                                    </form>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @else
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('No restrictions configured yet.') }}</p>
+                        @if ($errors->any())
+                            <p class="text-sm text-red-600 dark:text-red-400">{{ $errors->first() }}</p>
                         @endif
+
+                        <div class="space-y-3">
+                            @forelse ($conditions as $condition)
+                                <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                                    <form method="POST" action="{{ route('facility-conditions.update', $condition) }}" class="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto_auto] lg:items-end">
+                                        @csrf
+                                        @method('PATCH')
+
+                                        <select name="facility_id" required class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                                            @foreach ($facilities as $facility)
+                                                <option value="{{ $facility->id }}" @selected($condition->facility_id === $facility->id)>{{ $facility->name }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <select name="type" required class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                                            <option value="required_neighbour" @selected($condition->condition_type === 'required_neighbour')>{{ __('Required neighbour') }}</option>
+                                            <option value="forbidden_neighbour" @selected($condition->condition_type === 'forbidden_neighbour')>{{ __('Forbidden neighbour') }}</option>
+                                        </select>
+
+                                        <select name="related_facility_id" required class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                                            @foreach ($facilities as $facility)
+                                                <option value="{{ $facility->id }}" @selected($condition->neighbour_facility_id === $facility->id)>{{ $facility->name }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                                            {{ __('Save') }}
+                                        </button>
+                                    </form>
+
+                                    <form method="POST" action="{{ route('facility-conditions.destroy', $condition) }}" class="mt-2 text-right" onsubmit="return confirm('Delete this condition?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-sm font-medium text-red-600 dark:text-red-400">
+                                            {{ __('Delete') }}
+                                        </button>
+                                    </form>
+                                </div>
+                            @empty
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('No conditions configured yet.') }}</p>
+                            @endforelse
+                        </div>
                     </div>
                 </section>
             @endif
@@ -389,7 +352,9 @@
                         {{ __('Facility Score Matrix') }}
                     </h3>
                     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                        {{ __('Click a score to edit its value from -5 to 5.') }}
+                        {{ $isAdmin
+                            ? __('Click a score to edit its value from -5 to 5.')
+                            : __('Facility values are read-only for your role.') }}
                     </p>
                 </div>
 
@@ -447,11 +412,14 @@
                                         <td class="px-4 py-4 text-center">
                                             @if (! is_null($score))
                                                 <span
-                                                    data-score-id="{{ $facilityScore->id }}"
-                                                    data-score="{{ $score }}"
-                                                    title="Click to edit"
+                                                    @if ($isAdmin)
+                                                        data-score-id="{{ $facilityScore->id }}"
+                                                        data-score="{{ $score }}"
+                                                        title="Click to edit"
+                                                    @endif
                                                     @class([
-                                                        'inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold cursor-pointer select-none transition hover:ring-2 hover:ring-indigo-300',
+                                                        'inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold select-none transition',
+                                                        'cursor-pointer hover:ring-2 hover:ring-indigo-300' => $isAdmin,
                                                         'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' => $score > 0,
                                                         'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300' => $score < 0,
                                                         'text-gray-500 dark:bg-gray-700 dark:text-gray-400' => $score === 0,
@@ -472,7 +440,9 @@
         </div>
     </div>
 
-    @push('scripts')
-        @vite('resources/js/facilities/scoreEditor.js')
-    @endpush
+    @if ($isAdmin)
+        @push('scripts')
+            @vite('resources/js/facilities/scoreEditor.js')
+        @endpush
+    @endif
 </x-app-layout>
