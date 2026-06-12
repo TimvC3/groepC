@@ -166,6 +166,15 @@
                             </div>
                         @endfor
                     </div>
+
+                    <div
+                        id="condition-status"
+                        class="mt-4 w-full max-w-md rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300"
+                        aria-live="polite"
+                        aria-atomic="true"
+                    >
+                        Function conditions are active. Place a function to evaluate its neighbour rules.
+                    </div>
                 </div>
 
                 <section class="mt-6">
@@ -244,7 +253,7 @@
 
                             <div class="text-right">
                                 <div class="text-xs font-bold uppercase tracking-wider text-gray-500">
-                                    Totale score
+                                    Quality Of Life Score
                                 </div>
                                 <div
                                     id="effect-total-score"
@@ -386,6 +395,7 @@
 @push('scripts')
     <script>
         window.gridEffectData = {{ Illuminate\Support\Js::from($effectData) }};
+        window.gridConditionData = {{ Illuminate\Support\Js::from($conditionData) }};
         window.gridEventEffectData = {{ Illuminate\Support\Js::from($eventEffectData ?? ['events' => []]) }};
         window.gridRestrictions = {{ Illuminate\Support\Js::from($restrictions) }};
         window.approvedGridCells = {{ Illuminate\Support\Js::from($approvedGridCells ?? []) }};

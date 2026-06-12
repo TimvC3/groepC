@@ -1,0 +1,237 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Category;
+use App\Models\Facility;
+use App\Models\FacilityCondition;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class FacilityConditionTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_library_manager_can_create_update_and_delete_a_condition(): void
+    {
+        [$library, $park, $factory] = $this->createFacilities();
+        $user = $this->libraryManager();
+
+        $this->actingAs($user)
+            ->post(route('facilities.conditions.store', $library), [
+                'condition_type' => 'required_neighbour',
+                'neighbour_facility_id' => $park->id,
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $condition = FacilityCondition::firstOrFail();
+
+        $this->assertDatabaseHas('facility_conditions', [
+            'facility_id' => $library->id,
+            'condition_type' => 'required_neighbour',
+            'neighbour_facility_id' => $park->id,
+        ]);
+
+        $this->actingAs($user)
+            ->patch(route('facilities.conditions.update', [$library, $condition]), [
+                'condition_type' => 'forbidden_neighbour',
+                'neighbour_facility_id' => $factory->id,
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('facility_conditions', [
+            'id' => $condition->id,
+            'condition_type' => 'forbidden_neighbour',
+            'neighbour_facility_id' => $factory->id,
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('facilities.conditions.destroy', [$library, $condition]))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('facility_conditions', ['id' => $condition->id]);
+    }
+
+    public function test_condition_cannot_target_the_same_facility_or_be_duplicated(): void
+    {
+        [$library, $park] = $this->createFacilities();
+        $user = $this->libraryManager();
+
+        $this->actingAs($user)
+            ->post(route('facilities.conditions.store', $library), [
+                'condition_type' => 'required_neighbour',
+                'neighbour_facility_id' => $library->id,
+            ])
+            ->assertSessionHasErrors('neighbour_facility_id');
+
+        FacilityCondition::create([
+            'facility_id' => $library->id,
+            'condition_type' => 'required_neighbour',
+            'neighbour_facility_id' => $park->id,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('facilities.conditions.store', $library), [
+                'condition_type' => 'required_neighbour',
+                'neighbour_facility_id' => $park->id,
+            ])
+            ->assertSessionHasErrors('neighbour_facility_id');
+    }
+
+    public function test_facilities_page_shows_condition_management_to_library_manager(): void
+    {
+        [$library, $park] = $this->createFacilities();
+        $user = $this->libraryManager();
+
+        FacilityCondition::create([
+            'facility_id' => $library->id,
+            'condition_type' => 'required_neighbour',
+            'neighbour_facility_id' => $park->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('facilities'))
+            ->assertOk()
+            ->assertSee('Function Conditions')
+            ->assertSee('Requires neighbour')
+            ->assertSee($park->name)
+            ->assertSee(route('facilities.conditions.store', $library), false);
+    }
+
+    public function test_other_roles_cannot_manage_conditions(): void
+    {
+        [$library, $park] = $this->createFacilities();
+        $cityPlanner = User::factory()->create(['role' => 'city_planner']);
+        $policyMaker = $this->policyMaker();
+
+        $this->actingAs($cityPlanner)
+            ->post(route('facilities.conditions.store', $library), [
+                'condition_type' => 'required_neighbour',
+                'neighbour_facility_id' => $park->id,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($cityPlanner)
+            ->get(route('facilities'))
+            ->assertOk()
+            ->assertDontSee('Function Conditions');
+
+        $this->actingAs($policyMaker)
+            ->post(route('facilities.conditions.store', $library), [
+                'condition_type' => 'required_neighbour',
+                'neighbour_facility_id' => $park->id,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($policyMaker)
+            ->get(route('facilities'))
+            ->assertOk()
+            ->assertDontSee('Function Conditions');
+    }
+
+    public function test_library_manager_cannot_edit_facility_values(): void
+    {
+        [$library] = $this->createFacilities();
+        $score = $library->scores()->create([
+            'category_id' => $library->category_id,
+            'score' => 3,
+        ]);
+        $libraryManager = $this->libraryManager();
+
+        $this->actingAs($libraryManager)
+            ->patchJson(route('facilities.scores.update', $score), ['score' => 5])
+            ->assertForbidden();
+
+        $this->actingAs($libraryManager)
+            ->patch(route('facilities.update', $library), [
+                'name' => 'Changed Library',
+                'category_id' => $library->category_id,
+                'icon' => 'changed',
+                'scores' => [$library->category_id => 5],
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($libraryManager)
+            ->get(route('facilities'))
+            ->assertOk()
+            ->assertDontSee('data-score-id=', false)
+            ->assertSee('Function Conditions');
+
+        $this->assertDatabaseHas('facilities', [
+            'id' => $library->id,
+            'name' => 'Library',
+        ]);
+        $this->assertDatabaseHas('facility_scores', [
+            'id' => $score->id,
+            'score' => 3,
+        ]);
+    }
+
+    public function test_grid_receives_persisted_condition_data_and_feedback_area(): void
+    {
+        [$library, $park] = $this->createFacilities();
+
+        FacilityCondition::create([
+            'facility_id' => $library->id,
+            'condition_type' => 'forbidden_neighbour',
+            'neighbour_facility_id' => $park->id,
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('grid'))
+            ->assertOk()
+            ->assertSee('id="condition-status"', false)
+            ->assertSee('window.gridConditionData', false)
+            ->assertViewHas('conditionData', function ($conditionData) use ($library, $park): bool {
+                $condition = $conditionData[(string) $library->id]['conditions']->first();
+
+                return $condition['type'] === 'forbidden_neighbour'
+                    && $condition['neighbourFacilityId'] === (string) $park->id;
+            });
+    }
+
+    /**
+     * @return array<int, Facility>
+     */
+    private function createFacilities(): array
+    {
+        $category = Category::create([
+            'name' => 'Public Services',
+            'slug' => 'public-services',
+            'sort_order' => 1,
+        ]);
+
+        return collect(['Library', 'Park', 'Factory'])
+            ->map(fn (string $name, int $index) => Facility::create([
+                'category_id' => $category->id,
+                'name' => $name,
+                'slug' => strtolower($name),
+                'icon' => strtoupper($name[0]),
+                'sort_order' => $index + 1,
+            ]))
+            ->all();
+    }
+
+    private function policyMaker(): User
+    {
+        return User::factory()->create([
+            'name' => 'Policy Maker',
+            'email' => 'policy.maker@example.com',
+            'password' => 'Password',
+            'role' => 'policy_maker',
+        ]);
+    }
+
+    private function libraryManager(): User
+    {
+        return User::factory()->create([
+            'name' => 'Library Manager',
+            'email' => 'library.manager@example.com',
+            'password' => 'Password',
+            'role' => 'library_manager',
+        ]);
+    }
+}

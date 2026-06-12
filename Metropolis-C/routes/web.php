@@ -1,10 +1,11 @@
 <?php
 
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\FacilityConditionController;
 use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\FacilityRestrictionController;
 use App\Http\Controllers\GridController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\EventController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -24,6 +25,17 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+Route::middleware(['auth', 'library-manager'])->group(function () {
+    Route::post('/facilities/{facility}/conditions', [FacilityConditionController::class, 'store'])
+        ->name('facilities.conditions.store');
+
+    Route::patch('/facilities/{facility}/conditions/{condition}', [FacilityConditionController::class, 'update'])
+        ->name('facilities.conditions.update');
+
+    Route::delete('/facilities/{facility}/conditions/{condition}', [FacilityConditionController::class, 'destroy'])
+        ->name('facilities.conditions.destroy');
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {
