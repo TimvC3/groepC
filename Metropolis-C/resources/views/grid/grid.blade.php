@@ -253,11 +253,7 @@
 
                             <div class="text-right">
                                 <div class="text-xs font-bold uppercase tracking-wider text-gray-500">
-<<<<<<< HEAD
-                                    Total score
-=======
-                                    Quality Of Life Score
->>>>>>> 9b1fb50cbd837e928587d63b45472150bab40073
+                                    Quality of Life Score
                                 </div>
                                 <div
                                     id="effect-total-score"

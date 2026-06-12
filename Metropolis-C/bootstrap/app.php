@@ -3,10 +3,7 @@
 use App\Http\Middleware\CityPlannerMiddleware;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsLibraryManager;
-<<<<<<< HEAD
-=======
 use App\Http\Middleware\EnsureUserIsPolicyMaker;
->>>>>>> 9b1fb50cbd837e928587d63b45472150bab40073
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -22,7 +19,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureUserIsAdmin::class,
             'library-manager' => EnsureUserIsLibraryManager::class,
             'city-planner' => CityPlannerMiddleware::class,
-            'library-manager' => EnsureUserIsLibraryManager::class,
             'policy-maker' => EnsureUserIsPolicyMaker::class,
         ]);
     })
