@@ -1,9 +1,6 @@
-import { calculateFacilityEffects } from './facilityScoring.js';
-
 const gridEffectData = window.gridEffectData || {};
 const effectCategories = gridEffectData.categories || [];
 const facilityScoreMatrix = gridEffectData.scoreMatrix || {};
-const facilityEffectData = gridEffectData.facilities || {};
 const gridEventEffectData = window.gridEventEffectData || {};
 const eventImpactMatrix = Object.fromEntries(
     (gridEventEffectData.events || []).map((event) => [String(event.id), event])
@@ -23,7 +20,6 @@ let simulationInterval = null;
 let simulationRunning = false;
 let simulationSpeed = 1;
 let lastSimulationSpeed = 1;
-let placementSequence = 0;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 
@@ -435,16 +431,6 @@ function selectedFacilityIds() {
         .filter(Boolean);
 }
 
-function selectedFacilityPlacements() {
-    return Array.from(document.querySelectorAll('.grid-cell'))
-        .filter((cell) => cell.dataset.itemType === 'facility')
-        .map((cell) => ({
-            index: Number(cell.dataset.index),
-            facilityId: String(cell.dataset.itemId),
-            placementOrder: Number(cell.dataset.placementOrder || cell.dataset.index),
-        }));
-}
-
 function currentGridState() {
     return new Map(
         Array.from(document.querySelectorAll('.grid-cell'))
@@ -608,12 +594,18 @@ function emptyCategoryTotals() {
 }
 
 function facilityCategoryTotals() {
-    return calculateFacilityEffects({
-        categories: effectCategories,
-        facilities: facilityEffectData,
-        placements: selectedFacilityPlacements(),
-        totalCells: document.querySelectorAll('.grid-cell').length,
+    const totals = emptyCategoryTotals();
+    const facilityIds = selectedFacilityIds();
+
+    facilityIds.forEach((facilityId) => {
+        const scores = facilityScoreMatrix[facilityId] || {};
+
+        effectCategories.forEach((category) => {
+            totals[category.id] += Number(scores[category.id] ?? 0);
+        });
     });
+
+    return totals;
 }
 
 function eventCategoryTotals() {
@@ -640,33 +632,8 @@ function updateStatus(totalScore, facilityCount) {
         : `${facilityCount} function(s) selected. The Quality of Life score is ${formatScore(totalScore)}.`;
 }
 
-function renderFacilityAdjustments(adjustments) {
-    const list = document.getElementById('facility-adjustment-list');
-    const emptyState = document.getElementById('facility-adjustment-empty');
-    if (!list || !emptyState) return;
-
-    list.replaceChildren();
-    emptyState.classList.toggle('hidden', adjustments.length > 0);
-
-    adjustments.forEach((adjustment) => {
-        const row = document.createElement('div');
-        const reason = document.createElement('span');
-        const score = document.createElement('span');
-
-        row.className = 'flex items-start justify-between gap-3 rounded-md border border-gray-200 px-3 py-2 text-xs dark:border-gray-700';
-        reason.className = 'text-gray-600 dark:text-gray-300';
-        score.className = `shrink-0 font-bold ${scoreColorClass(adjustment.amount)}`;
-        reason.textContent = `${adjustment.reason} (${adjustment.categoryName})`;
-        score.textContent = formatScore(adjustment.amount);
-
-        row.append(reason, score);
-        list.append(row);
-    });
-}
-
 function updateEffectView() {
-    const facilityEffects = facilityCategoryTotals();
-    const facilityTotals = facilityEffects.totals;
+    const facilityTotals = facilityCategoryTotals();
     const eventTotals = eventCategoryTotals();
     const facilityIds = selectedFacilityIds();
 
@@ -703,7 +670,6 @@ function updateEffectView() {
         .toggle('hidden', facilityIds.length > 0 || activeEventNames().length > 0);
 
     updateStatus(totalScore, facilityIds.length);
-    renderFacilityAdjustments(facilityEffects.adjustments);
     updateConditionStatus();
     updateActiveEventDisplay();
 }
@@ -996,7 +962,6 @@ function removeCellContent(cell) {
     cell.replaceChildren(label);
     delete cell.dataset.itemId;
     delete cell.dataset.itemType;
-    delete cell.dataset.placementOrder;
     cell.removeAttribute('aria-label');
     cell.classList.remove(
         'group',
@@ -1019,13 +984,6 @@ function fillCell(cell, item) {
     cell.replaceChildren(isEvent ? createEventCellContent(item) : createFacilityCellContent(item));
     cell.dataset.itemId = item.id;
     cell.dataset.itemType = item.type;
-    if (!isEvent) {
-        const placementOrder = Number(item.placementOrder) || ++placementSequence;
-        placementSequence = Math.max(placementSequence, placementOrder);
-        cell.dataset.placementOrder = String(placementOrder);
-    } else {
-        delete cell.dataset.placementOrder;
-    }
     cell.setAttribute('aria-label', item.name);
     cell.classList.remove('border-dashed');
     cell.classList.add('group', 'border-solid');
@@ -1161,7 +1119,6 @@ function bindGridCells() {
                     id: cell.dataset.itemId,
                     icon: cell.querySelector('.text-2xl').innerText,
                     name: cell.getAttribute('aria-label'),
-                    placementOrder: Number(cell.dataset.placementOrder),
                 };
 
             setDragPayload(event, payload);

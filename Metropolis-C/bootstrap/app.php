@@ -1,10 +1,11 @@
 <?php
 
+use App\Http\Middleware\CityPlannerMiddleware;
+use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\EnsureUserIsPolicyMaker;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\CityPlannerMiddleware;
-use App\Http\Middleware\EnsureUserIsAdmin;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
             'city-planner' => CityPlannerMiddleware::class,
+            'policy-maker' => EnsureUserIsPolicyMaker::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

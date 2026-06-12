@@ -13,10 +13,10 @@ class FacilityConditionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_authenticated_user_can_create_update_and_delete_a_condition(): void
+    public function test_policy_maker_can_create_update_and_delete_a_condition(): void
     {
         [$library, $park, $factory] = $this->createFacilities();
-        $user = User::factory()->create();
+        $user = $this->policyMaker();
 
         $this->actingAs($user)
             ->post(route('facilities.conditions.store', $library), [
@@ -58,7 +58,7 @@ class FacilityConditionTest extends TestCase
     public function test_condition_cannot_target_the_same_facility_or_be_duplicated(): void
     {
         [$library, $park] = $this->createFacilities();
-        $user = User::factory()->create();
+        $user = $this->policyMaker();
 
         $this->actingAs($user)
             ->post(route('facilities.conditions.store', $library), [
@@ -81,10 +81,10 @@ class FacilityConditionTest extends TestCase
             ->assertSessionHasErrors('neighbour_facility_id');
     }
 
-    public function test_facilities_page_shows_condition_management_to_non_admin_user(): void
+    public function test_facilities_page_shows_condition_management_to_policy_maker(): void
     {
         [$library, $park] = $this->createFacilities();
-        $user = User::factory()->create(['role' => 'city_planner']);
+        $user = $this->policyMaker();
 
         FacilityCondition::create([
             'facility_id' => $library->id,
@@ -99,6 +99,62 @@ class FacilityConditionTest extends TestCase
             ->assertSee('Requires neighbour')
             ->assertSee($park->name)
             ->assertSee(route('facilities.conditions.store', $library), false);
+    }
+
+    public function test_other_roles_cannot_manage_conditions(): void
+    {
+        [$library, $park] = $this->createFacilities();
+        $cityPlanner = User::factory()->create(['role' => 'city_planner']);
+
+        $this->actingAs($cityPlanner)
+            ->post(route('facilities.conditions.store', $library), [
+                'condition_type' => 'required_neighbour',
+                'neighbour_facility_id' => $park->id,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($cityPlanner)
+            ->get(route('facilities'))
+            ->assertOk()
+            ->assertDontSee('Function Conditions');
+    }
+
+    public function test_policy_maker_cannot_edit_facility_values(): void
+    {
+        [$library] = $this->createFacilities();
+        $score = $library->scores()->create([
+            'category_id' => $library->category_id,
+            'score' => 3,
+        ]);
+        $policyMaker = $this->policyMaker();
+
+        $this->actingAs($policyMaker)
+            ->patchJson(route('facilities.scores.update', $score), ['score' => 5])
+            ->assertForbidden();
+
+        $this->actingAs($policyMaker)
+            ->patch(route('facilities.update', $library), [
+                'name' => 'Changed Library',
+                'category_id' => $library->category_id,
+                'icon' => 'changed',
+                'scores' => [$library->category_id => 5],
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($policyMaker)
+            ->get(route('facilities'))
+            ->assertOk()
+            ->assertDontSee('data-score-id=', false)
+            ->assertSee('Function Conditions');
+
+        $this->assertDatabaseHas('facilities', [
+            'id' => $library->id,
+            'name' => 'Library',
+        ]);
+        $this->assertDatabaseHas('facility_scores', [
+            'id' => $score->id,
+            'score' => 3,
+        ]);
     }
 
     public function test_grid_receives_persisted_condition_data_and_feedback_area(): void
@@ -144,5 +200,15 @@ class FacilityConditionTest extends TestCase
                 'sort_order' => $index + 1,
             ]))
             ->all();
+    }
+
+    private function policyMaker(): User
+    {
+        return User::factory()->create([
+            'name' => 'Policy Maker',
+            'email' => 'policy.maker@example.com',
+            'password' => 'Password',
+            'role' => 'policy_maker',
+        ]);
     }
 }

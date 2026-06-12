@@ -222,7 +222,8 @@
                 </div>
             @endif
 
-            <section class="overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800">
+            @if (auth()->user()?->role === 'policy_maker')
+                <section class="overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800">
                 <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         {{ __('Function Conditions') }}
@@ -356,7 +357,8 @@
                         {{ $errors->first('condition_type') ?: $errors->first('neighbour_facility_id') }}
                     </div>
                 @endif
-            </section>
+                </section>
+            @endif
 
             <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                 <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
@@ -364,7 +366,11 @@
                         {{ __('Facility Score Matrix') }}
                     </h3>
                     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                        {{ __('Click a score to edit its value from -5 to 5.') }}
+                        @if (auth()->user()?->role === 'policy_maker')
+                            {{ __('Facility scores are read-only for policy makers.') }}
+                        @else
+                            {{ __('Click a score to edit its value from -5 to 5.') }}
+                        @endif
                     </p>
                 </div>
 
@@ -422,11 +428,14 @@
                                         <td class="px-4 py-4 text-center">
                                             @if (! is_null($score))
                                                 <span
-                                                    data-score-id="{{ $facilityScore->id }}"
-                                                    data-score="{{ $score }}"
-                                                    title="Click to edit"
+                                                    @if (auth()->user()?->role !== 'policy_maker')
+                                                        data-score-id="{{ $facilityScore->id }}"
+                                                        data-score="{{ $score }}"
+                                                        title="Click to edit"
+                                                    @endif
                                                     @class([
-                                                        'inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold cursor-pointer select-none transition hover:ring-2 hover:ring-indigo-300',
+                                                        'inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold select-none transition',
+                                                        'cursor-pointer hover:ring-2 hover:ring-indigo-300' => auth()->user()?->role !== 'policy_maker',
                                                         'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' => $score > 0,
                                                         'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300' => $score < 0,
                                                         'text-gray-500 dark:bg-gray-700 dark:text-gray-400' => $score === 0,
@@ -448,6 +457,8 @@
     </div>
 
     @push('scripts')
-        @vite('resources/js/facilities/scoreEditor.js')
+        @if (auth()->user()?->role !== 'policy_maker')
+            @vite('resources/js/facilities/scoreEditor.js')
+        @endif
     @endpush
 </x-app-layout>

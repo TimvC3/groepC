@@ -46,17 +46,15 @@ class GridEffectDataTest extends TestCase
 
         $effectData = GridEffectData::from(
             Category::orderBy('sort_order')->get(),
-            Facility::with(['category', 'scores'])->get(),
+            Facility::with(['scores'])->get(),
         );
 
         $this->assertSame([
-            ['id' => $security->id, 'name' => 'Security', 'slug' => 'security'],
-            ['id' => $mobility->id, 'name' => 'Mobility', 'slug' => 'mobility'],
+            ['id' => $security->id, 'name' => 'Security'],
+            ['id' => $mobility->id, 'name' => 'Mobility'],
         ], $effectData['categories']->all());
 
         $this->assertSame(5, $effectData['scoreMatrix'][$policeStation->id][$security->id]);
         $this->assertSame(-2, $effectData['scoreMatrix'][$policeStation->id][$mobility->id]);
-        $this->assertSame('police-station', $effectData['facilities'][$policeStation->id]['slug']);
-        $this->assertSame('security', $effectData['facilities'][$policeStation->id]['categorySlug']);
     }
 }

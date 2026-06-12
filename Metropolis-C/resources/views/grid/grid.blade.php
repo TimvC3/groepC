@@ -240,16 +240,6 @@
                             @endforeach
                         </div>
 
-                        <div class="mt-5 border-t border-gray-200 pt-4 dark:border-gray-700">
-                            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                Bonuses and Penalties
-                            </h4>
-                            <p id="facility-adjustment-empty" class="mt-2 text-sm text-gray-500">
-                                No proximity or duplicate adjustments are active.
-                            </p>
-                            <div id="facility-adjustment-list" class="mt-3 space-y-2"></div>
-                        </div>
-
                         <p id="effect-empty-state" class="mt-4 text-sm text-gray-500" aria-live="polite">
                             Drag facilities in the grid to see the score change.
                         </p>
