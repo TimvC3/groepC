@@ -8,6 +8,69 @@ const eventImpactMatrix = Object.fromEntries(
 );
 const gridConditionData = window.gridConditionData || {};
 const facilityRestrictions = window.gridRestrictions || [];
+const facilityMetadata = window.gridFacilityData || {};
+const categoryNameToId = Object.fromEntries(
+    effectCategories.map((category) => [category.name, category.id])
+);
+
+const LEVEL_4_ADJACENCY_TYPE = 'level_4_adjacency';
+const level4AdjacencyEffects = {
+    'cinema:store': {
+        Facilities: 2,
+        Recreation: 1,
+    },
+    'cycling-path:park': {
+        'Environmental Quality': 2,
+        Recreation: 1,
+    },
+    'cycling-path:train-station': {
+        Mobility: 2,
+    },
+    'fire-station:road': {
+        Security: 1,
+        Mobility: 1,
+    },
+    'hospital:cycling-path': {
+        Mobility: 1,
+        'Environmental Quality': 1,
+    },
+    'park:school': {
+        Recreation: 2,
+        'Environmental Quality': 1,
+    },
+    'park:sports-park': {
+        Recreation: 2,
+    },
+    'petrol-station:park': {
+        'Environmental Quality': -3,
+    },
+    'petrol-station:school': {
+        Security: -2,
+        'Environmental Quality': -2,
+    },
+    'police-station:school': {
+        Security: 1,
+        Facilities: 1,
+    },
+    'police-station:train-station': {
+        Security: 2,
+    },
+    'road:hospital': {
+        Security: -1,
+        'Environmental Quality': -1,
+    },
+    'road:park': {
+        Recreation: -1,
+        'Environmental Quality': -2,
+    },
+    'road:school': {
+        Security: -2,
+        Mobility: -1,
+    },
+    'water-purification:park': {
+        Recreation: -1,
+    },
+};
 
 const gridPermissions = window.gridPermissions || {};
 const approvedGridCells = window.approvedGridCells || {};
@@ -17,6 +80,162 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribut
 const gridColumns = 4;
 const simulationStorageKey = 'metropolis.simulationDateTime';
 const approvedStorageKey = 'metropolis.approvedCells';
+
+function facilityMetadataById(facilityId) {
+    return facilityMetadata[String(facilityId)] || null;
+}
+
+function categoryIdForName(name) {
+    return categoryNameToId[name] || null;
+}
+
+function sortedFacilityPairKey(a, b) {
+    return [String(a), String(b)].sort().join(':');
+}
+
+function sortedSlugPairKey(a, b) {
+    return [String(a), String(b)].sort().join(':');
+}
+
+function activeSameCategoryAdjacencySummaries(state) {
+    const summaries = [];
+    const visitedPairs = new Set();
+
+    state.forEach((item, index) => {
+        if (item.type !== 'facility') return;
+
+        const itemMeta = facilityMetadataById(item.id);
+        if (!itemMeta) return;
+
+        neighbouringIndexes(index).forEach((neighbourIndex) => {
+            const neighbour = state.get(neighbourIndex);
+            if (!neighbour || neighbour.type !== 'facility') return;
+
+            const neighbourMeta = facilityMetadataById(neighbour.id);
+            if (!neighbourMeta
+                || itemMeta.categoryId !== neighbourMeta.categoryId
+                || item.id === neighbour.id
+            ) {
+                return;
+            }
+
+            const pairKey = sortedFacilityPairKey(item.id, neighbour.id);
+            if (visitedPairs.has(pairKey)) return;
+            visitedPairs.add(pairKey);
+
+            summaries.push(`${item.name} + ${neighbour.name}: +2 ${itemMeta.categoryName}`);
+        });
+    });
+
+    return summaries;
+}
+
+function activeNeighbourConditionSummaries(state) {
+    const summaries = [];
+
+    state.forEach((item, index) => {
+        if (item.type !== 'facility') return;
+
+        const facilityConditions = gridConditionData[item.id]?.conditions || [];
+        const neighbouringFacilityIds = neighbouringIndexes(index)
+            .map((neighbourIndex) => state.get(neighbourIndex))
+            .filter((neighbour) => neighbour?.type === 'facility')
+            .map((neighbour) => neighbour.id);
+
+        facilityConditions.forEach((condition) => {
+            if (condition.type === 'required_neighbour') {
+                summaries.push(
+                    `${item.name} requires ${condition.neighbourFacilityName} adjacent ${neighbouringFacilityIds.includes(condition.neighbourFacilityId) ? '(satisfied)' : '(missing)'}`
+                );
+            }
+
+            if (condition.type === 'forbidden_neighbour') {
+                summaries.push(
+                    `${item.name} forbids ${condition.neighbourFacilityName} adjacent ${neighbouringFacilityIds.includes(condition.neighbourFacilityId) ? '(violated)' : '(ok)'}`
+                );
+            }
+        });
+    });
+
+    return summaries;
+}
+
+function activeLevel4AdjacencySummaries(state) {
+    const summaries = [];
+    const visitedPairs = new Set();
+
+    state.forEach((item, index) => {
+        if (item.type !== 'facility') return;
+
+        neighbouringIndexes(index).forEach((neighbourIndex) => {
+            const neighbour = state.get(neighbourIndex);
+            if (!neighbour || neighbour.type !== 'facility') return;
+
+            const pairKey = sortedFacilityPairKey(item.id, neighbour.id);
+            if (visitedPairs.has(pairKey)) return;
+            visitedPairs.add(pairKey);
+
+            const effects = getLevel4AdjacencyScoreEffects(item.id, neighbour.id);
+            if (!effects) return;
+
+            const formattedEffects = Object.entries(effects)
+                .map(([categoryName, value]) => `${value > 0 ? '+' : ''}${value} ${categoryName}`)
+                .join(', ');
+
+            summaries.push(`${item.name} + ${neighbour.name}: ${formattedEffects}`);
+        });
+    });
+
+    return summaries;
+}
+
+function activeSensitiveFacilityPollutionSummaries(state) {
+    const summaries = [];
+    const sensitiveSlugs = new Set(['park', 'school', 'hospital']);
+    const pollutionSlugs = new Set(['road', 'store', 'petrol-station']);
+    const visitedPairs = new Set();
+
+    state.forEach((item, index) => {
+        if (item.type !== 'facility') return;
+
+        const itemMeta = facilityMetadataById(item.id);
+        if (!itemMeta || !sensitiveSlugs.has(itemMeta.slug)) return;
+
+        neighbouringIndexes(index).forEach((neighbourIndex) => {
+            const neighbour = state.get(neighbourIndex);
+            if (!neighbour || neighbour.type !== 'facility') return;
+
+            const neighbourMeta = facilityMetadataById(neighbour.id);
+            if (!neighbourMeta || !pollutionSlugs.has(neighbourMeta.slug)) return;
+            if (item.id === neighbour.id) return;
+
+            const pairKey = sortedFacilityPairKey(item.id, neighbour.id);
+            if (visitedPairs.has(pairKey)) return;
+            visitedPairs.add(pairKey);
+
+            summaries.push(
+                `${item.name} adjacent to ${neighbour.name}: -2 ${itemMeta.categoryName} due to pollution-sensitive placement`
+            );
+        });
+    });
+
+    return summaries;
+}
+
+function getLevel4AdjacencyScoreEffects(facilityId, neighbourId) {
+    const firstMeta = facilityMetadataById(facilityId);
+    const secondMeta = facilityMetadataById(neighbourId);
+
+    if (!firstMeta || !secondMeta) {
+        return null;
+    }
+
+    return level4AdjacencyEffects[sortedSlugPairKey(firstMeta.slug, secondMeta.slug)] || null;
+}
+
+function emptyCategoryTotals() {
+    return Object.fromEntries(effectCategories.map((category) => [category.id, 0]));
+}
 
 let draggedData = null;
 let sourceCell = null;
@@ -32,7 +251,7 @@ let lastApprovedFeedbackAt = 0;
 let lastNeighbourFeedbackAt = 0;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
-const canApproveDestinations = Boolean(gridPermissions.canApproveDestinations);
+const canApproveFunctions = Boolean(gridPermissions.canApproveFunctions);
 
 function formatScore(score) {
     return score > 0 ? `+${score}` : String(score);
@@ -45,45 +264,7 @@ function scoreColorClass(score) {
 }
 
 function showPlacementFeedback(message, type = 'error') {
-    document.getElementById('placement-feedback')?.remove();
-
-    const feedback = document.createElement('div');
-    feedback.id = 'placement-feedback';
-    feedback.textContent = message;
-    feedback.setAttribute('role', 'alert');
-
-    feedback.style.position = 'fixed';
-    feedback.style.right = '20px';
-    feedback.style.bottom = '20px';
-    feedback.style.zIndex = '999999';
-    feedback.style.maxWidth = '360px';
-    feedback.style.padding = '14px 18px';
-    feedback.style.borderRadius = '10px';
-    feedback.style.fontSize = '14px';
-    feedback.style.fontWeight = '700';
-    feedback.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.25)';
-
-    if (type === 'error') {
-        feedback.style.backgroundColor = '#fee2e2';
-        feedback.style.color = '#991b1b';
-        feedback.style.border = '1px solid #fecaca';
-    } else {
-        feedback.style.backgroundColor = '#dcfce7';
-        feedback.style.color = '#166534';
-        feedback.style.border = '1px solid #bbf7d0';
-    }
-
-    document.body.appendChild(feedback);
-
-    const statusElement = document.getElementById('effect-status');
-
-    if (statusElement) {
-        statusElement.textContent = message;
-    }
-
-    setTimeout(() => {
-        feedback.remove();
-    }, 4000);
+    setConditionStatus(message, type);
 }
 
 function isApprovedCell(cell) {
@@ -100,7 +281,7 @@ function approvedMessage() {
     lastApprovedFeedbackAt = now;
 
     showPlacementFeedback(
-        'This destination has already been approved and can no longer be changed or removed.',
+        'This function has already been approved and can no longer be changed or removed.',
         'error'
     );
 }
@@ -266,7 +447,7 @@ function applyApprovedStyle(cell) {
         'cursor-not-allowed'
     );
 
-    cell.title = 'Approved destination: this cell can no longer be changed or removed.';
+    cell.title = 'Approved function: this cell can no longer be changed or removed.';
 }
 
 function removeApprovedStyle(cell) {
@@ -308,19 +489,19 @@ function updateApprovalUI(cell) {
 
     removeApprovedStyle(cell);
 
-    if (canApproveDestinations && wrapper) {
+    if (canApproveFunctions && wrapper) {
         wrapper.append(createApproveButton(cell));
     }
 }
 
 async function approveCell(cell) {
-    if (!canApproveDestinations) {
-        showPlacementFeedback('You are not authorized to approve destinations.', 'error');
+    if (!canApproveFunctions) {
+        showPlacementFeedback('You are not authorized to approve functions.', 'error');
         return;
     }
 
     if (!cell.dataset.itemId) {
-        showPlacementFeedback('Only a cell with a destination can be approved.', 'error');
+        showPlacementFeedback('Only a cell with a function can be approved.', 'error');
         return;
     }
 
@@ -347,7 +528,7 @@ async function approveCell(cell) {
         });
 
         if (!response.ok) {
-            showPlacementFeedback('This destination could not be approved.', 'error');
+            showPlacementFeedback('This function could not be approved.', 'error');
             return;
         }
 
@@ -355,9 +536,9 @@ async function approveCell(cell) {
         storeApprovedCell(cell);
         updateApprovalUI(cell);
 
-        showPlacementFeedback('Destination approved. This cell can no longer be changed or removed.', 'success');
+        showPlacementFeedback('Function approved. This cell can no longer be changed or removed.', 'success');
     } catch {
-        showPlacementFeedback('This destination could not be approved.', 'error');
+        showPlacementFeedback('This function could not be approved.', 'error');
     }
 }
 
@@ -821,6 +1002,71 @@ function conditionViolations(state) {
     return violations;
 }
 
+function extractConditionViolationCellIndexes(state) {
+    const violatingIndexes = new Set();
+
+    state.forEach((item, index) => {
+        if (item.type !== 'facility') return;
+
+        const facilityConditions = gridConditionData[item.id]?.conditions || [];
+        const neighbouringFacilities = neighbouringIndexes(index)
+            .map((neighbourIndex) => ({
+                index: neighbourIndex,
+                item: state.get(neighbourIndex),
+            }))
+            .filter(({ item }) => item?.type === 'facility');
+
+        facilityConditions.forEach((condition) => {
+            const neighbourEntry = neighbouringFacilities.find(({ item }) =>
+                String(item.id) === String(condition.neighbourFacilityId)
+            );
+            const hasNeighbour = Boolean(neighbourEntry);
+
+            if (condition.type === 'required_neighbour' && !hasNeighbour) {
+                violatingIndexes.add(index);
+            }
+
+            if (condition.type === 'forbidden_neighbour' && hasNeighbour) {
+                violatingIndexes.add(index);
+                violatingIndexes.add(neighbourEntry.index);
+            }
+        });
+    });
+
+    return violatingIndexes;
+}
+
+function clearConditionViolationHighlights() {
+    document.querySelectorAll('.grid-cell').forEach((cell) => {
+        cell.classList.remove(
+            'border-red-500',
+            'bg-red-50',
+            'dark:bg-red-900/20',
+            'ring-2',
+            'ring-red-400/60'
+        );
+    });
+}
+
+function highlightConditionViolations(state) {
+    clearConditionViolationHighlights();
+
+    const violatingIndexes = extractConditionViolationCellIndexes(state);
+
+    violatingIndexes.forEach((index) => {
+        const cell = document.querySelector(`.grid-cell[data-index="${index}"]`);
+        if (!cell) return;
+
+        cell.classList.add(
+            'border-red-500',
+            'bg-red-50',
+            'dark:bg-red-900/20',
+            'ring-2',
+            'ring-red-400/60'
+        );
+    });
+}
+
 function proposedGridState(targetCell, item, originalCell = null) {
     const state = currentGridState();
 
@@ -837,7 +1083,16 @@ function proposedGridState(targetCell, item, originalCell = null) {
     return state;
 }
 
-function setConditionStatus(message, type = 'neutral') {
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function setConditionStatus(message, type = 'neutral', details = []) {
     const status = document.getElementById('condition-status');
     if (!status) return;
 
@@ -848,7 +1103,60 @@ function setConditionStatus(message, type = 'neutral') {
     };
 
     status.className = `mt-4 w-full max-w-md rounded-lg border px-4 py-3 text-sm ${colorClasses[type]}`;
+
+    if (details.length > 0) {
+        status.innerHTML = `
+            <div>${escapeHtml(message)}</div>
+            <ul class="mt-2 list-disc pl-5 space-y-1">
+                ${details.map((detail) => `<li>${escapeHtml(detail)}</li>`).join('')}
+            </ul>
+        `;
+        return;
+    }
+
     status.textContent = message;
+}
+
+function buildConditionSummaryDetails(state) {
+    const neighbourSummaries = activeNeighbourConditionSummaries(state);
+    const sameCategorySummaries = activeSameCategoryAdjacencySummaries(state);
+    const level4Summaries = activeLevel4AdjacencySummaries(state);
+    const sensitiveSummaries = activeSensitiveFacilityPollutionSummaries(state);
+    const duplicateSummaries = activeDuplicatePlacementSummaries();
+    const roadClusterSummaries = activeRoadClusterPenaltySummaries(state);
+    const details = [];
+
+    if (neighbourSummaries.length > 0) {
+        details.push('Neighbour conditions:');
+        details.push(...neighbourSummaries);
+    }
+
+    if (sameCategorySummaries.length > 0) {
+        details.push('Level 2 same-category adjacency bonuses:');
+        details.push(...sameCategorySummaries);
+    }
+
+    if (sensitiveSummaries.length > 0) {
+        details.push('Level 2 pollution-sensitive adjacency penalties:');
+        details.push(...sensitiveSummaries);
+    }
+
+    if (duplicateSummaries.length > 0) {
+        details.push('Level 3 duplicate-placement bonus reductions:');
+        details.push(...duplicateSummaries);
+    }
+
+    if (level4Summaries.length > 0) {
+        details.push('Level 4 adjacency modifiers:');
+        details.push(...level4Summaries);
+    }
+
+    if (roadClusterSummaries.length > 0) {
+        details.push('Level 4 road cluster penalties:');
+        details.push(...roadClusterSummaries);
+    }
+
+    return details;
 }
 
 function updateConditionStatus() {
@@ -864,23 +1172,128 @@ function updateConditionStatus() {
     }
 
     const violations = conditionViolations(state);
+    const summaryDetails = buildConditionSummaryDetails(state);
 
     if (violations.length > 0) {
-        setConditionStatus(violations[0], 'error');
-        return;
+        const message = violations.length === 1
+            ? '1 function condition violation detected.'
+            : `${violations.length} function condition violations detected.`;
+
+        const details = [...violations];
+
+        if (summaryDetails.length > 0) {
+            details.push('Active neighbour condition summaries:');
+            details.push(...summaryDetails);
+        }
+
+        setConditionStatus(message, 'error', details);
+    } else {
+        const appliedConditionCount = placedFacilities.reduce(
+            (total, item) => total + (gridConditionData[item.id]?.conditions?.length || 0),
+            0
+        );
+
+        const sameCategorySummaries = activeSameCategoryAdjacencySummaries(state);
+        const sameCategoryScore = sameCategorySummaries.length * 2;
+        const summaryMessage = appliedConditionCount > 0
+            ? `${appliedConditionCount} neighbour condition(s) applied successfully.`
+            : sameCategorySummaries.length > 0
+                ? `Level 2: ${sameCategorySummaries.length} same-category adjacent pair(s) active for +${sameCategoryScore} score.`
+                : (summaryDetails.length > 0)
+                    ? 'Adjacency and duplicate-placement modifiers are active.'
+                    : 'No active neighbour constraints or adjacency bonuses are currently triggered.';
+
+        setConditionStatus(summaryMessage, 'success', summaryDetails);
     }
 
-    const appliedConditionCount = placedFacilities.reduce(
-        (total, item) => total + (gridConditionData[item.id]?.conditions?.length || 0),
-        0
-    );
+    highlightConditionViolations(state);
+}
 
-    setConditionStatus(
-        appliedConditionCount > 0
-            ? `${appliedConditionCount} neighbour condition(s) applied successfully.`
-            : 'The placed functions have no neighbour conditions.',
-        'success'
-    );
+function activeDuplicatePlacementSummaries() {
+    const summaries = [];
+    const facilityIds = selectedFacilityIds();
+
+    const facilityCounts = facilityIds.reduce((counts, facilityId) => {
+        counts[facilityId] = (counts[facilityId] || 0) + 1;
+        return counts;
+    }, {});
+
+    Object.entries(facilityCounts).forEach(([facilityId, count]) => {
+        if (count < 2) return;
+
+        const meta = facilityMetadataById(facilityId);
+        const name = meta?.name || facilityNameById(facilityId) || `Facility ${facilityId}`;
+        const scores = facilityScoreMatrix[facilityId] || {};
+
+        effectCategories.forEach((category) => {
+            const rawScore = Number(scores[category.id] ?? 0);
+
+            if (rawScore <= 0) return;
+
+            const halvedBonus = Math.ceil(rawScore / 2);
+            const extraPlacements = count - 2;
+
+            const detail = extraPlacements > 0
+                ? `${name} placed ${count}x: ${category.name} bonus is now +${rawScore} (1st) + +${halvedBonus} (2nd, halved) + 0 for ${extraPlacements} additional placement(s)`
+                : `${name} placed ${count}x: ${category.name} bonus is now +${rawScore} (1st) + +${halvedBonus} (2nd, halved)`;
+
+            summaries.push(detail);
+        });
+    });
+
+    return summaries;
+}
+
+function activeRoadClusterPenaltySummaries(state) {
+    const clusters = findRoadClusters(state);
+    const summaries = [];
+
+    clusters
+        .filter((cluster) => cluster.length >= 3)
+        .forEach((cluster) => {
+            summaries.push(
+                `Road cluster of ${cluster.length} connected roads (cells ${cluster.join(', ')}): -2 Recreation, -2 Environmental Quality`
+            );
+        });
+
+    return summaries;
+}
+
+function findRoadClusters(state) {
+    const roadIndexes = Array.from(state.entries())
+        .filter(([, item]) => item.type === 'facility' && facilityMetadataById(item.id)?.slug === 'road')
+        .map(([index]) => Number(index));
+
+    const visited = new Set();
+    const clusters = [];
+
+    roadIndexes.forEach((index) => {
+        if (visited.has(index)) return;
+
+        const cluster = [index];
+        const stack = [index];
+        visited.add(index);
+
+        while (stack.length > 0) {
+            const currentIndex = stack.pop();
+
+            neighbouringIndexes(currentIndex).forEach((neighbourIndex) => {
+                if (visited.has(neighbourIndex)) return;
+
+                const neighbour = state.get(neighbourIndex);
+                if (!neighbour || neighbour.type !== 'facility') return;
+                if (facilityMetadataById(neighbour.id)?.slug !== 'road') return;
+
+                visited.add(neighbourIndex);
+                stack.push(neighbourIndex);
+                cluster.push(neighbourIndex);
+            });
+        }
+
+        clusters.push(cluster);
+    });
+
+    return clusters;
 }
 
 function selectedEvents() {
@@ -916,21 +1329,158 @@ function getDropPayload(event) {
     }
 }
 
-function emptyCategoryTotals() {
-    return Object.fromEntries(effectCategories.map((category) => [category.id, 0]));
-}
-
 function facilityCategoryTotals() {
     const totals = emptyCategoryTotals();
     const facilityIds = selectedFacilityIds();
+    const facilityCounts = facilityIds.reduce((counts, facilityId) => {
+        counts[facilityId] = (counts[facilityId] || 0) + 1;
+        return counts;
+    }, {});
 
-    facilityIds.forEach((facilityId) => {
+    Object.entries(facilityCounts).forEach(([facilityId, count]) => {
         const scores = facilityScoreMatrix[facilityId] || {};
 
         effectCategories.forEach((category) => {
-            totals[category.id] += Number(scores[category.id] ?? 0);
+            const rawScore = Number(scores[category.id] ?? 0);
+
+            if (rawScore > 0) {
+                totals[category.id] += rawScore + (count >= 2 ? Math.ceil(rawScore / 2) : 0);
+                return;
+            }
+
+            totals[category.id] += rawScore * count;
         });
     });
+
+    const currentState = currentGridState();
+    const sameCategoryTotals = sameCategoryAdjacencyTotals(currentState);
+    const level4Totals = level4AdjacencyTotals(currentState);
+    const sensitivePenaltyTotals = sensitiveFacilityPollutionPenaltyTotals(currentState);
+    const roadPenaltyTotals = roadClusterPenaltyTotals(currentState);
+
+    [sameCategoryTotals, level4Totals, sensitivePenaltyTotals, roadPenaltyTotals].forEach((adjustments) => {
+        Object.entries(adjustments).forEach(([categoryId, adjustment]) => {
+            totals[categoryId] += adjustment;
+        });
+    });
+
+    return totals;
+}
+
+function sameCategoryAdjacencyTotals(state) {
+    const totals = emptyCategoryTotals();
+    const visitedPairs = new Set();
+
+    state.forEach((item, index) => {
+        if (item.type !== 'facility') return;
+
+        const itemMeta = facilityMetadataById(item.id);
+        if (!itemMeta) return;
+
+        neighbouringIndexes(index).forEach((neighbourIndex) => {
+            const neighbour = state.get(neighbourIndex);
+            if (!neighbour || neighbour.type !== 'facility') return;
+
+            const neighbourMeta = facilityMetadataById(neighbour.id);
+            if (!neighbourMeta
+                || itemMeta.categoryId !== neighbourMeta.categoryId
+                || item.id === neighbour.id
+            ) {
+                return;
+            }
+
+            const pairKey = sortedFacilityPairKey(item.id, neighbour.id);
+            if (visitedPairs.has(pairKey)) return;
+
+            visitedPairs.add(pairKey);
+            totals[itemMeta.categoryId] += 2;
+        });
+    });
+
+    return totals;
+}
+
+function level4AdjacencyTotals(state) {
+    const totals = emptyCategoryTotals();
+    const visitedPairs = new Set();
+
+    state.forEach((item, index) => {
+        if (item.type !== 'facility') return;
+
+        neighbouringIndexes(index).forEach((neighbourIndex) => {
+            const neighbour = state.get(neighbourIndex);
+            if (!neighbour || neighbour.type !== 'facility') return;
+
+            const pairKey = sortedFacilityPairKey(item.id, neighbour.id);
+            if (visitedPairs.has(pairKey)) return;
+            visitedPairs.add(pairKey);
+
+            const effects = getLevel4AdjacencyScoreEffects(item.id, neighbour.id);
+            if (!effects) return;
+
+            Object.entries(effects).forEach(([categoryName, value]) => {
+                const categoryId = categoryIdForName(categoryName);
+
+                if (categoryId) {
+                    totals[categoryId] += value;
+                }
+            });
+        });
+    });
+
+    return totals;
+}
+
+function sensitiveFacilityPollutionPenaltyTotals(state) {
+    const totals = emptyCategoryTotals();
+    const sensitiveSlugs = new Set(['park', 'school', 'hospital']);
+    const pollutionSlugs = new Set(['road', 'store', 'petrol-station']);
+    const visitedPairs = new Set();
+
+    state.forEach((item, index) => {
+        if (item.type !== 'facility') return;
+
+        const itemMeta = facilityMetadataById(item.id);
+        if (!itemMeta || !sensitiveSlugs.has(itemMeta.slug)) return;
+
+        neighbouringIndexes(index).forEach((neighbourIndex) => {
+            const neighbour = state.get(neighbourIndex);
+            if (!neighbour || neighbour.type !== 'facility') return;
+
+            const neighbourMeta = facilityMetadataById(neighbour.id);
+            if (!neighbourMeta || !pollutionSlugs.has(neighbourMeta.slug)) return;
+
+            const pairKey = `${item.id}:${neighbour.id}`;
+            if (visitedPairs.has(pairKey)) return;
+            visitedPairs.add(pairKey);
+
+            const categoryId = itemMeta.categoryId;
+            if (categoryId) {
+                totals[categoryId] -= 2;
+            }
+        });
+    });
+
+    return totals;
+}
+
+function roadClusterPenaltyTotals(state) {
+    const totals = emptyCategoryTotals();
+    const clusters = findRoadClusters(state);
+    const recreationCategoryId = categoryIdForName('Recreation');
+    const environmentalCategoryId = categoryIdForName('Environmental Quality');
+
+    clusters
+        .filter((cluster) => cluster.length >= 3)
+        .forEach(() => {
+            if (recreationCategoryId) {
+                totals[recreationCategoryId] -= 2;
+            }
+
+            if (environmentalCategoryId) {
+                totals[environmentalCategoryId] -= 2;
+            }
+        });
 
     return totals;
 }
@@ -1218,7 +1768,7 @@ function requiredNeighbourViolationsForPlacement(targetCell, payload) {
 
 function showRequiredNeighbourViolation(violation) {
     showPlacementFeedback(
-        `${violation.facilityName} cannot be placed here. It must be placed directly next to ${violation.requiredNeighbourName} horizontally or vertically.`,
+        `Warning: ${violation.facilityName} is not adjacent to ${violation.requiredNeighbourName}. This condition is not satisfied.`,
         'error'
     );
 }
@@ -1228,7 +1778,7 @@ function showRequiredNeighbourMessage(facility) {
     const requiredNeighbourName = rule?.requiredNeighbourName || 'the required neighbour';
 
     showPlacementFeedback(
-        `${facility.name} cannot be placed here. It must be placed directly next to ${requiredNeighbourName} horizontally or vertically.`,
+        `Warning: ${facility.name} is not adjacent to ${requiredNeighbourName}. This condition is not satisfied.`,
         'error'
     );
 }
@@ -1510,30 +2060,8 @@ function findRestrictionConflicts(targetCell, facilityId) {
 
 function showRestrictionError(conflicts, droppedName) {
     const conflictNames = conflicts.map((c) => c.name).join(', ');
-
-    let errorEl = document.getElementById('restriction-error');
-
-    if (!errorEl) {
-        errorEl = document.createElement('div');
-        errorEl.id = 'restriction-error';
-        errorEl.className = 'fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-lg dark:border-red-900/50 dark:bg-red-900/20';
-        document.body.appendChild(errorEl);
-    }
-
-    errorEl.innerHTML = `
-        <div class="flex items-start gap-3">
-            <div class="flex-1">
-                <p class="text-sm font-semibold text-red-800 dark:text-red-300">Placement not allowed</p>
-                <p class="mt-1 text-sm text-red-700 dark:text-red-400">
-                    <strong>${droppedName}</strong> cannot be placed next to: ${conflictNames}
-                </p>
-            </div>
-            <button onclick="document.getElementById('restriction-error').remove()" class="text-lg leading-none text-red-400 hover:text-red-600">&times;</button>
-        </div>
-    `;
-
-    clearTimeout(errorEl._hideTimeout);
-    errorEl._hideTimeout = setTimeout(() => errorEl?.remove(), 4000);
+    const message = `${droppedName} cannot be placed next to: ${conflictNames}`;
+    setConditionStatus(message, 'error');
 }
 
 function bindLibraryItems() {
@@ -1695,11 +2223,14 @@ function bindGridCells() {
                 return;
             }
 
-            if (draggedData?.type === 'facility' && !requiredNeighbourIsPresent(cell, draggedData.id)) {
-                event.dataTransfer.dropEffect = 'move';
-                cell.classList.add('bg-red-50', 'border-red-400');
-                showRequiredNeighbourToast(draggedData);
-                return;
+            if (draggedData?.type === 'facility') {
+                const conflicts = findRestrictionConflicts(cell, draggedData.id);
+
+                if (conflicts.length > 0 || !requiredNeighbourIsPresent(cell, draggedData.id)) {
+                    event.dataTransfer.dropEffect = 'move';
+                    cell.classList.add('bg-red-50', 'border-red-400');
+                    return;
+                }
             }
 
             event.dataTransfer.dropEffect = 'move';
@@ -1736,37 +2267,7 @@ function bindGridCells() {
                 return;
             }
 
-            const violations = conditionViolations(
-                proposedGridState(cell, payload, sourceCell)
-            );
-
-            if (violations.length > 0) {
-                droppedOnGrid = false;
-                setConditionStatus(`Placement blocked: ${violations[0]}`, 'error');
-                return;
-            }
-
             droppedOnGrid = true;
-
-            if (payload.type === 'facility') {
-                const requiredNeighbourViolations = requiredNeighbourViolationsForPlacement(cell, payload);
-
-                if (requiredNeighbourViolations.length > 0) {
-                    showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
-                    sourceCell = null;
-                    draggedData = null;
-                    return;
-                }
-
-                const conflicts = findRestrictionConflicts(cell, payload.id);
-
-                if (conflicts.length > 0) {
-                    showRestrictionError(conflicts, payload.name);
-                    sourceCell = null;
-                    draggedData = null;
-                    return;
-                }
-            }
 
             if (sourceCell && sourceCell !== cell) {
                 removeCellContent(sourceCell);
@@ -1803,9 +2304,6 @@ function bindGridCells() {
             hideCellTooltip();
         });
 
-        // ── Mobile: tap to show, tap same cell to hide ─────────────────────
-        // The touch drag polyfill needs the original touch event to drag
-        // filled cells out of the grid.
         cell.addEventListener('touchstart', (event) => {
             if (!cell.dataset.itemId || !event.touches[0]) return;
 
@@ -1879,15 +2377,6 @@ function bindDropOutsideGrid() {
 
         event.preventDefault();
 
-        const state = currentGridState();
-        state.delete(Number(sourceCell.dataset.index));
-        const violations = conditionViolations(state);
-
-        if (violations.length > 0) {
-            setConditionStatus(`Removal blocked: ${violations[0]}`, 'error');
-            return;
-        }
-
         removeCellContent(sourceCell);
         sourceCell = null;
         draggedData = null;
@@ -1913,8 +2402,9 @@ function bindSearch() {
 function bindClearButton() {
     document.getElementById('clear-grid')?.addEventListener('click', () => {
         let blockedApprovedCell = false;
+        const cells = Array.from(document.querySelectorAll('.grid-cell'));
 
-        document.querySelectorAll('.grid-cell').forEach((cell) => {
+        cells.forEach((cell) => {
             if (isApprovedCell(cell)) {
                 blockedApprovedCell = true;
                 return;
@@ -1926,6 +2416,9 @@ function bindClearButton() {
         if (blockedApprovedCell) {
             approvedMessage();
         }
+
+        updateEffectView();
+        updateEventEffectView();
     });
 }
 

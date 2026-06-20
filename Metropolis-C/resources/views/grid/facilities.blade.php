@@ -9,12 +9,12 @@
         <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    {{ __('Facilities') }}
+                    {{ __('Functions') }}
                 </h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                     {{ $isLibraryManager
                         ? __('Manage required and forbidden neighbour conditions for functions.')
-                        : __('Manage facilities and their impact scores.') }}
+                        : __('Manage functions and their impact scores.') }}
                 </p>
             </div>
         </div>
@@ -39,10 +39,10 @@
                     <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                         <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                {{ __('Existing Facilities') }}
+                                {{ __('Existing Functions') }}
                             </h3>
                             <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                                {{ __('These facilities are available in the simulation and scoring matrix.') }}
+                                {{ __('These functions are available in the simulation and scoring matrix.') }}
                             </p>
                         </div>
 
@@ -74,29 +74,29 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                    @forelse ($facilities as $facility)
+                                    @forelse ($functions as $function)
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                             <td class="px-6 py-4 text-2xl">
-                                                {{ $facility->icon }}
+                                                {{ $function->icon }}
                                             </td>
                                             <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                                                {{ $facility->name }}
+                                                {{ $function->name }}
                                             </td>
                                             <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                                {{ $facility->category->name }}
+                                                {{ $function->category->name }}
                                             </td>
                                             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                                {{ $facility->slug }}
+                                                {{ $function->slug }}
                                             </td>
                                             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                                {{ $conditions->where('facility_id', $facility->id)->count() }}
+                                                {{ $conditions->where('facility_id', $function->id)->count() }}
                                             </td>
                                             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                                {{ $facility->updated_at?->format('M j, Y') }}
+                                                {{ $function->updated_at?->format('M j, Y') }}
                                             </td>
                                             <td class="px-6 py-4 text-right text-sm font-medium">
                                                 <a
-                                                    href="{{ route('facilities.edit', $facility) }}"
+                                                    href="{{ route('functions.edit', $function) }}"
                                                     class="text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                                                 >
                                                     {{ __('Edit') }}
@@ -106,7 +106,7 @@
                                     @empty
                                         <tr>
                                             <td colspan="7" class="px-6 py-6 text-center text-sm text-gray-500">
-                                                {{ __('No facilities found.') }}
+                                                {{ __('No functions found.') }}
                                             </td>
                                         </tr>
                                     @endforelse
@@ -117,15 +117,15 @@
 
                     <section id="{{ $isEditing ? 'edit' : 'create' }}" class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            {{ $isEditing ? __('Edit Facility') : __('Create Facility') }}
+                            {{ $isEditing ? __('Edit Function') : __('Create Function') }}
                         </h3>
                         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                            {{ $isEditing ? __('Update facility details and category scores.') : __('Add a facility and set its initial category scores.') }}
+                            {{ $isEditing ? __('Update function details and category scores.') : __('Add a function and set its initial category scores.') }}
                         </p>
 
                         <form
                             method="POST"
-                            action="{{ $isEditing ? route('facilities.update', $editingFacility) : route('facilities.store') }}"
+                            action="{{ $isEditing ? route('functions.update', $editingFacility) : route('functions.store') }}"
                             class="mt-6 space-y-5"
                             onsubmit="this.querySelector('[type=submit]').disabled=true; this.querySelector('[type=submit]').innerText='Saving...';"
                         >
@@ -222,12 +222,12 @@
                                 type="submit"
                                 class="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                             >
-                                {{ $isEditing ? __('Update Facility') : __('Save Facility') }}
+                                {{ $isEditing ? __('Update Function') : __('Save Function') }}
                             </button>
 
                             @if ($isEditing)
                                 <a
-                                    href="{{ route('facilities') }}"
+                                    href="{{ route('functions.index') }}"
                                     class="inline-flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
                                 >
                                     {{ __('Cancel Edit') }}
@@ -246,12 +246,12 @@
                             {{ __('Function Conditions') }}
                         </h3>
                         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                            {{ __('Required neighbours must be present. Forbidden neighbours cannot be placed directly next to each other.') }}
+                            {{ __('Required neighbours must be present. Forbidden neighbours cannot be placed directly next to each other. Level 4 adjacency modifiers are applied automatically and are not configurable here.') }}
                         </p>
                     </div>
 
                     <div class="p-6 space-y-6">
-                        <form method="POST" action="{{ route('facility-conditions.store') }}" class="grid gap-4 lg:grid-cols-4 lg:items-end">
+                        <form method="POST" action="{{ route('functions.conditions.store') }}" class="grid gap-4 lg:grid-cols-4 lg:items-end">
                             @csrf
 
                             <div>
@@ -260,9 +260,9 @@
                                 </label>
                                 <select id="condition_facility" name="facility_id" required class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
                                     <option value="">{{ __('Select function') }}</option>
-                                    @foreach ($facilities as $facility)
-                                        <option value="{{ $facility->id }}" @selected((int) old('facility_id') === $facility->id)>
-                                            {{ $facility->name }}
+                                    @foreach ($functions as $function)
+                                        <option value="{{ $function->id }}" @selected((int) old('facility_id') === $function->id)>
+                                            {{ $function->name }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -284,9 +284,9 @@
                                 </label>
                                 <select id="condition_related_facility" name="related_facility_id" required class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
                                     <option value="">{{ __('Select function') }}</option>
-                                    @foreach ($facilities as $facility)
-                                        <option value="{{ $facility->id }}" @selected((int) old('related_facility_id') === $facility->id)>
-                                            {{ $facility->name }}
+                                    @foreach ($functions as $function)
+                                        <option value="{{ $function->id }}" @selected((int) old('related_facility_id') === $function->id)>
+                                            {{ $function->name }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -302,15 +302,19 @@
                         @endif
 
                         <div class="space-y-3">
-                            @forelse ($conditions as $condition)
+                            @php
+                                $editableConditions = $conditions->whereIn('condition_type', ['required_neighbour', 'forbidden_neighbour']);
+                            @endphp
+
+                            @forelse ($editableConditions as $condition)
                                 <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-                                    <form method="POST" action="{{ route('facility-conditions.update', $condition) }}" class="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+                                    <form method="POST" action="{{ route('functions.conditions.update', $condition) }}" class="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
                                         @csrf
                                         @method('PATCH')
 
                                         <select name="facility_id" required class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
-                                            @foreach ($facilities as $facility)
-                                                <option value="{{ $facility->id }}" @selected($condition->facility_id === $facility->id)>{{ $facility->name }}</option>
+                                            @foreach ($functions as $function)
+                                                <option value="{{ $function->id }}" @selected($condition->facility_id === $function->id)>{{ $function->name }}</option>
                                             @endforeach
                                         </select>
 
@@ -320,8 +324,8 @@
                                         </select>
 
                                         <select name="related_facility_id" required class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
-                                            @foreach ($facilities as $facility)
-                                                <option value="{{ $facility->id }}" @selected($condition->neighbour_facility_id === $facility->id)>{{ $facility->name }}</option>
+                                            @foreach ($functions as $function)
+                                                <option value="{{ $function->id }}" @selected($condition->neighbour_facility_id === $function->id)>{{ $function->name }}</option>
                                             @endforeach
                                         </select>
 
@@ -330,7 +334,7 @@
                                         </button>
                                     </form>
 
-                                    <form method="POST" action="{{ route('facility-conditions.destroy', $condition) }}" class="mt-2 text-right" onsubmit="return confirm('Delete this condition?')">
+                                    <form method="POST" action="{{ route('functions.conditions.destroy', $condition) }}" class="mt-2 text-right" onsubmit="return confirm('Delete this condition?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-sm font-medium text-red-600 dark:text-red-400">
@@ -349,13 +353,11 @@
             <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                 <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {{ __('Facility Score Matrix') }}
-                    </h3>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                        @if (in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true))
-                            {{ __('Facility scores are read-only for this role.') }}
-                        @else
-                            {{ __('Click a score to edit its value from -5 to 5.') }}
+                                {{ __('Function Score Matrix') }}
+                            </h3>
+                            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                                @if (in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true))
+                                    {{ __('Function scores are read-only for this role.') }}
                         @endif
                     </p>
                 </div>
@@ -365,7 +367,7 @@
                         <thead class="bg-gray-50 dark:bg-gray-900">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 w-48">
-                                    {{ __('Facility') }}
+                                    {{ __('Function') }}
                                 </th>
                                 <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 w-36">
                                     {{ __('Category') }}
@@ -381,9 +383,9 @@
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                             @php $currentCategory = null; @endphp
 
-                            @foreach ($facilities as $facility)
-                                @if ($currentCategory !== $facility->category->name)
-                                    @php $currentCategory = $facility->category->name; @endphp
+                            @foreach ($functions as $function)
+                                @if ($currentCategory !== $function->category->name)
+                                    @php $currentCategory = $function->category->name; @endphp
                                     <tr class="bg-indigo-50 dark:bg-indigo-900/20">
                                         <td colspan="{{ $categories->count() + 2 }}"
                                             class="px-6 py-2 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
@@ -395,27 +397,27 @@
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center gap-3">
-                                            <span class="text-2xl">{{ $facility->icon }}</span>
+                                            <span class="text-2xl">{{ $function->icon }}</span>
                                             <span class="font-medium text-gray-900 dark:text-gray-100">
-                                                {{ $facility->name }}
+                                                {{ $function->name }}
                                             </span>
                                         </div>
                                     </td>
 
                                     <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $facility->category->name }}
+                                        {{ $function->category->name }}
                                     </td>
 
                                     @foreach ($categories as $category)
                                         @php
-                                            $facilityScore = $facility->scores->firstWhere('category_id', $category->id);
-                                            $score = $facilityScore?->score;
+                                            $functionScore = $function->scores->firstWhere('category_id', $category->id);
+                                            $score = $functionScore?->score;
                                         @endphp
                                         <td class="px-4 py-4 text-center">
                                             @if (! is_null($score))
                                                 <span
                                                     @if (! in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true))
-                                                        data-score-id="{{ $facilityScore->id }}"
+                                                        data-score-id="{{ $functionScore->id }}"
                                                         data-score="{{ $score }}"
                                                         title="Click to edit"
                                                     @endif

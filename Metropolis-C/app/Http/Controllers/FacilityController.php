@@ -19,7 +19,7 @@ class FacilityController extends Controller
 {
     public function index(): View
     {
-        return $this->facilitiesView();
+        return $this->functionsView();
     }
 
     public function edit(Facility $facility): View
@@ -30,14 +30,14 @@ class FacilityController extends Controller
             'conditions.neighbourFacility',
         ]);
 
-        return $this->facilitiesView($facility);
+        return $this->functionsView($facility);
     }
 
-    private function facilitiesView(?Facility $editingFacility = null): View
+    private function functionsView(?Facility $editingFacility = null): View
     {
         $categories = Category::orderBy('sort_order')->get();
 
-        $facilities = Facility::with([
+        $functions = Facility::with([
             'category',
             'scores.category',
             'conditions.neighbourFacility',
@@ -51,7 +51,7 @@ class FacilityController extends Controller
             ->get();
 
         return view('grid.facilities', compact(
-            'facilities',
+            'functions',
             'categories',
             'editingFacility',
             'conditions'
@@ -98,7 +98,7 @@ class FacilityController extends Controller
         }
 
         return redirect()
-            ->route('facilities')
+            ->route('functions.index')
             ->with('success', "{$facility->name} was created successfully.");
     }
 
@@ -134,7 +134,7 @@ class FacilityController extends Controller
         });
 
         return redirect()
-            ->route('facilities')
+            ->route('functions.index')
             ->with('success', "{$facility->name} was updated successfully.");
     }
 
