@@ -2172,6 +2172,8 @@ function bindGridCells() {
         updateApprovalUI(cell);
 
         cell.addEventListener('dragstart', (event) => {
+            hideCellTooltip();
+
             if (!cell.dataset.itemId) {
                 event.preventDefault();
                 return;
@@ -2266,6 +2268,18 @@ function bindGridCells() {
                 sourceCell = null;
                 draggedData = null;
                 return;
+            }
+
+            if (payload.type === 'facility') {
+                const conflicts = findRestrictionConflicts(cell, payload.id);
+
+                if (conflicts.length > 0) {
+                    droppedOnGrid = true;
+                    showRestrictionError(conflicts, payload.name);
+                    sourceCell = null;
+                    draggedData = null;
+                    return;
+                }
             }
 
             droppedOnGrid = true;
