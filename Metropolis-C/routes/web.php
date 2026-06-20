@@ -35,7 +35,7 @@ Route::middleware(['auth', 'library-manager'])->group(function () {
         ->name('facilities.conditions.destroy');
 });
 
-Route::middleware(['auth', 'admin'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::post('/facilities', [FacilityController::class, 'store'])->name('facilities.store');
     Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('facilities.edit');
     Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('facilities.update');

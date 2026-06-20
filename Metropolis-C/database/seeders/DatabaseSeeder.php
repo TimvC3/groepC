@@ -26,12 +26,6 @@ class DatabaseSeeder extends Seeder
             'role' => 'admin',
         ]);
         User::factory()->create([
-            'name' => 'Library Manager',
-            'email' => 'library.manager@example.com',
-            'password' => 'Password',
-            'role' => 'library_manager',
-        ]);
-        User::factory()->create([
             'name' => 'Policy Maker',
             'email' => 'policy.maker@example.com',
             'password' => 'Password',
