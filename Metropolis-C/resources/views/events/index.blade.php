@@ -20,14 +20,16 @@
     <div class="py-8">
         <div class="w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             @if (session('success'))
-                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300">
+                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300 [.colorblind-mode_&]:border-sky-300 [.colorblind-mode_&]:bg-sky-50 [.colorblind-mode_&]:text-sky-800">
+                    <span class="mr-1" aria-hidden="true">✓</span>
                     {{ session('success') }}
                 </div>
             @endif
 
             @if ($errors->any())
-                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 [.colorblind-mode_&]:border-orange-300 [.colorblind-mode_&]:bg-orange-50 [.colorblind-mode_&]:text-orange-800">
                     <p class="font-semibold">
+                        <span class="mr-1" aria-hidden="true">!</span>
                         {{ __('The event could not be saved:') }}
                     </p>
 
@@ -81,7 +83,7 @@
 
                                 <span
                                     data-event-status-badge
-                                    class="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold capitalize text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                    class="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold capitalize text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 [.colorblind-mode_&]:bg-sky-100 [.colorblind-mode_&]:text-sky-800"
                                 >
                                     planned
                                 </span>
@@ -95,13 +97,22 @@
                                         </span>
                                         <span
                                             @class([
-                                                'font-bold',
-                                                'text-green-700 dark:text-green-300' => $impact['score'] > 0,
-                                                'text-red-600 dark:text-red-300' => $impact['score'] < 0,
-                                                'text-gray-500 dark:text-gray-400' => $impact['score'] === 0,
+                                                'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold',
+                                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 [.colorblind-mode_&]:bg-sky-100 [.colorblind-mode_&]:text-sky-800' => $impact['score'] > 0,
+                                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 [.colorblind-mode_&]:bg-orange-100 [.colorblind-mode_&]:text-orange-800' => $impact['score'] < 0,
+                                                'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' => $impact['score'] === 0,
                                             ])
                                         >
-                                            {{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}
+                                            <span aria-hidden="true">
+                                                @if ($impact['score'] > 0)
+                                                    ▲
+                                                @elseif ($impact['score'] < 0)
+                                                    ▼
+                                                @else
+                                                    •
+                                                @endif
+                                            </span>
+                                            <span>{{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}</span>
                                         </span>
                                     </div>
                                 @endforeach
@@ -190,11 +201,21 @@
                                                     <span
                                                         @class([
                                                             'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold',
-                                                            'border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300' => $impact['score'] > 0,
-                                                            'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300' => $impact['score'] < 0,
+                                                            'border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300 [.colorblind-mode_&]:border-sky-300 [.colorblind-mode_&]:bg-sky-50 [.colorblind-mode_&]:text-sky-800' => $impact['score'] > 0,
+                                                            'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 [.colorblind-mode_&]:border-orange-300 [.colorblind-mode_&]:bg-orange-50 [.colorblind-mode_&]:text-orange-800' => $impact['score'] < 0,
                                                             'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300' => $impact['score'] === 0,
                                                         ])
                                                     >
+                                                        <span aria-hidden="true">
+                                                            @if ($impact['score'] > 0)
+                                                                ▲
+                                                            @elseif ($impact['score'] < 0)
+                                                                ▼
+                                                            @else
+                                                                •
+                                                            @endif
+                                                        </span>
+
                                                         <span>{{ $impact['category_name'] }}</span>
                                                         <span>{{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}</span>
                                                     </span>
@@ -246,7 +267,7 @@
                                                 @class([
                                                     'mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold capitalize',
                                                     'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' => $status === 'planned',
-                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $status === 'active',
+                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 [.colorblind-mode_&]:bg-indigo-100 [.colorblind-mode_&]:text-indigo-800' => $status === 'active',
                                                     'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => $status === 'past',
                                                 ])
                                             >

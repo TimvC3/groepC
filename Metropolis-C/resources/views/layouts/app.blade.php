@@ -14,6 +14,16 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
+        <script>
+            if (localStorage.getItem('accessibility.colorblindMode') === 'true') {
+                document.documentElement.classList.add('colorblind-mode');
+            }
+
+            if (localStorage.getItem('accessibility.largeTextMode') === 'true') {
+                document.documentElement.classList.add('text-lg');
+            }
+        </script>
+
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
