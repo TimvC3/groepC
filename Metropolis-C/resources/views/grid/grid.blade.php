@@ -410,6 +410,8 @@
         type="module">
     </script>
 
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+
     @vite('resources/js/grid/effectGrid.js')
 @endpush
 
