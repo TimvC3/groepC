@@ -1168,6 +1168,7 @@ function updateConditionStatus() {
         setConditionStatus(
             'Function conditions are active. Place a function to evaluate its neighbour rules.'
         );
+        highlightConditionViolations(state);
         return;
     }
 
