@@ -31,9 +31,6 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('facilities.edit');
     Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('facilities.update');
 
-    Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])
-        ->name('facilities.scores.update');
-
     Route::post('/facilities/restrictions', [FacilityRestrictionController::class, 'store'])->name('facilities.restrictions.store');
     Route::delete('/facilities/restrictions/{restriction}', [FacilityRestrictionController::class, 'destroy'])->name('facilities.restrictions.destroy');
 

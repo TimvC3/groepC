@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\NewFacilityCreated;
+use App\Models\ApprovedGridCell;
 use App\Models\Category;
 use App\Models\Facility;
 use App\Models\FacilityRestriction;
@@ -33,6 +34,11 @@ class FacilityController extends Controller
     private function facilitiesView(?Facility $editingFacility = null): View
     {
         $categories = Category::orderBy('sort_order')->get();
+        $approvedFacilityIds = ApprovedGridCell::query()
+            ->where('item_type', 'facility')
+            ->pluck('item_id')
+            ->map(fn ($id) => (string) $id)
+            ->all();
 
         $facilities = Facility::with([
             'category',
@@ -44,7 +50,13 @@ class FacilityController extends Controller
 
         $restrictions = FacilityRestriction::with(['facility1', 'facility2'])->get();
 
-        return view('grid.facilities', compact('facilities', 'categories', 'editingFacility', 'restrictions'));
+        return view('grid.facilities', compact(
+            'facilities',
+            'categories',
+            'editingFacility',
+            'restrictions',
+            'approvedFacilityIds',
+        ));
     }
 
     public function store(Request $request): RedirectResponse
@@ -139,6 +151,12 @@ class FacilityController extends Controller
 
     public function update(Request $request, FacilityScore $facilityScore): JsonResponse
     {
+        if ($this->scoreBelongsToApprovedFacility($facilityScore)) {
+            return response()->json([
+                'message' => 'This destination has already been approved and its effects can no longer be changed.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'score' => ['required', 'integer', 'min:-5', 'max:5'],
         ]);
@@ -164,5 +182,13 @@ class FacilityController extends Controller
         }
 
         return $slug;
+    }
+
+    private function scoreBelongsToApprovedFacility(FacilityScore $facilityScore): bool
+    {
+        return ApprovedGridCell::query()
+            ->where('item_type', 'facility')
+            ->where('item_id', $facilityScore->facility_id)
+            ->exists();
     }
 }

@@ -415,6 +415,10 @@
                             @php $currentCategory = null; @endphp
 
                             @foreach ($facilities as $facility)
+                                @php
+                                    $facilityIsApproved = in_array((string) $facility->id, $approvedFacilityIds ?? [], true);
+                                @endphp
+
                                 @if ($currentCategory !== $facility->category->name)
                                     @php $currentCategory = $facility->category->name; @endphp
                                     <tr class="bg-indigo-50 dark:bg-indigo-900/20">
@@ -449,9 +453,16 @@
                                                 <span
                                                     data-score-id="{{ $facilityScore->id }}"
                                                     data-score="{{ $score }}"
-                                                    title="Click to edit"
+                                                    @if ($facilityIsApproved)
+                                                        data-approved-destination="true"
+                                                        title="Approved destination: effects can no longer be changed"
+                                                    @else
+                                                        title="Click to edit"
+                                                    @endif
                                                     @class([
-                                                        'inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold cursor-pointer select-none transition hover:ring-2 hover:ring-indigo-300',
+                                                        'inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold select-none transition',
+                                                        'cursor-not-allowed ring-2 ring-green-500' => $facilityIsApproved,
+                                                        'cursor-pointer hover:ring-2 hover:ring-indigo-300' => ! $facilityIsApproved,
                                                         'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' => $score > 0,
                                                         'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300' => $score < 0,
                                                         'text-gray-500 dark:bg-gray-700 dark:text-gray-400' => $score === 0,

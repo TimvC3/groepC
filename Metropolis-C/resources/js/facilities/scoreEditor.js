@@ -5,6 +5,8 @@ export function initScoreEditor() {
     });
 }
 
+const approvedDestinationMessage = 'This destination has already been approved and its effects can no longer be changed.';
+
 const scoreColorClasses = [
     'bg-green-100',
     'text-green-800',
@@ -20,6 +22,11 @@ const scoreColorClasses = [
 ];
 
 function openEditor(badge) {
+    if (badge.dataset.approvedDestination === 'true') {
+        showToast(approvedDestinationMessage, 'error', badge);
+        return;
+    }
+
     // Avoid opening multiple editors on the same badge.
     if (badge.querySelector('input')) return;
 
@@ -107,14 +114,17 @@ async function saveScore(badge, scoreId, newScore, oldScore) {
             body: JSON.stringify({ score: newScore }),
         });
 
-        if (!response.ok) throw new Error('Server error');
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Saving failed, please try again.');
+        }
 
         restoreBadge(badge, newScore);
         badge.dataset.score = newScore;
 
-    } catch {
+    } catch (error) {
         restoreBadge(badge, oldScore);
-        showToast('Saving failed, please try again.', 'error', badge);
+        showToast(error.message || 'Saving failed, please try again.', 'error', badge);
     } finally {
         badge.classList.remove('opacity-50');
     }
