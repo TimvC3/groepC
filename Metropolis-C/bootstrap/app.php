@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\CityPlannerMiddleware;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\LibraryManagerMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
             'city-planner' => CityPlannerMiddleware::class,
+            'library-manager' => LibraryManagerMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

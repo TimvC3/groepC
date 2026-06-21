@@ -26,7 +26,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth', 'admin'])->group(function () {
+Route::middleware(['auth', 'library-manager'])->group(function () {
     Route::post('/facilities', [FacilityController::class, 'store'])->name('facilities.store');
     Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('facilities.edit');
     Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('facilities.update');
@@ -37,7 +37,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::redirect('/functions', '/facilities')->name('functions.index');
 });
 
-Route::middleware(['auth', 'admin'])
+Route::middleware(['auth', 'library-manager'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {

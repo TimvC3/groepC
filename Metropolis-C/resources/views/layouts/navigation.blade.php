@@ -14,11 +14,13 @@
                     </x-nav-link>
                 </div>
 
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('facilities')" :active="request()->routeIs('facilities')">
-                        {{ __('Facilities') }}
-                    </x-nav-link>
-                </div>
+                @if (auth()->user()?->role === 'library_manager')
+                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                        <x-nav-link :href="route('facilities')" :active="request()->routeIs('facilities')">
+                            {{ __('Facilities') }}
+                        </x-nav-link>
+                    </div>
+                @endif
 
                 @if (auth()->user()?->role === 'city_planner')
                     <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
@@ -79,9 +81,11 @@
                 {{ __('Metropolis Grid') }}
             </x-responsive-nav-link>
 
-            <x-responsive-nav-link :href="route('facilities')" :active="request()->routeIs('facilities')">
-                {{ __('Facilities') }}
-            </x-responsive-nav-link>
+            @if (auth()->user()?->role === 'library_manager')
+                <x-responsive-nav-link :href="route('facilities')" :active="request()->routeIs('facilities')">
+                    {{ __('Facilities') }}
+                </x-responsive-nav-link>
+            @endif
 
             @if (auth()->user()?->role === 'city_planner')
                 <x-responsive-nav-link :href="route('events.index')" :active="request()->routeIs('events.*')">

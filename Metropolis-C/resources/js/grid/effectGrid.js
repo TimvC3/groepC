@@ -28,7 +28,6 @@ let simulationRunning = false;
 let simulationSpeed = 1;
 let lastSimulationSpeed = 1;
 let lastApprovedFeedbackAt = 0;
-let lastNeighbourFeedbackAt = 0;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 const canApproveDestinations = Boolean(gridPermissions.canApproveDestinations);
@@ -66,6 +65,10 @@ function showPlacementFeedback(message, type = 'error') {
         feedback.style.backgroundColor = '#fee2e2';
         feedback.style.color = '#991b1b';
         feedback.style.border = '1px solid #fecaca';
+    } else if (type === 'warning') {
+        feedback.style.backgroundColor = '#fef3c7';
+        feedback.style.color = '#92400e';
+        feedback.style.border = '1px solid #fde68a';
     } else {
         feedback.style.backgroundColor = '#dcfce7';
         feedback.style.color = '#166534';
@@ -979,23 +982,6 @@ function getSurroundingCells(cell) {
     });
 }
 
-function getHorizontalVerticalNeighbourCells(cell) {
-    const index = Number(cell.dataset.index);
-    const allCells = Array.from(document.querySelectorAll('.grid-cell'));
-    const totalCells = allCells.length;
-    const row = Math.floor((index - 1) / gridColumns);
-    const column = (index - 1) % gridColumns;
-
-    return allCells.filter((otherCell) => {
-        const otherIndex = Number(otherCell.dataset.index);
-        const otherRow = Math.floor((otherIndex - 1) / gridColumns);
-        const otherColumn = (otherIndex - 1) % gridColumns;
-        const isDirectNeighbour = Math.abs(otherRow - row) + Math.abs(otherColumn - column) === 1;
-
-        return otherIndex >= 1 && otherIndex <= totalCells && isDirectNeighbour;
-    });
-}
-
 function getNeighbourRule(facilityId) {
     return neighbourRules[String(facilityId)] || neighbourRules[facilityId] || null;
 }
@@ -1016,17 +1002,6 @@ function directNeighbourIndexes(index, totalCells) {
     }
 
     return indexes;
-}
-
-function requiredNeighbourIsPresent(cell, facilityId) {
-    const rule = getNeighbourRule(facilityId);
-
-    if (!rule) return true;
-
-    return getHorizontalVerticalNeighbourCells(cell).some((neighbourCell) => {
-        return neighbourCell.dataset.itemType === 'facility'
-            && String(neighbourCell.dataset.itemId) === String(rule.requiredNeighbourId);
-    });
 }
 
 function facilityNameById(facilityId) {
@@ -1091,30 +1066,9 @@ function requiredNeighbourViolationsForPlacement(targetCell, payload) {
 
 function showRequiredNeighbourViolation(violation) {
     showPlacementFeedback(
-        `${violation.facilityName} cannot be placed here. It must be placed directly next to ${violation.requiredNeighbourName} horizontally or vertically.`,
-        'error'
+        `${violation.facilityName} was placed, but its required neighbour is missing. Place it directly next to ${violation.requiredNeighbourName} horizontally or vertically.`,
+        'warning'
     );
-}
-
-function showRequiredNeighbourMessage(facility) {
-    const rule = getNeighbourRule(facility.id);
-    const requiredNeighbourName = rule?.requiredNeighbourName || 'the required neighbour';
-
-    showPlacementFeedback(
-        `${facility.name} cannot be placed here. It must be placed directly next to ${requiredNeighbourName} horizontally or vertically.`,
-        'error'
-    );
-}
-
-function showRequiredNeighbourToast(facility) {
-    const now = Date.now();
-
-    if (now - lastNeighbourFeedbackAt < 2000) {
-        return;
-    }
-
-    lastNeighbourFeedbackAt = now;
-    showRequiredNeighbourMessage(facility);
 }
 
 function getLocalScores(cell) {
@@ -1568,13 +1522,6 @@ function bindGridCells() {
                 return;
             }
 
-            if (draggedData?.type === 'facility' && !requiredNeighbourIsPresent(cell, draggedData.id)) {
-                event.dataTransfer.dropEffect = 'move';
-                cell.classList.add('bg-red-50', 'border-red-400');
-                showRequiredNeighbourToast(draggedData);
-                return;
-            }
-
             event.dataTransfer.dropEffect = 'move';
             cell.classList.add('bg-indigo-50', 'border-indigo-400');
         });
@@ -1611,15 +1558,10 @@ function bindGridCells() {
 
             droppedOnGrid = true;
 
-            if (payload.type === 'facility') {
-                const requiredNeighbourViolations = requiredNeighbourViolationsForPlacement(cell, payload);
+            let requiredNeighbourViolations = [];
 
-                if (requiredNeighbourViolations.length > 0) {
-                    showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
-                    sourceCell = null;
-                    draggedData = null;
-                    return;
-                }
+            if (payload.type === 'facility') {
+                requiredNeighbourViolations = requiredNeighbourViolationsForPlacement(cell, payload);
 
                 const conflicts = findRestrictionConflicts(cell, payload.id);
 
@@ -1636,6 +1578,10 @@ function bindGridCells() {
             }
 
             fillCell(cell, payload);
+
+            if (requiredNeighbourViolations.length > 0) {
+                showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
+            }
 
             sourceCell = null;
             draggedData = null;
