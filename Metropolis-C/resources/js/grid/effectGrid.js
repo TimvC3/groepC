@@ -39,9 +39,78 @@ function formatScore(score) {
 }
 
 function scoreColorClass(score) {
-    if (score > 0) return 'text-green-700 dark:text-green-300';
-    if (score < 0) return 'text-red-600 dark:text-red-300';
+    if (score > 0) {
+        return 'text-green-700 dark:text-green-300 [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:font-extrabold';
+    }
+
+    if (score < 0) {
+        return 'text-red-600 dark:text-red-300 [.colorblind-mode_&]:text-orange-950 [.colorblind-mode_&]:font-extrabold';
+    }
+
     return 'text-gray-500 dark:text-gray-400';
+}
+
+function isColorblindModeEnabled() {
+    return document.documentElement.classList.contains('colorblind-mode');
+}
+
+function statusBadgeClasses(status) {
+    const base = 'inline-flex items-center gap-1 rounded-full border-2 px-2 py-1 text-xs font-bold capitalize';
+
+    if (isColorblindModeEnabled()) {
+        const classes = {
+            active: 'border-indigo-900 bg-indigo-900 text-white ring-2 ring-indigo-300',
+            planned: 'border-sky-700 bg-white text-sky-950',
+            past: 'border-gray-700 bg-white text-gray-950',
+        };
+
+        return `${base} ${classes[status] ?? classes.planned}`;
+    }
+
+    const classes = {
+        active: 'border-green-200 bg-green-100 text-green-700 dark:border-green-900/50 dark:bg-green-900/30 dark:text-green-300',
+        planned: 'border-blue-200 bg-blue-100 text-blue-700 dark:border-blue-900/50 dark:bg-blue-900/30 dark:text-blue-300',
+        past: 'border-gray-200 bg-gray-100 text-gray-700 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    };
+
+    return `${base} ${classes[status] ?? classes.planned}`;
+}
+
+function statusBadgeLabel(status) {
+    const labels = {
+        active: '◆ Active',
+        planned: '● Planned',
+        past: '• Past',
+    };
+
+    return labels[status] ?? status;
+}
+
+function placementFeedbackClasses(type = 'error') {
+    const baseClasses = [
+        'fixed',
+        'bottom-5',
+        'right-5',
+        'z-[999999]',
+        'max-w-sm',
+        'rounded-lg',
+        'border-2',
+        'px-4',
+        'py-3',
+        'text-sm',
+        'font-bold',
+        'shadow-xl',
+    ].join(' ');
+
+    if (type === 'error') {
+        return isColorblindModeEnabled()
+            ? `${baseClasses} border-orange-700 bg-white text-orange-950`
+            : `${baseClasses} border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300`;
+    }
+
+    return isColorblindModeEnabled()
+        ? `${baseClasses} border-sky-700 bg-white text-sky-950`
+        : `${baseClasses} border-green-200 bg-green-50 text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300`;
 }
 
 function showPlacementFeedback(message, type = 'error') {
@@ -49,29 +118,11 @@ function showPlacementFeedback(message, type = 'error') {
 
     const feedback = document.createElement('div');
     feedback.id = 'placement-feedback';
-    feedback.textContent = message;
     feedback.setAttribute('role', 'alert');
+    feedback.className = placementFeedbackClasses(type);
 
-    feedback.style.position = 'fixed';
-    feedback.style.right = '20px';
-    feedback.style.bottom = '20px';
-    feedback.style.zIndex = '999999';
-    feedback.style.maxWidth = '360px';
-    feedback.style.padding = '14px 18px';
-    feedback.style.borderRadius = '10px';
-    feedback.style.fontSize = '14px';
-    feedback.style.fontWeight = '700';
-    feedback.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.25)';
-
-    if (type === 'error') {
-        feedback.style.backgroundColor = '#fee2e2';
-        feedback.style.color = '#991b1b';
-        feedback.style.border = '1px solid #fecaca';
-    } else {
-        feedback.style.backgroundColor = '#dcfce7';
-        feedback.style.color = '#166534';
-        feedback.style.border = '1px solid #bbf7d0';
-    }
+    const icon = type === 'error' ? '!' : '✓';
+    feedback.textContent = `${icon} ${message}`;
 
     document.body.appendChild(feedback);
 
@@ -842,13 +893,21 @@ function setConditionStatus(message, type = 'neutral') {
     if (!status) return;
 
     const colorClasses = {
-        neutral: 'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300',
-        success: 'border-green-200 bg-green-50 text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300',
-        error: 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300',
+        neutral: 'border-gray-300 bg-white text-gray-800 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 [.colorblind-mode_&]:border-sky-700 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950',
+
+        success: 'border-green-200 bg-green-50 text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300 [.colorblind-mode_&]:border-sky-700 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950',
+
+        error: 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 [.colorblind-mode_&]:border-orange-700 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-orange-950',
+    };
+
+    const icons = {
+        neutral: 'ℹ',
+        success: '✓',
+        error: '!',
     };
 
     status.className = `mt-4 w-full max-w-md rounded-lg border px-4 py-3 text-sm ${colorClasses[type]}`;
-    status.textContent = message;
+    status.textContent = `${icons[type] ?? icons.neutral} ${message}`;
 }
 
 function updateConditionStatus() {
@@ -1056,8 +1115,12 @@ function renderEventEffectList(eventSelections) {
         const meta = document.createElement('div');
 
         item.className = active
-            ? 'rounded-md border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-900/20'
-            : 'rounded-md border border-gray-200 bg-gray-50 px-4 py-3 opacity-75 dark:border-gray-700 dark:bg-gray-900/40';
+            ? isColorblindModeEnabled()
+                ? 'rounded-md border-2 border-orange-950 bg-white px-4 py-3 text-orange-950 shadow-sm'
+                : 'rounded-md border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-900/20'
+            : isColorblindModeEnabled()
+                ? 'rounded-md border-2 border-gray-900 bg-white px-4 py-3 text-gray-950 opacity-90'
+                : 'rounded-md border border-gray-200 bg-gray-50 px-4 py-3 opacity-75 dark:border-gray-700 dark:bg-gray-900/40';
         header.className = 'flex items-start justify-between gap-3';
         name.className = 'text-sm font-semibold text-gray-900 dark:text-gray-100';
         scoreElement.className = [
@@ -1321,14 +1384,14 @@ function updateTooltipContent(cell, tooltip) {
         tooltip.innerHTML = `
             <div class="mb-2 font-bold">${itemName}</div>
             <div class="mb-2 text-gray-300">${event?.date || ''} ${event?.startTime || ''} - ${event?.endTime || ''}</div>
-            <div class="mb-2 ${active ? 'text-green-300' : 'text-gray-300'}">
+            <div class="mb-2 ${active ? 'text-indigo-200 font-bold' : 'text-gray-300'}">
                 ${active ? 'Active at simulation time' : 'Not active at simulation time'}
             </div>
             <div class="space-y-1">
                 ${(event?.impacts || []).map((impact) => `
                     <div class="flex justify-between gap-3">
                         <span>${impact.category_name}</span>
-                        <span class="${Number(impact.score ?? 0) > 0 ? 'text-green-300' : Number(impact.score ?? 0) < 0 ? 'text-red-300' : 'text-gray-300'}">
+                        <span class="${Number(impact.score ?? 0) > 0 ? 'text-sky-200 font-bold' : Number(impact.score ?? 0) < 0 ? 'text-orange-200 font-bold' : 'text-gray-300'}">
                             ${active ? formatScore(Number(impact.score ?? 0)) : '0'}
                         </span>
                     </div>
@@ -1361,7 +1424,7 @@ function updateTooltipContent(cell, tooltip) {
             ${localData.scores.map((item) => `
                 <div class="flex justify-between gap-3">
                     <span>${item.name}</span>
-                    <span class="${item.score > 0 ? 'text-green-300' : item.score < 0 ? 'text-red-300' : 'text-gray-300'}">
+                    <span class="${item.score > 0 ? 'text-sky-200 font-bold' : item.score < 0 ? 'text-orange-200 font-bold' : 'text-gray-300'}">
                         ${formatScore(item.score)}
                     </span>
                 </div>
@@ -1370,7 +1433,7 @@ function updateTooltipContent(cell, tooltip) {
 
         <div class="mt-2 border-t border-gray-600 pt-2 flex justify-between font-bold">
             <span>Total</span>
-            <span class="${total > 0 ? 'text-green-300' : total < 0 ? 'text-red-300' : 'text-gray-300'}">
+            <span class="${total > 0 ? 'text-sky-200 font-bold' : total < 0 ? 'text-orange-200 font-bold' : 'text-gray-300'}">
                 ${formatScore(total)}
             </span>
         </div>
@@ -1516,19 +1579,43 @@ function showRestrictionError(conflicts, droppedName) {
     if (!errorEl) {
         errorEl = document.createElement('div');
         errorEl.id = 'restriction-error';
-        errorEl.className = 'fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-lg dark:border-red-900/50 dark:bg-red-900/20';
         document.body.appendChild(errorEl);
     }
+
+    const containerClasses = isColorblindModeEnabled()
+        ? 'fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border-2 border-orange-950 bg-white px-4 py-3 text-orange-950 shadow-lg'
+        : 'fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-lg dark:border-red-900/50 dark:bg-red-900/20';
+
+    const titleClasses = isColorblindModeEnabled()
+        ? 'text-sm font-extrabold text-orange-950'
+        : 'text-sm font-semibold text-red-800 dark:text-red-300';
+
+    const messageClasses = isColorblindModeEnabled()
+        ? 'mt-1 text-sm font-bold text-orange-950'
+        : 'mt-1 text-sm text-red-700 dark:text-red-400';
+
+    const closeButtonClasses = isColorblindModeEnabled()
+        ? 'text-lg font-bold leading-none text-orange-950 hover:text-black'
+        : 'text-lg leading-none text-red-400 hover:text-red-600';
+
+    errorEl.className = containerClasses;
 
     errorEl.innerHTML = `
         <div class="flex items-start gap-3">
             <div class="flex-1">
-                <p class="text-sm font-semibold text-red-800 dark:text-red-300">Placement not allowed</p>
-                <p class="mt-1 text-sm text-red-700 dark:text-red-400">
+                <p class="${titleClasses}">Placement not allowed</p>
+                <p class="${messageClasses}">
                     <strong>${droppedName}</strong> cannot be placed next to: ${conflictNames}
                 </p>
             </div>
-            <button onclick="document.getElementById('restriction-error').remove()" class="text-lg leading-none text-red-400 hover:text-red-600">&times;</button>
+            <button
+                type="button"
+                onclick="document.getElementById('restriction-error').remove()"
+                class="${closeButtonClasses}"
+                aria-label="Close error message"
+            >
+                &times;
+            </button>
         </div>
     `;
 
@@ -1624,13 +1711,10 @@ function updateUpcomingEventList() {
         }
 
         if (statusBadge) {
-            statusBadge.textContent = active ? 'active' : 'planned';
-            statusBadge.className = [
-                'rounded-full px-2 py-1 text-xs font-semibold capitalize',
-                active
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-            ].join(' ');
+            const status = active ? 'active' : 'planned';
+
+            statusBadge.textContent = statusBadgeLabel(status);
+            statusBadge.className = statusBadgeClasses(status);
         }
 
         card.classList.remove('hidden');
@@ -1691,13 +1775,17 @@ function bindGridCells() {
 
             if (isApprovedCell(cell)) {
                 event.dataTransfer.dropEffect = 'move';
-                cell.classList.add('bg-red-50', 'border-red-400');
+                if (isColorblindModeEnabled()) {
+                    cell.classList.add('bg-white', 'border-orange-950');
+                } else {
+                    cell.classList.add('bg-red-50', 'border-red-400');
+                }
                 return;
             }
 
             if (draggedData?.type === 'facility' && !requiredNeighbourIsPresent(cell, draggedData.id)) {
                 event.dataTransfer.dropEffect = 'move';
-                cell.classList.add('bg-red-50', 'border-red-400');
+                cell.classList.add('bg-white', 'border-orange-950');;
                 showRequiredNeighbourToast(draggedData);
                 return;
             }
@@ -1711,7 +1799,9 @@ function bindGridCells() {
                 'bg-indigo-50',
                 'border-indigo-400',
                 'bg-red-50',
-                'border-red-400'
+                'border-red-400',
+                'bg-white',
+                'border-orange-950'
             );
         });
 
@@ -1722,7 +1812,9 @@ function bindGridCells() {
                 'bg-indigo-50',
                 'border-indigo-400',
                 'bg-red-50',
-                'border-red-400'
+                'border-red-400',
+                'bg-white',
+                'border-orange-950'
             );
 
             const payload = getDropPayload(event);
@@ -2226,6 +2318,21 @@ function exportToPDF() {
 function bindExportButton() {
     document.getElementById('export-pdf')?.addEventListener('click', exportToPDF);
 }
+function refreshColorblindGridStyles() {
+    updateEffectView();
+    updateEventEffectView();
+    updateUpcomingEventList();
+
+    document.querySelectorAll('.grid-cell').forEach((cell) => {
+        updateApprovalUI(cell);
+    });
+
+    if (activeTooltip) {
+        updateTooltipContent(activeTooltip, getOrCreateTooltip());
+    }
+}
+
+window.addEventListener('accessibility:colorblind-mode-changed', refreshColorblindGridStyles);
 
 document.addEventListener('DOMContentLoaded', () => {
     hydrateSimulationMoment();

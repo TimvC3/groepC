@@ -86,40 +86,6 @@
                                     class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 >
                             </label>
-
-                            <label class="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-3">
-                                <span>
-                                    <span class="block text-sm font-medium text-gray-900">
-                                        Larger text
-                                    </span>
-                                    <span class="block text-xs text-gray-500">
-                                        Makes text easier to read.
-                                    </span>
-                                </span>
-
-                                <input
-                                    type="checkbox"
-                                    id="largeTextMode"
-                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                >
-                            </label>
-
-                            <label class="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-3">
-                                <span>
-                                    <span class="block text-sm font-medium text-gray-900">
-                                        High contrast
-                                    </span>
-                                    <span class="block text-xs text-gray-500">
-                                        Improves contrast in the interface.
-                                    </span>
-                                </span>
-
-                                <input
-                                    type="checkbox"
-                                    id="highContrastMode"
-                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                >
-                            </label>
                         </div>
                     </div>
                 </div>

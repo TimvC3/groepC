@@ -414,9 +414,9 @@
                                         <td class="px-4 py-4 text-center">
                                             @if (! is_null($score))
                                                 <span
+                                                    data-score="{{ $score }}"
                                                     @if (! in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true))
                                                         data-score-id="{{ $facilityScore->id }}"
-                                                        data-score="{{ $score }}"
                                                         title="Click to edit"
                                                     @endif
                                                     @class([
@@ -452,8 +452,6 @@
     </div>
 
     @push('scripts')
-        @if (! in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true))
-            @vite('resources/js/facilities/scoreEditor.js')
-        @endif
+        @vite('resources/js/facilities/scoreEditor.js')
     @endpush
 </x-app-layout>

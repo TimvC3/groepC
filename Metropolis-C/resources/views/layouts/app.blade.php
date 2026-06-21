@@ -15,14 +15,16 @@
 
         <!-- Scripts -->
         <script>
-            if (localStorage.getItem('accessibility.colorblindMode') === 'true') {
+            const authUserId = @json(auth()->id() ?? 'guest');
+
+            if (localStorage.getItem(`accessibility.colorblindMode.${authUserId}`) === 'true') {
                 document.documentElement.classList.add('colorblind-mode');
             }
-
-            if (localStorage.getItem('accessibility.largeTextMode') === 'true') {
-                document.documentElement.classList.add('text-lg');
-            }
         </script>
+
+        @if (auth()->check())
+            <meta name="auth-user-id" content="{{ auth()->id() }}">
+        @endif
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>

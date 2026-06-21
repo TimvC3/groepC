@@ -1,14 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
     const button = document.getElementById('accessibilitySettingsButton');
     const menu = document.getElementById('accessibilitySettingsMenu');
-
     const colorblindMode = document.getElementById('colorblindMode');
-    const largeTextMode = document.getElementById('largeTextMode');
-    const highContrastMode = document.getElementById('highContrastMode');
 
-    const colorblindStorageKey = 'accessibility.colorblindMode';
-    const largeTextStorageKey = 'accessibility.largeTextMode';
-    const highContrastStorageKey = 'accessibility.highContrastMode';
+    const userId = document
+        .querySelector('meta[name="auth-user-id"]')
+        ?.getAttribute('content') || 'guest';
+
+    const colorblindStorageKey = `accessibility.colorblindMode.${userId}`;
+
+    // Oude algemene keys opruimen, zodat eerdere testinstellingen niet blijven hangen.
+    localStorage.removeItem('accessibility.colorblindMode');
+    localStorage.removeItem('accessibility.largeTextMode');
+    localStorage.removeItem('accessibility.highContrastMode');
+
+    // Oude user-specific keys van verwijderde opties opruimen.
+    localStorage.removeItem(`accessibility.largeTextMode.${userId}`);
+    localStorage.removeItem(`accessibility.highContrastMode.${userId}`);
 
     function applyColorblindMode(isEnabled) {
         document.documentElement.classList.toggle('colorblind-mode', isEnabled);
@@ -18,32 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         localStorage.setItem(colorblindStorageKey, isEnabled ? 'true' : 'false');
-    }
 
-    function applyLargeTextMode(isEnabled) {
-        document.documentElement.classList.toggle('text-lg', isEnabled);
-
-        if (largeTextMode) {
-            largeTextMode.checked = isEnabled;
-        }
-
-        localStorage.setItem(largeTextStorageKey, isEnabled ? 'true' : 'false');
-    }
-
-    function applyHighContrastMode(isEnabled) {
-        document.documentElement.classList.toggle('bg-gray-950', isEnabled);
-        document.documentElement.classList.toggle('text-white', isEnabled);
-
-        if (highContrastMode) {
-            highContrastMode.checked = isEnabled;
-        }
-
-        localStorage.setItem(highContrastStorageKey, isEnabled ? 'true' : 'false');
+        window.dispatchEvent(new CustomEvent('accessibility:colorblind-mode-changed', {
+            detail: {
+                enabled: isEnabled,
+            },
+        }));
     }
 
     applyColorblindMode(localStorage.getItem(colorblindStorageKey) === 'true');
-    applyLargeTextMode(localStorage.getItem(largeTextStorageKey) === 'true');
-    applyHighContrastMode(localStorage.getItem(highContrastStorageKey) === 'true');
 
     if (!button || !menu) {
         return;
@@ -76,13 +67,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     colorblindMode?.addEventListener('change', () => {
         applyColorblindMode(colorblindMode.checked);
-    });
-
-    largeTextMode?.addEventListener('change', () => {
-        applyLargeTextMode(largeTextMode.checked);
-    });
-
-    highContrastMode?.addEventListener('change', () => {
-        applyHighContrastMode(highContrastMode.checked);
     });
 });

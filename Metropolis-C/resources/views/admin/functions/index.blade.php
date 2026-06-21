@@ -38,7 +38,7 @@
 
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                             @forelse ($functions as $function)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 [.colorblind-mode_&]:hover:bg-sky-50">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 [.colorblind-mode_&]:hover:bg-white [.colorblind-mode_&]:hover:ring-2 [.colorblind-mode_&]:hover:ring-sky-950">
                                     <td class="px-4 py-3 text-2xl">
                                         {{ $function->icon }}
                                     </td>
@@ -56,7 +56,7 @@
                                     </td>
 
                                     <td class="px-4 py-3 text-right">
-                                        <a href="{{ route('admin.functions.edit', $function) }}" class="font-medium text-indigo-600 hover:text-indigo-900 [.colorblind-mode_&]:text-sky-700 [.colorblind-mode_&]:hover:text-sky-900">
+                                        <a href="{{ route('admin.functions.edit', $function) }}" class="font-medium text-indigo-600 hover:text-indigo-900 [.colorblind-mode_&]:font-bold [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:underline">
                                             Edit
                                         </a>
                                     </td>
