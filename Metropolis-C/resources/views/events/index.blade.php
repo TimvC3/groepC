@@ -135,13 +135,13 @@
                                 >
 
                                 <input
-                                    id="eventDateFilter"
+                                    id="event-date-search"
                                     type="date"
                                     class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                                 >
 
                                 <input
-                                    id="eventTypeFilter"
+                                    id="event-type-search"
                                     type="text"
                                     placeholder=" by type..."
                                     class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
@@ -748,6 +748,43 @@
                     emptyMessage.classList.toggle('hidden', count > 0);
                 }
             });
+            function applyEventFilters() {
+                const name = (document.getElementById("event-search")?.value || "")
+                    .toLowerCase()
+                    .trim();
+
+                const date = document.getElementById("event-date-search")?.value || "";
+
+                const type = (document.getElementById("event-type-search")?.value || "")
+                    .toLowerCase()
+                    .trim();
+
+                document.querySelectorAll("[data-event-card]").forEach(card => {
+                    const cardName = (card.dataset.eventName || "").toLowerCase();
+                    const cardType = (card.dataset.eventType || "").toLowerCase();
+                    const cardDate = card.dataset.eventDate || "";
+
+                    const matchesName = !name || cardName.includes(name);
+                    const matchesDate = !date || cardDate === date;
+                    const matchesType = !type || cardType.includes(type);
+
+                    const shouldShow = matchesName && matchesDate && matchesType;
+
+                    card.classList.toggle("hidden", !shouldShow);
+                });
+            }
+            function bindEventSearch() {
+                const nameInput = document.getElementById("event-search");
+                const dateInput = document.getElementById("event-date-search");
+                const typeInput = document.getElementById("event-type-search");
+
+                const handler = () => applyEventFilters();
+
+                nameInput?.addEventListener("input", handler);
+                dateInput?.addEventListener("input", handler);
+                typeInput?.addEventListener("input", handler);
+            }
+            bindEventSearch();
         });
     </script>
 </x-app-layout>

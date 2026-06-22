@@ -2227,53 +2227,6 @@ function bindExportButton() {
     document.getElementById('export-pdf')?.addEventListener('click', exportToPDF);
 }
 
-function bindEventSearch() {
-    const nameInput = document.getElementById("eventNameFilter");
-    const dateInput = document.getElementById("eventDateFilter");
-    const typeInput = document.getElementById("eventTypeFilter");
-
-    if (!nameInput && !dateInput && !typeInput) return;
-
-    const handler = () => {
-        applyEventFilters();
-    };
-
-    nameInput?.addEventListener("input", handler);
-    dateInput?.addEventListener("input", handler);
-    typeInput?.addEventListener("input", handler);
-}
-
-function applyEventFilters() {
-    const name = (document.getElementById("eventNameFilter")?.value || "")
-        .toLowerCase()
-        .trim();
-
-    const date = document.getElementById("eventDateFilter")?.value || "";
-
-    const type = (document.getElementById("eventTypeFilter")?.value || "")
-        .toLowerCase()
-        .trim();
-
-    document.querySelectorAll("[data-event-card]").forEach(card => {
-        const cardName = (card.dataset.eventName || "").toLowerCase();
-        const cardType = (card.dataset.eventType || "").toLowerCase();
-        const cardDate = card.dataset.eventDate || "";
-
-        const matchesName =
-            !name || cardName.includes(name);
-
-        const matchesDate =
-            !date || cardDate === date;
-
-        const matchesType =
-            !type || cardType.includes(type);
-
-        const shouldShow =
-            matchesName && matchesDate && matchesType;
-
-        card.classList.toggle("hidden", !shouldShow);
-    });
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     hydrateSimulationMoment();
@@ -2291,6 +2244,4 @@ document.addEventListener('DOMContentLoaded', () => {
     updateEffectView();
     updateEventEffectView();
     updateUpcomingEventList();
-    bindEventSearch();
-    applyEventFilters();
 });
