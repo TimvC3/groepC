@@ -9,6 +9,7 @@ use App\Models\Event;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Illuminate\Http\Request;
 
 class EventController extends Controller
 {

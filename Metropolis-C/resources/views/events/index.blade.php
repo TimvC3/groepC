@@ -238,7 +238,7 @@
                                             <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                                 {{ $event->recurrence_type->isRecurring() ? __('Next Date') : __('Date') }}
                                             </p>
-                                            <p class="mt-1 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-200">
+                                            <p class="mt-1 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-200" data-event-date-text>
                                                 {{ $occurrence ? $occurrence['starts_at']->format('d-m-Y') : \Illuminate\Support\Carbon::parse($event->event_date)->format('d-m-Y') }}
                                             </p>
                                             @if ($event->recurrence_type->isRecurring())
@@ -816,7 +816,6 @@
                     .trim();
 
                 const date = document.getElementById("event-date-search")?.value || "";
-
                 const type = (document.getElementById("event-type-search")?.value || "")
                     .toLowerCase()
                     .trim();
@@ -833,6 +832,12 @@
                     const shouldShow = matchesName && matchesDate && matchesType;
 
                     card.classList.toggle("hidden", !shouldShow);
+
+                    if (shouldShow) {
+                        const status = statusFor(card);
+                        updateBadge(card, status);
+                        updateRescheduleButton(card, status);
+                    }
                 });
             }
             function bindEventSearch() {
@@ -867,52 +872,77 @@
                 e.preventDefault();
 
                 const eventId = eventIdInput.value;
+                const payload = {
+                    event_date: dateInput.value
+                };
 
-                const res = await fetch(`/events/${eventId}/reschedule`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        event_date: dateInput.value
-                    })
-                });
+                console.log('[Reschedule] Submitting request');
+                console.log('[Reschedule] Event ID:', eventId);
+                console.log('[Reschedule] Payload:', payload);
 
-                if (!res.ok) return;
+                try {
+                    const res = await fetch(`/events/${eventId}/reschedule`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
 
-                const data = await res.json();
-                const newEvent = data.event;
+                    console.log('[Reschedule] Response status:', res.status);
 
-                // create a lightweight new card dataset object
-                const cards = document.querySelectorAll('[data-event-card]');
+                    const rawText = await res.clone().text();
+                    console.log('[Reschedule] Raw response:', rawText);
 
-                // optionally reload page if you want simplest correctness:
-                // window.location.reload();
+                    if (!res.ok) {
+                        console.error('[Reschedule] Request failed');
+                        return;
+                    }
 
-                // OR just re-run classification logic by injecting a new card clone:
-                const originalCard = document.querySelector(`[data-event-id="${eventId}"]`);
+                    const data = await res.json();
 
-                if (originalCard) {
-                    const clone = originalCard.cloneNode(true);
+                    console.log('[Reschedule] Parsed JSON:', data);
 
-                    clone.dataset.eventDate = newEvent.event_date;
-                    clone.dataset.startTime = newEvent.start_time.slice(0,5);
-                    clone.dataset.endTime = newEvent.end_time.slice(0,5);
+                    const newEvent = data.event;
 
-                    clone.classList.remove('hidden');
+                    const originalCard = document.querySelector(`[data-event-id="${eventId}"]`);
 
-                    document.querySelector('[data-event-list="planned"]').appendChild(clone);
+                    if (originalCard) {
+                        // update dataset (used by logic)
+                        originalCard.dataset.eventDate = newEvent.event_date;
+                        originalCard.dataset.startTime = newEvent.start_time.slice(0, 5);
+                        originalCard.dataset.endTime = newEvent.end_time.slice(0, 5);
 
-                    // re-run your existing logic
-                    const status = statusFor(clone);
-                    updateBadge(clone, status);
-                    sections[status]?.appendChild(clone);
+                        // update visible date text
+                        const dateText = originalCard.querySelector('[data-event-date-text]');
+                        if (dateText) {
+                            const d = new Date(newEvent.event_date);
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const year = d.getFullYear();
+
+                            dateText.textContent = `${day}-${month}-${year}`;
+                        }
+
+                        // recalc status
+                        const status = statusFor(originalCard);
+
+                        // update UI state
+                        updateBadge(originalCard, status);
+                        updateRescheduleButton(originalCard, status);
+
+                        // move card to correct section
+                        sections[status]?.appendChild(originalCard);
+                    }
+
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+
+                } catch (err) {
+                    console.error('[Reschedule] Exception:', err);
                 }
-
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
             });
             function updateRescheduleButton(card, status) {
                 const btn = card.querySelector('[data-reschedule-btn]');
