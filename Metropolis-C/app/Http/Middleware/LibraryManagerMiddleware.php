@@ -10,7 +10,7 @@ class LibraryManagerMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->role !== 'library_manager') {
+        if (! in_array($request->user()?->role, ['admin', 'library_manager'], true)) {
             abort(403);
         }
 

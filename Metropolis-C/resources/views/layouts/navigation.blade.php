@@ -14,7 +14,7 @@
                     </x-nav-link>
                 </div>
 
-                @if (auth()->user()?->role === 'library_manager')
+                @if (in_array(auth()->user()?->role, ['admin', 'library_manager'], true))
                     <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                         <x-nav-link :href="route('facilities')" :active="request()->routeIs('facilities')">
                             {{ __('Facilities') }}
@@ -22,7 +22,7 @@
                     </div>
                 @endif
 
-                @if (in_array(auth()->user()?->role, ['admin', 'city_planner'], true))
+                @if (auth()->user()?->role === 'city_planner')
                     <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                         <x-nav-link :href="route('events.index')" :active="request()->routeIs('events.*')">
                             {{ __('Events') }}
@@ -81,13 +81,13 @@
                 {{ __('Metropolis Grid') }}
             </x-responsive-nav-link>
 
-            @if (auth()->user()?->role === 'library_manager')
+            @if (in_array(auth()->user()?->role, ['admin', 'library_manager'], true))
                 <x-responsive-nav-link :href="route('facilities')" :active="request()->routeIs('facilities')">
                     {{ __('Facilities') }}
                 </x-responsive-nav-link>
             @endif
 
-            @if (in_array(auth()->user()?->role, ['admin', 'city_planner'], true))
+            @if (auth()->user()?->role === 'city_planner')
                 <x-responsive-nav-link :href="route('events.index')" :active="request()->routeIs('events.*')">
                     {{ __('Events') }}
                 </x-responsive-nav-link>
