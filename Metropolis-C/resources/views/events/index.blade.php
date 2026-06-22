@@ -189,6 +189,7 @@
                                         <article
                                             class="rounded-lg p-0 transition hover:bg-gray-50 dark:hover:bg-gray-700/40"
                                             data-event-card
+                                            data-event-id="{{ $event->id }}"
                                             data-event-name="{{ strtolower($event->name) }}"
                                             data-event-type="{{ strtolower($event->event_type) }}"
                                             data-event-date="{{ $event->event_date?->format('Y-m-d') }}"
@@ -291,12 +292,24 @@
                                                 {{ __('Edit') }}
                                             </p>
 
-                                            <a
-                                                href="{{ route('events.edit', $event) }}"
-                                                class="mt-1 inline-flex text-sm font-medium text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-                                            >
-                                                {{ __('Edit') }}
-                                            </a>
+                                            <div class="mt-1 flex flex-col items-end gap-2">
+                                                <a
+                                                    href="{{ route('events.edit', $event) }}"
+                                                    class="inline-flex text-sm font-medium text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                >
+                                                    {{ __('Edit') }}
+                                                </a>
+
+                                                <button
+                                                    type="button"
+                                                    class="hidden inline-flex text-sm font-medium text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                    data-reschedule-btn
+                                                    data-event-id="{{ $event->id }}"
+                                                    data-event-name="{{ $event->name }}"
+                                                >
+                                                    {{ __('Reschedule') }}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -530,6 +543,45 @@
             </div>
         </div>
     </div>
+    <div id="reschedule-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+        <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {{ __('Reschedule Event') }}
+            </h3>
+
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300" id="reschedule-event-name"></p>
+
+            <form id="reschedule-form" class="mt-4 space-y-4">
+                <input type="hidden" name="event_id" id="reschedule-event-id">
+
+                <div>
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        {{ __('New Date') }}
+                    </label>
+
+                    <input
+                        type="date"
+                        name="event_date"
+                        id="reschedule-date"
+                        required
+                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900"
+                    >
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" id="reschedule-cancel"
+                        class="rounded-lg border px-4 py-2 text-sm dark:border-gray-600">
+                        {{ __('Cancel') }}
+                    </button>
+
+                    <button type="submit"
+                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
+                        {{ __('Confirm') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -551,6 +603,14 @@
             };
 
             const emptyMessages = {};
+
+            const modal = document.getElementById('reschedule-modal');
+            const form = document.getElementById('reschedule-form');
+            const cancelBtn = document.getElementById('reschedule-cancel');
+
+            const eventIdInput = document.getElementById('reschedule-event-id');
+            const dateInput = document.getElementById('reschedule-date');
+            const nameLabel = document.getElementById('reschedule-event-name');
 
             Object.entries(sections).forEach(([status, section]) => {
                 emptyMessages[status] = section?.querySelector('[data-empty-event-message]') ?? null;
@@ -696,6 +756,7 @@
                 const status = statusFor(card);
                 sections[status]?.appendChild(card);
                 updateBadge(card, status);
+                updateRescheduleButton(card, status);
             });
 
             const upcomingList = document.querySelector('[data-upcoming-events-list]');
@@ -732,6 +793,7 @@
 
                         item.card.classList.remove('hidden');
                         updateBadge(item.card, item.status);
+                        updateRescheduleButton(item.card, item.status);
                         upcomingList?.appendChild(item.card);
                     });
             }
@@ -783,6 +845,84 @@
                 nameInput?.addEventListener("input", handler);
                 dateInput?.addEventListener("input", handler);
                 typeInput?.addEventListener("input", handler);
+            }
+            
+
+            document.querySelectorAll('[data-reschedule-btn]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    eventIdInput.value = btn.dataset.eventId;
+                    nameLabel.textContent = btn.dataset.eventName;
+
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                });
+            });
+
+            cancelBtn?.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            });
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const eventId = eventIdInput.value;
+
+                const res = await fetch(`/events/${eventId}/reschedule`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        event_date: dateInput.value
+                    })
+                });
+
+                if (!res.ok) return;
+
+                const data = await res.json();
+                const newEvent = data.event;
+
+                // create a lightweight new card dataset object
+                const cards = document.querySelectorAll('[data-event-card]');
+
+                // optionally reload page if you want simplest correctness:
+                // window.location.reload();
+
+                // OR just re-run classification logic by injecting a new card clone:
+                const originalCard = document.querySelector(`[data-event-id="${eventId}"]`);
+
+                if (originalCard) {
+                    const clone = originalCard.cloneNode(true);
+
+                    clone.dataset.eventDate = newEvent.event_date;
+                    clone.dataset.startTime = newEvent.start_time.slice(0,5);
+                    clone.dataset.endTime = newEvent.end_time.slice(0,5);
+
+                    clone.classList.remove('hidden');
+
+                    document.querySelector('[data-event-list="planned"]').appendChild(clone);
+
+                    // re-run your existing logic
+                    const status = statusFor(clone);
+                    updateBadge(clone, status);
+                    sections[status]?.appendChild(clone);
+                }
+
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            });
+            function updateRescheduleButton(card, status) {
+                const btn = card.querySelector('[data-reschedule-btn]');
+                if (!btn) return;
+
+                if (status === 'past') {
+                    btn.classList.remove('hidden');
+                } else {
+                    btn.classList.add('hidden');
+                }
             }
             bindEventSearch();
         });
