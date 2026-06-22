@@ -15,7 +15,7 @@ class CityPlannerMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->role !== 'city_planner') {
+        if (! in_array($request->user()?->role, ['admin', 'city_planner'], true)) {
             abort(403);
         }
 

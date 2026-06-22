@@ -22,7 +22,7 @@
                     </div>
                 @endif
 
-                @if (auth()->user()?->role === 'city_planner')
+                @if (in_array(auth()->user()?->role, ['admin', 'city_planner'], true))
                     <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                         <x-nav-link :href="route('events.index')" :active="request()->routeIs('events.*')">
                             {{ __('Events') }}
@@ -87,7 +87,7 @@
                 </x-responsive-nav-link>
             @endif
 
-            @if (auth()->user()?->role === 'city_planner')
+            @if (in_array(auth()->user()?->role, ['admin', 'city_planner'], true))
                 <x-responsive-nav-link :href="route('events.index')" :active="request()->routeIs('events.*')">
                     {{ __('Events') }}
                 </x-responsive-nav-link>
