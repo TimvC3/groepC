@@ -307,7 +307,7 @@
                                                     data-event-id="{{ $event->id }}"
                                                     data-event-name="{{ $event->name }}"
                                                 >
-                                                    {{ __('Reschedule') }}
+                                                    {{ __('repeat') }}
                                                 </button>
                                             </div>
                                         </div>
@@ -546,7 +546,7 @@
     <div id="reschedule-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
         <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {{ __('Reschedule Event') }}
+                {{ __('repeat Event') }}
             </h3>
 
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-300" id="reschedule-event-name"></p>
