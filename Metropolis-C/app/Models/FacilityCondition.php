@@ -11,6 +11,8 @@ class FacilityCondition extends Model
 
     public const FORBIDDEN_NEIGHBOUR = 'forbidden_neighbour';
 
+    public const LEVEL_4_ADJACENCY = 'level_4_adjacency';
+
     protected $fillable = [
         'facility_id',
         'condition_type',
@@ -34,5 +36,10 @@ class FacilityCondition extends Model
     public function isForbiddenNeighbour(): bool
     {
         return $this->condition_type === self::FORBIDDEN_NEIGHBOUR;
+    }
+
+    public function isLevel4Adjacency(): bool
+    {
+        return $this->condition_type === self::LEVEL_4_ADJACENCY;
     }
 }

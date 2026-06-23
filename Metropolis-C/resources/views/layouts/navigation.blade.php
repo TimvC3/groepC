@@ -15,8 +15,8 @@
                 </div>
 
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('facilities')" :active="request()->routeIs('facilities')">
-                        {{ __('Facilities') }}
+                    <x-nav-link :href="route('functions.index')" :active="request()->routeIs('functions.*')">
+                        {{ __('Functions') }}
                     </x-nav-link>
                 </div>
 
@@ -79,8 +79,8 @@
                 {{ __('Metropolis Grid') }}
             </x-responsive-nav-link>
 
-            <x-responsive-nav-link :href="route('facilities')" :active="request()->routeIs('facilities')">
-                {{ __('Facilities') }}
+            <x-responsive-nav-link :href="route('functions.index')" :active="request()->routeIs('functions.*')">
+                {{ __('Functions') }}
             </x-responsive-nav-link>
 
             @if (auth()->user()?->role === 'city_planner')
