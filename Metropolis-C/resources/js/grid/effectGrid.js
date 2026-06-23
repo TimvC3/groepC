@@ -2735,6 +2735,7 @@ function bindExportButton() {
     document.getElementById('export-pdf')?.addEventListener('click', exportToPDF);
 }
 
+
 document.addEventListener('DOMContentLoaded', () => {
     hydrateSimulationMoment();
     restoreApprovedCellsFromStorage();

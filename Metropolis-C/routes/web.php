@@ -75,3 +75,5 @@ Route::middleware(['auth', 'city-planner'])
         Route::get('/{event}/edit', [EventController::class, 'edit'])->name('edit');
         Route::patch('/{event}', [EventController::class, 'update'])->name('update');
     });
+Route::post('/events/{event}/reschedule', [EventController::class, 'reschedule'])
+    ->name('events.reschedule');
