@@ -28,15 +28,15 @@ class Bes3aFacilityAccessTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($user) {
             $browser->loginAs($user)
                 ->visit('/grid')
-                ->waitForLink('Facilities', 5)
-                ->assertSeeLink('Facilities')
+                ->waitForLink('Functions', 5)
+                ->assertSeeLink('Functions')
                 ->assertDontSeeLink('Events')
-                ->clickLink('Facilities')
+                ->clickLink('Functions')
                 ->waitForLocation('/facilities', 5)
                 ->assertPathIs('/facilities')
-                ->waitForText('Existing Facilities', 5)
-                ->assertSee('Create Facility')
-                ->assertSee('Facility Score Matrix');
+                ->waitForText('Existing Functions', 5)
+                ->assertSee('Create Function')
+                ->assertSee('Function Score Matrix');
         });
     }
 }

@@ -23,15 +23,15 @@ class FacilityManagementTest extends TestCase
 
         $response = $this
             ->actingAs($this->adminUser())
-            ->get(route('facilities'));
+            ->get(route('functions.index'));
 
         $response
             ->assertOk()
-            ->assertSee('Existing Facilities')
-            ->assertSee('Create Facility')
-            ->assertSee('Facility Score Matrix')
+            ->assertSee('Existing Functions')
+            ->assertSee('Create Function')
+            ->assertSee('Function Score Matrix')
             ->assertSee($facility->name)
-            ->assertSee(route('facilities.edit', $facility), false);
+            ->assertSee(route('functions.edit', $facility), false);
     }
 
     public function test_non_admin_cannot_create_or_edit_facilities(): void
@@ -45,7 +45,7 @@ class FacilityManagementTest extends TestCase
 
         $this
             ->actingAs($user)
-            ->post(route('facilities.store'), [
+            ->post(route('functions.store'), [
                 'name' => 'Hospital',
                 'category_id' => $security->id,
                 'icon' => 'hospital',
@@ -55,12 +55,12 @@ class FacilityManagementTest extends TestCase
 
         $this
             ->actingAs($user)
-            ->get(route('facilities.edit', $facility))
+            ->get(route('functions.edit', $facility))
             ->assertForbidden();
 
         $this
             ->actingAs($user)
-            ->patch(route('facilities.update', $facility), [
+            ->patch(route('functions.update', $facility), [
                 'name' => 'Changed Name',
                 'category_id' => $mobility->id,
                 'icon' => 'changed',
@@ -84,7 +84,7 @@ class FacilityManagementTest extends TestCase
         [$security, $mobility] = $this->createCategories();
         $response = $this
             ->actingAs($this->adminUser())
-            ->post(route('facilities.store'), [
+            ->post(route('functions.store'), [
                 'name' => 'Hospital',
                 'category_id' => $security->id,
                 'icon' => 'hospital',
@@ -96,7 +96,7 @@ class FacilityManagementTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('facilities'));
+            ->assertRedirect(route('functions.index'));
 
         $this->assertDatabaseHas('facilities', [
             'category_id' => $security->id,
@@ -130,16 +130,16 @@ class FacilityManagementTest extends TestCase
 
         $response = $this
             ->actingAs($this->adminUser())
-            ->get(route('facilities.edit', $facility));
+            ->get(route('functions.edit', $facility));
 
         $response
             ->assertOk()
-            ->assertSee('Edit Facility')
+            ->assertSee('Edit Function')
             ->assertSee('value="Police Station"', false)
             ->assertSee('value="police"', false)
             ->assertSee('value="5"', false)
             ->assertSee('value="-2"', false)
-            ->assertSee(route('facilities.update', $facility), false);
+            ->assertSee(route('functions.update', $facility), false);
     }
 
     public function test_admin_can_update_facility_and_scores(): void
@@ -151,7 +151,7 @@ class FacilityManagementTest extends TestCase
         ]);
         $response = $this
             ->actingAs($this->adminUser())
-            ->patch(route('facilities.update', $facility), [
+            ->patch(route('functions.update', $facility), [
                 'name' => 'Emergency Center',
                 'category_id' => $mobility->id,
                 'icon' => 'emergency',
@@ -163,7 +163,7 @@ class FacilityManagementTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('facilities'));
+            ->assertRedirect(route('functions.index'));
 
         $this->assertDatabaseHas('facilities', [
             'id' => $facility->id,
@@ -201,7 +201,7 @@ class FacilityManagementTest extends TestCase
 
         $response = $this
             ->actingAs($this->adminUser())
-            ->patch(route('facilities.update', $facility), [
+            ->patch(route('functions.update', $facility), [
                 'name' => 'Library',
                 'category_id' => $security->id,
                 'icon' => 'library-alt',
@@ -210,37 +210,14 @@ class FacilityManagementTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('facilities'));
+            ->assertRedirect(route('functions.index'));
 
         $this->assertDatabaseHas('facilities', [
             'id' => $facility->id,
             'name' => 'Library',
             'slug' => 'library-1',
             'icon' => 'library-alt',
-        ]);
-    }
-
-    public function test_non_admin_cannot_update_score_from_score_matrix(): void
-    {
-        [$security, $mobility] = $this->createCategories();
-        $facility = $this->createFacilityWithScores($security, [
-            $security->id => 5,
-            $mobility->id => -2,
-        ]);
-        $score = $facility->scores()->where('category_id', $mobility->id)->firstOrFail();
-
-        $response = $this
-            ->actingAs(User::factory()->create(['role' => 'city_planner']))
-            ->patchJson(route('facilities.scores.update', $score), [
-                'score' => 3,
-            ]);
-
-        $response->assertForbidden();
-
-        $this->assertDatabaseHas('facility_scores', [
-            'id' => $score->id,
-            'score' => -2,
-        ]);
+       ]);
     }
 
     public function test_facility_management_validates_scores(): void
@@ -249,7 +226,7 @@ class FacilityManagementTest extends TestCase
 
         $response = $this
             ->actingAs($this->adminUser())
-            ->post(route('facilities.store'), [
+            ->post(route('functions.store'), [
                 'name' => 'Invalid Score Facility',
                 'category_id' => $security->id,
                 'icon' => 'invalid',

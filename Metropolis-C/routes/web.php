@@ -22,31 +22,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
-Route::middleware(['auth', 'library-manager'])->group(function () {
-    Route::post('/functions/{facility}/conditions', [FacilityConditionController::class, 'store'])
-        ->name('functions.function.conditions.store');
-
-    Route::patch('/functions/{facility}/conditions/{condition}', [FacilityConditionController::class, 'update'])
-        ->name('functions.function.conditions.update');
-
-    Route::delete('/functions/{facility}/conditions/{condition}', [FacilityConditionController::class, 'destroy'])
-        ->name('functions.function.conditions.destroy');
-});
-
-Route::middleware(['auth'])->group(function () {
-    Route::post('/facilities', [FacilityController::class, 'store'])->name('functions.store');
-    Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('functions.edit');
-    Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('functions.update');
-
-    Route::patch('/functions/scores/{facilityScore}', [FacilityController::class, 'update'])
-        ->name('functions.scores.update');
 
     Route::redirect('/functions', '/facilities');
 });
 
 Route::middleware(['auth', 'library-manager'])->group(function () {
+
+    Route::post('/functions/{facility}/conditions', [FacilityConditionController::class, 'store'])
+        ->name('functions.function.conditions.store');
+    Route::patch('/functions/{facility}/conditions/{condition}', [FacilityConditionController::class, 'update'])
+        ->name('functions.function.conditions.update');
+    Route::delete('/functions/{facility}/conditions/{condition}', [FacilityConditionController::class, 'destroy'])
+        ->name('functions.function.conditions.destroy');
+
     Route::post('/functions/conditions', [FacilityConditionController::class, 'store'])
         ->name('functions.conditions.store');
     Route::patch('/functions/conditions/{condition}', [FacilityConditionController::class, 'update'])
@@ -54,17 +42,6 @@ Route::middleware(['auth', 'library-manager'])->group(function () {
     Route::delete('/functions/conditions/{condition}', [FacilityConditionController::class, 'destroy'])
         ->name('functions.conditions.destroy');
 });
-
-Route::middleware(['auth', 'library-manager'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-        Route::redirect('/functions', '/facilities')->name('functions.index');
-        Route::redirect('/functions/create', '/facilities')->name('functions.create');
-        Route::post('/functions', [FacilityController::class, 'store'])->name('functions.store');
-        Route::get('/functions/{facility}/edit', [FacilityController::class, 'edit'])->name('functions.edit');
-        Route::patch('/functions/{facility}', [FacilityController::class, 'updateFacility'])->name('functions.update');
-    });
 
 Route::middleware(['auth', 'city-planner'])
     ->prefix('events')
@@ -75,5 +52,14 @@ Route::middleware(['auth', 'city-planner'])
         Route::get('/{event}/edit', [EventController::class, 'edit'])->name('edit');
         Route::patch('/{event}', [EventController::class, 'update'])->name('update');
     });
+
 Route::post('/events/{event}/reschedule', [EventController::class, 'reschedule'])
     ->name('events.reschedule');
+
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::post('/facilities', [FacilityController::class, 'store'])->name('functions.store');
+    Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('functions.edit');
+    Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('functions.update');
+    Route::patch('/functions/scores/{facilityScore}', [FacilityController::class, 'update'])
+        ->name('functions.scores.update');
+});
