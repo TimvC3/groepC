@@ -16,7 +16,7 @@ class GridController extends Controller
     {
         $categories = Category::orderBy('sort_order')->get();
 
-        $facilities = Facility::with([
+        $functions = Facility::with([
             'category',
             'scores.category',
             'conditions.neighbourFacility',
@@ -25,16 +25,27 @@ class GridController extends Controller
             ->get();
         $conditions = FacilityCondition::with('neighbourFacility')->get();
 
-        $groupedFacilities = $facilities->groupBy('category.name');
-        $effectData = GridEffectData::from($categories, $facilities, $conditions);
-        $conditionData = $facilities->mapWithKeys(fn (Facility $facility) => [
+        $groupedFunctions = $functions->groupBy('category.name');
+        $effectData = GridEffectData::from($categories, $functions, $conditions);
+        $conditionData = $functions->mapWithKeys(fn (Facility $facility) => [
             (string) $facility->id => [
                 'name' => $facility->name,
+                'slug' => $facility->slug,
+                'categoryId' => $facility->category_id,
+                'categoryName' => $facility->category->name,
                 'conditions' => $facility->conditions->map(fn ($condition) => [
                     'type' => $condition->condition_type,
                     'neighbourFacilityId' => (string) $condition->neighbour_facility_id,
                     'neighbourFacilityName' => $condition->neighbourFacility?->name,
                 ])->values(),
+            ],
+        ]);
+
+        $facilityData = $functions->mapWithKeys(fn (Facility $facility) => [
+            (string) $facility->id => [
+                'slug' => $facility->slug,
+                'categoryId' => $facility->category_id,
+                'categoryName' => $facility->category->name,
             ],
         ]);
 
@@ -89,10 +100,11 @@ class GridController extends Controller
 
         return view('grid.grid', compact(
             'categories',
-            'facilities',
-            'groupedFacilities',
+            'functions',
+            'groupedFunctions',
             'effectData',
             'conditionData',
+            'facilityData',
             'eventEffectData',
             'restrictions',
             'approvedGridCells',

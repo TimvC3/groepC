@@ -19,7 +19,7 @@ class FacilityConditionTest extends TestCase
         $manager = $this->libraryManager();
 
         $this->actingAs($manager)
-            ->post(route('facility-conditions.store'), [
+            ->post(route('functions.conditions.store'), [
                 'facility_id' => $library->id,
                 'type' => FacilityCondition::REQUIRED_NEIGHBOUR,
                 'related_facility_id' => $park->id,
@@ -30,7 +30,7 @@ class FacilityConditionTest extends TestCase
         $condition = FacilityCondition::firstOrFail();
 
         $this->actingAs($manager)
-            ->patch(route('facility-conditions.update', $condition), [
+            ->patch(route('functions.conditions.update', $condition), [
                 'facility_id' => $library->id,
                 'type' => FacilityCondition::FORBIDDEN_NEIGHBOUR,
                 'related_facility_id' => $factory->id,
@@ -46,11 +46,31 @@ class FacilityConditionTest extends TestCase
         ]);
 
         $this->actingAs($manager)
-            ->delete(route('facility-conditions.destroy', $condition))
+            ->delete(route('functions.conditions.destroy', $condition))
             ->assertRedirect()
             ->assertSessionHas('success');
 
         $this->assertDatabaseMissing('facility_conditions', ['id' => $condition->id]);
+    }
+
+    public function test_library_manager_cannot_create_level_4_adjacency_condition(): void
+    {
+        [$library, $park] = $this->createFacilities();
+        $manager = $this->libraryManager();
+
+        $this->actingAs($manager)
+            ->post(route('functions.conditions.store'), [
+                'facility_id' => $library->id,
+                'type' => FacilityCondition::LEVEL_4_ADJACENCY,
+                'related_facility_id' => $park->id,
+            ])
+            ->assertSessionHasErrors('type');
+
+        $this->assertDatabaseMissing('facility_conditions', [
+            'facility_id' => min($library->id, $park->id),
+            'condition_type' => FacilityCondition::LEVEL_4_ADJACENCY,
+            'neighbour_facility_id' => max($library->id, $park->id),
+        ]);
     }
 
     public function test_library_manager_can_manage_a_condition_through_facility_routes(): void
@@ -59,7 +79,7 @@ class FacilityConditionTest extends TestCase
         $manager = $this->libraryManager();
 
         $this->actingAs($manager)
-            ->post(route('facilities.conditions.store', $library), [
+            ->post(route('functions.function.conditions.store', $library), [
                 'condition_type' => FacilityCondition::REQUIRED_NEIGHBOUR,
                 'neighbour_facility_id' => $park->id,
             ])
@@ -69,7 +89,7 @@ class FacilityConditionTest extends TestCase
         $condition = FacilityCondition::firstOrFail();
 
         $this->actingAs($manager)
-            ->patch(route('facilities.conditions.update', [$library, $condition]), [
+            ->patch(route('functions.function.conditions.update', [$library, $condition]), [
                 'condition_type' => FacilityCondition::FORBIDDEN_NEIGHBOUR,
                 'neighbour_facility_id' => $factory->id,
             ])
@@ -77,7 +97,7 @@ class FacilityConditionTest extends TestCase
             ->assertSessionHas('success');
 
         $this->actingAs($manager)
-            ->delete(route('facilities.conditions.destroy', [$library, $condition]))
+            ->delete(route('functions.function.conditions.destroy', [$library, $condition]))
             ->assertRedirect()
             ->assertSessionHas('success');
 
@@ -90,7 +110,7 @@ class FacilityConditionTest extends TestCase
         $manager = $this->libraryManager();
 
         $this->actingAs($manager)
-            ->post(route('facilities.conditions.store', $library), [
+            ->post(route('functions.function.conditions.store', $library), [
                 'condition_type' => FacilityCondition::REQUIRED_NEIGHBOUR,
                 'neighbour_facility_id' => $library->id,
             ])
@@ -103,7 +123,7 @@ class FacilityConditionTest extends TestCase
         ]);
 
         $this->actingAs($manager)
-            ->post(route('facilities.conditions.store', $library), [
+            ->post(route('functions.function.conditions.store', $library), [
                 'condition_type' => FacilityCondition::REQUIRED_NEIGHBOUR,
                 'neighbour_facility_id' => $park->id,
             ])
@@ -116,7 +136,7 @@ class FacilityConditionTest extends TestCase
 
         foreach (['admin', 'city_planner', 'policy_maker'] as $role) {
             $this->actingAs(User::factory()->create(['role' => $role]))
-                ->post(route('facility-conditions.store'), [
+                ->post(route('functions.conditions.store'), [
                     'facility_id' => $library->id,
                     'type' => FacilityCondition::REQUIRED_NEIGHBOUR,
                     'related_facility_id' => $park->id,

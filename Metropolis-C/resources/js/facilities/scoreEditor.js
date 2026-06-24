@@ -185,7 +185,7 @@ async function saveScore(badge, scoreId, newScore, oldScore) {
     badge.classList.add('opacity-50');
 
     try {
-        const response = await fetch(`/facilities/scores/${scoreId}`, {
+        const response = await fetch(`/functions/scores/${scoreId}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
