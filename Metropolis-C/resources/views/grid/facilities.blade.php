@@ -312,18 +312,18 @@
                                         @csrf
                                         @method('PATCH')
 
-                                        <select name="facility_id" required class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                                        <select name="facility_id" required aria-label="{{ __('Function') }}" class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
                                             @foreach ($functions as $function)
                                                 <option value="{{ $function->id }}" @selected($condition->facility_id === $function->id)>{{ $function->name }}</option>
                                             @endforeach
                                         </select>
 
-                                        <select name="type" required class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                                        <select name="type" required aria-label="{{ __('Condition') }}" class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
                                             <option value="required_neighbour" @selected($condition->condition_type === 'required_neighbour')>{{ __('Required neighbour') }}</option>
                                             <option value="forbidden_neighbour" @selected($condition->condition_type === 'forbidden_neighbour')>{{ __('Forbidden neighbour') }}</option>
                                         </select>
 
-                                        <select name="related_facility_id" required class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                                        <select name="related_facility_id" required aria-label="{{ __('Neighbouring function') }}" class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
                                             @foreach ($functions as $function)
                                                 <option value="{{ $function->id }}" @selected($condition->neighbour_facility_id === $function->id)>{{ $function->name }}</option>
                                             @endforeach

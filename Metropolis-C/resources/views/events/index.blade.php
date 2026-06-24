@@ -581,7 +581,7 @@
                 <input type="hidden" name="event_id" id="reschedule-event-id">
 
                 <div>
-                    <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    <label for="reschedule-date" class="text-sm font-medium text-gray-700 dark:text-gray-200">
                         {{ __('New Date') }}
                     </label>
 

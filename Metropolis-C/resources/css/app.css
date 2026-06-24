@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    :where(a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+        outline: 3px solid #f59e0b;
+        outline-offset: 3px;
+        box-shadow: 0 0 0 6px rgb(245 158 11 / 0.24);
+    }
+}
+
 html.colorblind-mode {
     --cb-surface: #ffffff;
     --cb-text: #111827;

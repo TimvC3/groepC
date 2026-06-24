@@ -11,7 +11,16 @@ export function initScoreEditor() {
         }
 
         badge.dataset.scoreEditorBound = 'true';
+        badge.tabIndex = 0;
+        badge.setAttribute('role', 'button');
+        badge.setAttribute('aria-label', `Edit score ${badge.dataset.score}`);
         badge.addEventListener('click', () => openEditor(badge));
+        badge.addEventListener('keydown', (event) => {
+            if (!['Enter', ' '].includes(event.key)) return;
+
+            event.preventDefault();
+            openEditor(badge);
+        });
     });
 }
 
@@ -307,6 +316,7 @@ function scoreBadgeClasses(score) {
 
 function restoreBadge(badge, score) {
     badge.className = scoreBadgeClasses(score).join(' ');
+    badge.setAttribute('aria-label', badge.dataset.scoreId ? `Edit score ${score}` : `Score ${score}`);
 
     while (badge.firstChild) {
         badge.removeChild(badge.firstChild);

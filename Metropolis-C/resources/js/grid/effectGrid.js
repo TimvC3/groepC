@@ -239,6 +239,7 @@ function emptyCategoryTotals() {
 
 let draggedData = null;
 let sourceCell = null;
+let keyboardPayload = null;
 let droppedOnGrid = false;
 let activeTooltip = null;
 let touchTapState = null;
@@ -589,7 +590,10 @@ function renderApprovedCell(cell, approvedCell) {
     cell.dataset.itemType = approvedCell.itemType;
     cell.dataset.approved = 'true';
 
-    cell.setAttribute('aria-label', approvedCell.name);
+    cell.setAttribute(
+        'aria-label',
+        `Approved grid cell ${cell.dataset.index}: ${approvedCell.name}. This item can no longer be changed.`
+    );
     cell.classList.remove('border-dashed');
     cell.classList.add('group', 'border-solid');
     applyPlacedCellStyle(cell, isEvent);
@@ -2243,7 +2247,10 @@ function removeCellContent(cell) {
     delete cell.dataset.itemType;
     delete cell.dataset.approved;
 
-    cell.removeAttribute('aria-label');
+    cell.setAttribute(
+        'aria-label',
+        `Grid cell ${index}. Press Enter to place a selected item here.`
+    );
     cell.classList.remove(
         'group',
         'border-solid',
@@ -2283,7 +2290,10 @@ function fillCell(cell, item) {
     cell.dataset.itemType = item.type;
     delete cell.dataset.approved;
 
-    cell.setAttribute('aria-label', item.name);
+    cell.setAttribute(
+        'aria-label',
+        `Grid cell ${cell.dataset.index}: ${item.name}. Press Enter to select this item for moving. Press Delete to remove it.`
+    );
     cell.classList.remove(
         'border-dashed',
         'border-green-500',
@@ -2376,40 +2386,154 @@ function showRestrictionError(conflicts, droppedName) {
 
 function bindLibraryItems() {
     document.querySelectorAll('.zoning-item').forEach((item) => {
+        const payload = () => ({
+            type: 'facility',
+            id: item.dataset.id,
+            name: item.dataset.name,
+            icon: item.dataset.icon,
+        });
+
         item.addEventListener('dragstart', (event) => {
             sourceCell = null;
             droppedOnGrid = false;
 
-            setDragPayload(event, {
-                type: 'facility',
-                id: item.dataset.id,
-                name: item.dataset.name,
-                icon: item.dataset.icon,
-            });
+            setDragPayload(event, payload());
+        });
+
+        item.addEventListener('keydown', (event) => {
+            if (!['Enter', ' '].includes(event.key)) return;
+
+            event.preventDefault();
+            sourceCell = null;
+            keyboardPayload = payload();
+            showPlacementFeedback(
+                `${keyboardPayload.name} selected. Tab to a grid cell and press Enter to place it.`,
+                'success'
+            );
         });
     });
 }
 
 function bindEventItems() {
     document.querySelectorAll('.event-item').forEach((item) => {
+        const payload = () => ({
+            type: 'event',
+            id: item.dataset.id,
+            name: item.dataset.name,
+            categoryId: item.dataset.categoryId,
+            categoryName: item.dataset.category,
+            score: Number(item.dataset.score ?? 0),
+            status: item.dataset.status,
+            date: item.dataset.date,
+            startTime: item.dataset.startTime,
+            endTime: item.dataset.endTime,
+        });
+
         item.addEventListener('dragstart', (event) => {
             sourceCell = null;
             droppedOnGrid = false;
 
-            setDragPayload(event, {
-                type: 'event',
-                id: item.dataset.id,
-                name: item.dataset.name,
-                categoryId: item.dataset.categoryId,
-                categoryName: item.dataset.category,
-                score: Number(item.dataset.score ?? 0),
-                status: item.dataset.status,
-                date: item.dataset.date,
-                startTime: item.dataset.startTime,
-                endTime: item.dataset.endTime,
-            });
+            setDragPayload(event, payload());
+        });
+
+        item.addEventListener('keydown', (event) => {
+            if (!['Enter', ' '].includes(event.key)) return;
+
+            event.preventDefault();
+            sourceCell = null;
+            keyboardPayload = payload();
+            showPlacementFeedback(
+                `${keyboardPayload.name} selected. Tab to a grid cell and press Enter to place it.`,
+                'success'
+            );
         });
     });
+}
+
+function payloadFromGridCell(cell) {
+    if (!cell.dataset.itemId) return null;
+
+    if (cell.dataset.itemType === 'event') {
+        const event = eventImpactMatrix[String(cell.dataset.itemId)] || {};
+
+        return {
+            ...event,
+            type: 'event',
+            id: cell.dataset.itemId,
+            name: event.name || cell.getAttribute('aria-label') || 'Selected event',
+        };
+    }
+
+    const libraryItem = Array.from(document.querySelectorAll('.zoning-item'))
+        .find((item) => String(item.dataset.id) === String(cell.dataset.itemId));
+
+    return {
+        type: 'facility',
+        id: cell.dataset.itemId,
+        icon: libraryItem?.dataset.icon || cell.querySelector('.text-2xl')?.innerText || '',
+        name: libraryItem?.dataset.name || cell.getAttribute('aria-label') || 'Selected function',
+    };
+}
+
+function placeKeyboardPayloadInCell(cell) {
+    if (!keyboardPayload) {
+        if (!cell.dataset.itemId) {
+            showPlacementFeedback('Select a function or event first, then press Enter on a grid cell.', 'neutral');
+            return;
+        }
+
+        if (isApprovedCell(cell)) {
+            approvedMessage();
+            return;
+        }
+
+        sourceCell = cell;
+        keyboardPayload = payloadFromGridCell(cell);
+        if (!keyboardPayload) {
+            showPlacementFeedback('This grid cell cannot be selected.', 'error');
+            return;
+        }
+
+        showPlacementFeedback(
+            `${keyboardPayload.name} selected. Tab to another grid cell and press Enter to move it.`,
+            'success'
+        );
+        return;
+    }
+
+    if (isApprovedCell(cell)) {
+        approvedMessage();
+        keyboardPayload = null;
+        sourceCell = null;
+        return;
+    }
+
+    if (keyboardPayload.type === 'facility') {
+        const conflicts = findRestrictionConflicts(cell, keyboardPayload.id);
+
+        if (conflicts.length > 0) {
+            showRestrictionError(conflicts, keyboardPayload.name);
+            keyboardPayload = null;
+            sourceCell = null;
+            return;
+        }
+    }
+
+    if (sourceCell && sourceCell !== cell) {
+        removeCellContent(sourceCell);
+    }
+
+    fillCell(cell, keyboardPayload);
+
+    if (keyboardPayload.type === 'facility') {
+        const requiredNeighbourViolations = requiredNeighbourViolationsForPlacement(cell, keyboardPayload);
+        if (requiredNeighbourViolations.length > 0) {
+            showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
+        }
+    }
+
+    keyboardPayload = null;
+    sourceCell = null;
 }
 
 function updateUpcomingEventList() {
@@ -2476,6 +2600,13 @@ function updateUpcomingEventList() {
 function bindGridCells() {
     document.querySelectorAll('.grid-cell').forEach((cell) => {
         updateApprovalUI(cell);
+
+        if (!cell.getAttribute('aria-label')) {
+            cell.setAttribute(
+                'aria-label',
+                `Grid cell ${cell.dataset.index}. Press Enter to place a selected item here.`
+            );
+        }
 
         cell.addEventListener('dragstart', (event) => {
             hideCellTooltip();
@@ -2677,6 +2808,24 @@ function bindGridCells() {
                 showCellTooltip(cell, x, y);
             }
         }, { passive: true });
+
+        cell.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                placeKeyboardPayloadInCell(cell);
+                return;
+            }
+
+            if (event.key === 'Delete' || event.key === 'Backspace') {
+                if (!cell.dataset.itemId) return;
+
+                event.preventDefault();
+                removeCellContent(cell);
+                keyboardPayload = null;
+                sourceCell = null;
+                showPlacementFeedback('Grid cell cleared.', 'success');
+            }
+        });
     });
 }
 

@@ -38,6 +38,9 @@
                                             <div
                                                 class="zoning-item w-44 flex-none cursor-grab active:cursor-grabbing rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4 shadow-sm transition hover:border-indigo-400 xl:w-full"
                                                 draggable="true"
+                                                tabindex="0"
+                                                role="button"
+                                                aria-label="Select {{ $function->name }} to place on the grid"
                                                 data-id="{{ $function->id }}"
                                                 data-name="{{ $function->name }}"
                                                 data-category="{{ $function->category->name }}"
@@ -109,6 +112,9 @@
                                     <div
                                         class="grid-cell h-16 w-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all sm:h-24 sm:w-24 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white"
                                         data-index="{{ $i }}"
+                                        tabindex="0"
+                                        role="button"
+                                        aria-label="Grid cell {{ $i }}. Press Enter to place a selected item here."
                                     >
                                         <span class="text-gray-400 text-xs font-mono">
                                             {{ $i }}
@@ -151,6 +157,9 @@
                                         <div
                                             data-upcoming-event-card
                                             draggable="true"
+                                            tabindex="0"
+                                            role="button"
+                                            aria-label="Select event {{ $eventName }} to place on the grid"
                                             data-id="{{ $eventId }}"
                                             data-name="{{ $eventName }}"
                                             data-category-id="{{ data_get($firstImpact, 'category_id') }}"
