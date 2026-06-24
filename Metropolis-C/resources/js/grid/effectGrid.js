@@ -240,6 +240,9 @@ function emptyCategoryTotals() {
 let draggedData = null;
 let sourceCell = null;
 let droppedOnGrid = false;
+let selectedKeyboardItem = null;
+let keyboardSourceCell = null;
+let selectedKeyboardTrigger = null;
 let activeTooltip = null;
 let touchTapState = null;
 let simulationDateTime = null;
@@ -248,6 +251,7 @@ let simulationRunning = false;
 let simulationSpeed = 1;
 let lastSimulationSpeed = 1;
 let lastApprovedFeedbackAt = 0;
+let lastNeighbourFeedbackAt = 0;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 const canApproveFunctions = Boolean(gridPermissions.canApproveFunctions);
@@ -294,6 +298,12 @@ const conditionViolationClasses = [
     'ring-red-400/60',
     'ring-orange-300',
 ];
+const keyboardSelectionClasses = [
+    'outline',
+    'outline-2',
+    'outline-offset-2',
+    'outline-sky-700',
+];
 
 function formatScore(score) {
     return score > 0 ? `+${score}` : String(score);
@@ -313,6 +323,60 @@ function scoreColorClass(score) {
 
 function isColorblindModeEnabled() {
     return document.documentElement.classList.contains('colorblind-mode');
+}
+
+function gridKeyboardStatusElement() {
+    return document.getElementById('grid-keyboard-status');
+}
+
+function announceGridKeyboardStatus(message) {
+    const status = gridKeyboardStatusElement();
+    if (status) {
+        status.textContent = message;
+    }
+}
+
+function cellPosition(cell) {
+    const index = Number(cell.dataset.index);
+    const row = Number(cell.dataset.row) || Math.floor((index - 1) / gridColumns) + 1;
+    const column = Number(cell.dataset.column) || ((index - 1) % gridColumns) + 1;
+
+    return { index, row, column };
+}
+
+function cellItemName(cell) {
+    return cell.dataset.itemName || '';
+}
+
+function cellAccessibleLabel(cell) {
+    const { index, row, column } = cellPosition(cell);
+    const itemName = cellItemName(cell);
+
+    if (!itemName) {
+        return `Cell ${index}, row ${row}, column ${column}, empty`;
+    }
+
+    const type = cell.dataset.itemType === 'event' ? 'event' : 'function';
+    const approved = isApprovedCell(cell) ? ', approved' : '';
+
+    return `Cell ${index}, row ${row}, column ${column}, contains ${type} ${itemName}${approved}`;
+}
+
+function updateGridCellAccessibility(cell) {
+    const { row, column } = cellPosition(cell);
+
+    cell.setAttribute('aria-rowindex', String(row));
+    cell.setAttribute('aria-colindex', String(column));
+    cell.setAttribute('aria-label', cellAccessibleLabel(cell));
+    cell.setAttribute('aria-describedby', 'grid-keyboard-status');
+
+    if (!cell.hasAttribute('aria-selected')) {
+        cell.setAttribute('aria-selected', 'false');
+    }
+}
+
+function updateAllGridCellAccessibility() {
+    document.querySelectorAll('.grid-cell').forEach(updateGridCellAccessibility);
 }
 
 function placedCellClasses(isEvent) {
@@ -542,7 +606,7 @@ function storeApprovedCell(cell) {
     approvedCells[cell.dataset.index] = {
         itemId: cell.dataset.itemId,
         itemType: cell.dataset.itemType,
-        name: cell.getAttribute('aria-label'),
+        name: cellItemName(cell),
     };
 }
 
@@ -587,9 +651,10 @@ function renderApprovedCell(cell, approvedCell) {
 
     cell.dataset.itemId = approvedCell.itemId;
     cell.dataset.itemType = approvedCell.itemType;
+    cell.dataset.itemName = approvedCell.name;
     cell.dataset.approved = 'true';
 
-    cell.setAttribute('aria-label', approvedCell.name);
+    updateGridCellAccessibility(cell);
     cell.classList.remove('border-dashed');
     cell.classList.add('group', 'border-solid');
     applyPlacedCellStyle(cell, isEvent);
@@ -725,6 +790,7 @@ function updateApprovalUI(cell) {
     if (!cell.dataset.itemId) {
         delete cell.dataset.approved;
         removeApprovedStyle(cell);
+        updateGridCellAccessibility(cell);
         return;
     }
 
@@ -737,6 +803,7 @@ function updateApprovalUI(cell) {
             wrapper.append(createApprovedBadge());
         }
 
+        updateGridCellAccessibility(cell);
         return;
     }
 
@@ -745,6 +812,8 @@ function updateApprovalUI(cell) {
     if (canApproveFunctions && wrapper) {
         wrapper.append(createApproveButton(cell));
     }
+
+    updateGridCellAccessibility(cell);
 }
 
 async function approveCell(cell) {
@@ -776,7 +845,7 @@ async function approveCell(cell) {
                 cell_index: cell.dataset.index,
                 item_type: cell.dataset.itemType,
                 item_id: cell.dataset.itemId,
-                item_name: cell.getAttribute('aria-label'),
+                item_name: cellItemName(cell),
             }),
         });
 
@@ -1201,7 +1270,7 @@ function currentGridState() {
                 {
                     type: cell.dataset.itemType,
                     id: String(cell.dataset.itemId),
-                    name: cell.getAttribute('aria-label') || '',
+                    name: cellItemName(cell),
                 },
             ])
     );
@@ -1981,7 +2050,7 @@ function placementSnapshot(targetCell, payload) {
 
         snapshot.set(String(gridCell.dataset.index), {
             id: gridCell.dataset.itemId,
-            name: gridCell.getAttribute('aria-label') || facilityNameById(gridCell.dataset.itemId),
+            name: cellItemName(gridCell) || facilityNameById(gridCell.dataset.itemId),
         });
     });
 
@@ -2121,7 +2190,7 @@ function positionTooltip(tooltip, x, y) {
 }
 
 function updateTooltipContent(cell, tooltip) {
-    const itemName = cell.getAttribute('aria-label') || 'Unknown item';
+    const itemName = cellItemName(cell) || 'Unknown item';
     const isEvent = cell.dataset.itemType === 'event';
 
     if (isEvent) {
@@ -2207,6 +2276,7 @@ function createFacilityCellContent(facility) {
     wrapper.className = 'relative flex flex-col items-center';
     icon.className = 'text-2xl pointer-events-none';
     icon.textContent = facility.icon;
+    icon.setAttribute('aria-hidden', 'true');
 
     wrapper.append(icon);
 
@@ -2237,13 +2307,15 @@ function removeCellContent(cell) {
 
     label.className = 'text-gray-400 text-xs font-mono';
     label.textContent = index;
+    label.setAttribute('aria-hidden', 'true');
 
     cell.replaceChildren(label);
     delete cell.dataset.itemId;
     delete cell.dataset.itemType;
+    delete cell.dataset.itemName;
     delete cell.dataset.approved;
 
-    cell.removeAttribute('aria-label');
+    updateGridCellAccessibility(cell);
     cell.classList.remove(
         'group',
         'border-solid',
@@ -2281,9 +2353,10 @@ function fillCell(cell, item) {
 
     cell.dataset.itemId = item.id;
     cell.dataset.itemType = item.type;
+    cell.dataset.itemName = item.name;
     delete cell.dataset.approved;
 
-    cell.setAttribute('aria-label', item.name);
+    updateGridCellAccessibility(cell);
     cell.classList.remove(
         'border-dashed',
         'border-green-500',
@@ -2308,7 +2381,55 @@ function fillCell(cell, item) {
 function getAdjacentFacilities(targetCell) {
     return getHorizontalVerticalNeighbourCells(targetCell)
         .filter((c) => c.dataset.itemType === 'facility')
-        .map((c) => ({ id: c.dataset.itemId, name: c.getAttribute('aria-label') || `Facility ${c.dataset.itemId}` }));
+        .map((c) => ({ id: c.dataset.itemId, name: cellItemName(c) || `Facility ${c.dataset.itemId}` }));
+}
+
+function placeItemInCell(cell, payload, originalCell = null, options = {}) {
+    if (!payload) return false;
+
+    if (isApprovedCell(cell)) {
+        approvedMessage();
+
+        if (options.announce) {
+            announceGridKeyboardStatus('This cell has already been approved and cannot be changed.');
+        }
+
+        return false;
+    }
+
+    if (payload.type === 'facility') {
+        const conflicts = findRestrictionConflicts(cell, payload.id);
+
+        if (conflicts.length > 0) {
+            showRestrictionError(conflicts, payload.name);
+
+            if (options.announce) {
+                announceGridKeyboardStatus(`${payload.name} cannot be placed in cell ${cell.dataset.index}.`);
+            }
+
+            return false;
+        }
+    }
+
+    if (originalCell && originalCell !== cell) {
+        removeCellContent(originalCell);
+    }
+
+    if (!fillCell(cell, payload)) {
+        return false;
+    }
+
+    const requiredNeighbourViolations = requiredNeighbourViolationsForPlacement(cell, payload);
+    if (requiredNeighbourViolations.length > 0) {
+        showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
+    }
+
+    if (options.announce) {
+        const { index, row, column } = cellPosition(cell);
+        announceGridKeyboardStatus(`${payload.name} placed in cell ${index}, row ${row}, column ${column}.`);
+    }
+
+    return true;
 }
 
 function findRestrictionConflicts(targetCell, facilityId) {
@@ -2374,40 +2495,120 @@ function showRestrictionError(conflicts, droppedName) {
     setConditionStatus(message, 'error');
 }
 
+function payloadFromLibraryItem(item) {
+    return {
+        type: 'facility',
+        id: item.dataset.id,
+        name: item.dataset.name,
+        icon: item.dataset.icon,
+    };
+}
+
+function payloadFromEventItem(item) {
+    return {
+        type: 'event',
+        id: item.dataset.id,
+        name: item.dataset.name,
+        categoryId: item.dataset.categoryId,
+        categoryName: item.dataset.category,
+        score: Number(item.dataset.score ?? 0),
+        status: item.dataset.status,
+        date: item.dataset.date,
+        startTime: item.dataset.startTime,
+        endTime: item.dataset.endTime,
+    };
+}
+
+function payloadFromGridCell(cell) {
+    if (!cell.dataset.itemId) return null;
+
+    if (cell.dataset.itemType === 'event') {
+        return {
+            type: 'event',
+            id: cell.dataset.itemId,
+            name: cellItemName(cell),
+            score: eventImpactMatrix[String(cell.dataset.itemId)]?.score ?? 0,
+        };
+    }
+
+    return {
+        type: 'facility',
+        id: cell.dataset.itemId,
+        icon: cell.querySelector('.text-2xl')?.innerText ?? '',
+        name: cellItemName(cell),
+    };
+}
+
+function clearKeyboardSelection(options = {}) {
+    selectedKeyboardTrigger?.classList.remove(...keyboardSelectionClasses);
+
+    if (selectedKeyboardTrigger?.classList.contains('grid-cell')) {
+        selectedKeyboardTrigger.setAttribute('aria-selected', 'false');
+    } else {
+        selectedKeyboardTrigger?.setAttribute('aria-pressed', 'false');
+    }
+
+    selectedKeyboardItem = null;
+    keyboardSourceCell = null;
+    selectedKeyboardTrigger = null;
+
+    if (options.announce) {
+        announceGridKeyboardStatus('Selection cancelled.');
+    }
+}
+
+function selectKeyboardItem(payload, trigger, originalCell = null) {
+    if (!payload) return;
+
+    clearKeyboardSelection();
+
+    selectedKeyboardItem = payload;
+    keyboardSourceCell = originalCell;
+    selectedKeyboardTrigger = trigger;
+
+    trigger?.classList.add(...keyboardSelectionClasses);
+
+    if (trigger?.classList.contains('grid-cell')) {
+        trigger.setAttribute('aria-selected', 'true');
+    } else {
+        trigger?.setAttribute('aria-pressed', 'true');
+    }
+
+    announceGridKeyboardStatus(`${payload.name} selected. Move to a grid cell and press Enter or Space to place it.`);
+}
+
 function bindLibraryItems() {
     document.querySelectorAll('.zoning-item').forEach((item) => {
+        item.setAttribute('aria-pressed', 'false');
+
+        item.addEventListener('click', () => {
+            selectKeyboardItem(payloadFromLibraryItem(item), item);
+        });
+
         item.addEventListener('dragstart', (event) => {
             sourceCell = null;
             droppedOnGrid = false;
+            clearKeyboardSelection();
 
-            setDragPayload(event, {
-                type: 'facility',
-                id: item.dataset.id,
-                name: item.dataset.name,
-                icon: item.dataset.icon,
-            });
+            setDragPayload(event, payloadFromLibraryItem(item));
         });
     });
 }
 
 function bindEventItems() {
     document.querySelectorAll('.event-item').forEach((item) => {
+        item.setAttribute('aria-pressed', 'false');
+
+        item.addEventListener('click', () => {
+            selectKeyboardItem(payloadFromEventItem(item), item);
+        });
+
         item.addEventListener('dragstart', (event) => {
             sourceCell = null;
             droppedOnGrid = false;
+            clearKeyboardSelection();
 
-            setDragPayload(event, {
-                type: 'event',
-                id: item.dataset.id,
-                name: item.dataset.name,
-                categoryId: item.dataset.categoryId,
-                categoryName: item.dataset.category,
-                score: Number(item.dataset.score ?? 0),
-                status: item.dataset.status,
-                date: item.dataset.date,
-                startTime: item.dataset.startTime,
-                endTime: item.dataset.endTime,
-            });
+            setDragPayload(event, payloadFromEventItem(item));
         });
     });
 }
@@ -2476,6 +2677,7 @@ function updateUpcomingEventList() {
 function bindGridCells() {
     document.querySelectorAll('.grid-cell').forEach((cell) => {
         updateApprovalUI(cell);
+        updateGridCellAccessibility(cell);
 
         cell.addEventListener('dragstart', (event) => {
             hideCellTooltip();
@@ -2497,19 +2699,7 @@ function bindGridCells() {
             sourceCell = cell;
             droppedOnGrid = false;
 
-            const payload = cell.dataset.itemType === 'event'
-                ? {
-                    type: 'event',
-                    id: cell.dataset.itemId,
-                    name: cell.getAttribute('aria-label'),
-                    score: eventImpactMatrix[String(cell.dataset.itemId)]?.score ?? 0,
-                }
-                : {
-                    type: 'facility',
-                    id: cell.dataset.itemId,
-                    icon: cell.querySelector('.text-2xl')?.innerText ?? '',
-                    name: cell.getAttribute('aria-label'),
-                };
+            const payload = payloadFromGridCell(cell);
 
             setDragPayload(event, payload);
             cell.style.opacity = '0.5';
@@ -2569,41 +2759,67 @@ function bindGridCells() {
             const payload = getDropPayload(event);
             if (!payload) return;
 
-            if (isApprovedCell(cell)) {
-                droppedOnGrid = true;
-                approvedMessage();
-                sourceCell = null;
-                draggedData = null;
-                return;
-            }
-
-            if (payload.type === 'facility') {
-                const conflicts = findRestrictionConflicts(cell, payload.id);
-
-                if (conflicts.length > 0) {
-                    droppedOnGrid = true;
-                    showRestrictionError(conflicts, payload.name);
-                    sourceCell = null;
-                    draggedData = null;
-                    return;
-                }
-            }
-
             droppedOnGrid = true;
-
-            if (sourceCell && sourceCell !== cell) {
-                removeCellContent(sourceCell);
-            }
-
-            fillCell(cell, payload);
-
-            const requiredNeighbourViolations = requiredNeighbourViolationsForPlacement(cell, payload);
-            if (requiredNeighbourViolations.length > 0) {
-                showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
-            }
+            placeItemInCell(cell, payload, sourceCell);
 
             sourceCell = null;
             draggedData = null;
+        });
+
+        cell.addEventListener('click', (event) => {
+            if (event.detail === 0) return;
+            if (!selectedKeyboardItem) return;
+
+            if (placeItemInCell(cell, selectedKeyboardItem, keyboardSourceCell, { announce: true })) {
+                clearKeyboardSelection();
+            }
+        });
+
+        cell.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                if (selectedKeyboardItem) {
+                    event.preventDefault();
+                    clearKeyboardSelection({ announce: true });
+                }
+                return;
+            }
+
+            if (event.key === 'Delete' || event.key === 'Backspace') {
+                if (!cell.dataset.itemId) return;
+
+                event.preventDefault();
+
+                const itemName = cellItemName(cell);
+                if (removeCellContent(cell)) {
+                    announceGridKeyboardStatus(`${itemName} removed from cell ${cell.dataset.index}.`);
+                }
+
+                return;
+            }
+
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+
+            event.preventDefault();
+
+            if (selectedKeyboardItem) {
+                if (placeItemInCell(cell, selectedKeyboardItem, keyboardSourceCell, { announce: true })) {
+                    clearKeyboardSelection();
+                }
+                return;
+            }
+
+            if (cell.dataset.itemId) {
+                if (isApprovedCell(cell)) {
+                    approvedMessage();
+                    announceGridKeyboardStatus('This approved cell cannot be selected for moving.');
+                    return;
+                }
+
+                selectKeyboardItem(payloadFromGridCell(cell), cell, cell);
+                return;
+            }
+
+            announceGridKeyboardStatus('Select a function or event first, then press Enter or Space on a grid cell.');
         });
 
         cell.addEventListener('mouseenter', (event) => {
@@ -2759,6 +2975,15 @@ function bindOutsideTap() {
     }, { passive: true });
 }
 
+function bindKeyboardSelectionShortcuts() {
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || !selectedKeyboardItem) return;
+
+        event.preventDefault();
+        clearKeyboardSelection({ announce: true });
+    });
+}
+
 function getEventStatus() {
     const names = activeEventNames();
 
@@ -2865,7 +3090,7 @@ function exportToPDF() {
 
         doc.roundedRect(x, y, cellW, cellH, 1.5, 1.5, 'FD');
 
-        const itemName = cell.getAttribute('aria-label');
+        const itemName = cellItemName(cell);
 
         if (itemName) {
             doc.setFontSize(7);
@@ -3077,6 +3302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bindSearch();
     bindClearButton();
     bindOutsideTap();
+    bindKeyboardSelectionShortcuts();
     bindExportButton();
     bindSimulationSettings();
     bindSimulationSpeedControls();

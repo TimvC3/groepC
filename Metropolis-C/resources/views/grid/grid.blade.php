@@ -39,13 +39,16 @@
 
                                 <div class="mt-3 flex gap-3 xl:grid xl:grid-cols-1">
                                     @foreach ($functions as $function)
-                                        <div
-                                            class="zoning-item w-44 flex-none cursor-grab active:cursor-grabbing rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4 shadow-sm transition hover:border-indigo-400 xl:w-full"
+                                        <button
+                                            type="button"
+                                            class="zoning-item w-44 flex-none cursor-grab rounded-lg border border-gray-200 bg-gray-50 p-4 text-left shadow-sm transition hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 active:cursor-grabbing dark:border-gray-700 dark:bg-gray-900 xl:w-full"
                                             draggable="true"
                                             data-id="{{ $function->id }}"
                                             data-name="{{ $function->name }}"
                                             data-category="{{ $function->category->name }}"
                                             data-icon="{{ $function->icon }}"
+                                            data-type="facility"
+                                            aria-label="Select {{ $function->name }} from the Function Library"
                                         >
                                             <div class="flex items-start gap-3 pointer-events-none">
                                                 <div class="text-3xl">
@@ -61,7 +64,7 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </button>
                                     @endforeach
                                 </div>
                             </section>
@@ -87,8 +90,9 @@
                                     $eventScore = $impacts->sum(fn ($impact) => (int) data_get($impact, 'score', 0));
                                 @endphp
 
-                                <div
-                                    class="event-item cursor-grab active:cursor-grabbing rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm transition hover:border-amber-400 dark:border-amber-900/40 dark:bg-amber-900/20 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-orange-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:hover:border-orange-950"
+                                <button
+                                    type="button"
+                                    class="event-item w-full cursor-grab rounded-lg border border-amber-200 bg-amber-50 p-4 text-left shadow-sm transition hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 active:cursor-grabbing dark:border-amber-900/40 dark:bg-amber-900/20 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-orange-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:hover:border-orange-950"
                                     draggable="true"
                                     data-id="{{ $eventId }}"
                                     data-name="{{ $eventName }}"
@@ -99,6 +103,8 @@
                                     data-date="{{ $eventDate }}"
                                     data-start-time="{{ $startTime }}"
                                     data-end-time="{{ $endTime }}"
+                                    data-type="event"
+                                    aria-label="Select event {{ $eventName }}"
                                 >
                                     <div class="pointer-events-none">
                                         <div class="font-semibold text-gray-900 dark:text-gray-100">
@@ -110,7 +116,7 @@
                                         <div class="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300 [.colorblind-mode_&]:text-orange-950">                                            Score: {{ $eventScore > 0 ? '+' . $eventScore : $eventScore }}
                                         </div>
                                     </div>
-                                </div>
+                                </button>
                             @endforeach
                         </div>
                     </div>
@@ -153,18 +159,49 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-4 gap-1 justify-center border-4 border-gray-100 dark:border-gray-700 p-2 rounded-3xl dark:bg-gray-900/50">
-                        @for ($i = 1; $i <= 12; $i++)
-                            <div
-                                class="grid-cell h-16 w-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all sm:h-24 sm:w-24 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white"
-                                data-index="{{ $i }}"
-                            >
-                                <span class="text-gray-400 text-xs font-mono">
-                                    {{ $i }}
-                                </span>
+                    <div
+                        class="flex flex-col gap-1 justify-center border-4 border-gray-100 dark:border-gray-700 p-2 rounded-3xl dark:bg-gray-900/50"
+                        role="grid"
+                        aria-label="City Grid"
+                        aria-rowcount="3"
+                        aria-colcount="4"
+                    >
+                        @for ($row = 1; $row <= 3; $row++)
+                            <div class="grid grid-cols-4 gap-1" role="row" aria-rowindex="{{ $row }}">
+                                @for ($column = 1; $column <= 4; $column++)
+                                    @php
+                                        $i = (($row - 1) * 4) + $column;
+                                    @endphp
+
+                                    <button
+                                        type="button"
+                                        role="gridcell"
+                                        class="grid-cell h-16 w-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:h-24 sm:w-24 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white"
+                                        data-index="{{ $i }}"
+                                        data-row="{{ $row }}"
+                                        data-column="{{ $column }}"
+                                        aria-rowindex="{{ $row }}"
+                                        aria-colindex="{{ $column }}"
+                                        aria-selected="false"
+                                        aria-label="Cell {{ $i }}, row {{ $row }}, column {{ $column }}, empty"
+                                    >
+                                        <span class="text-gray-400 text-xs font-mono" aria-hidden="true">
+                                            {{ $i }}
+                                        </span>
+                                    </button>
+                                @endfor
                             </div>
                         @endfor
                     </div>
+
+                    <p
+                        id="grid-keyboard-status"
+                        class="sr-only"
+                        aria-live="polite"
+                        aria-atomic="true"
+                    >
+                        Drag functions or events to the grid, or select an item and press Enter on a grid cell to place it.
+                    </p>
 
                     <div
                         id="condition-status"

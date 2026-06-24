@@ -75,6 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // We voegen draggable="true" expliciet toe aan de nieuwe IMG tag
                 cell.innerHTML = `
                     <img src="${imgSrc}" 
+                         alt=""
+                         aria-hidden="true"
                          draggable="true" 
                          class="w-full h-full object-cover rounded-lg cursor-move">
                 `;
