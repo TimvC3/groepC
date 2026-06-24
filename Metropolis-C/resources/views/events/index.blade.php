@@ -997,6 +997,7 @@
 
                     modal.classList.add('hidden');
                     modal.classList.remove('flex');
+                    window.location.reload();
 
                 } catch (err) {
                     console.error('[Reschedule] Exception:', err);
