@@ -213,9 +213,7 @@ function activeSensitiveFacilityPollutionSummaries(state) {
             if (visitedPairs.has(pairKey)) return;
             visitedPairs.add(pairKey);
 
-            summaries.push(
-                `${item.name} adjacent to ${neighbour.name}: -2 ${itemMeta.categoryName} due to pollution-sensitive placement`
-            );
+            summaries.push(`-2 ${itemMeta.categoryName}`);
         });
     });
 
@@ -579,7 +577,7 @@ function storeApprovedCell(cell) {
     approvedCells[cell.dataset.index] = {
         itemId: cell.dataset.itemId,
         itemType: cell.dataset.itemType,
-        name: gridCellItemName(cell),
+        name: cellItemName(cell),
     };
 }
 
@@ -595,7 +593,7 @@ function getApprovedItem(approvedCell) {
         return {
             type: 'facility',
             id: approvedCell.itemId,
-            name: libraryItem?.dataset.name || approvedCell.name,
+            name: cleanItemName(approvedCell.name),
             icon: libraryItem?.dataset.icon || '✓',
         };
     }
@@ -607,7 +605,7 @@ function getApprovedItem(approvedCell) {
             ...(event || {}),
             type: 'event',
             id: approvedCell.itemId,
-            name: event?.name || approvedCell.name,
+            name: cleanItemName(approvedCell.name),
         };
     }
 
@@ -624,10 +622,13 @@ function renderApprovedCell(cell, approvedCell) {
 
     cell.dataset.itemId = approvedCell.itemId;
     cell.dataset.itemType = approvedCell.itemType;
-    cell.dataset.itemName = approvedCell.name;
+    cell.dataset.itemName = item.name;
     cell.dataset.approved = 'true';
 
-    updateGridCellAccessibility(cell);
+    cell.setAttribute(
+        'aria-label',
+        `Approved grid cell ${cell.dataset.index}: ${cleanItemName(approvedCell.name)}. This item can no longer be changed.`
+    );
     cell.classList.remove('border-dashed');
     cell.classList.add('group', 'border-solid');
     applyPlacedCellStyle(cell, isEvent);
@@ -818,7 +819,7 @@ async function approveCell(cell) {
                 cell_index: cell.dataset.index,
                 item_type: cell.dataset.itemType,
                 item_id: cell.dataset.itemId,
-                item_name: gridCellItemName(cell),
+                item_name: cellItemName(cell),
             }),
         });
 
@@ -1243,7 +1244,7 @@ function currentGridState() {
                 {
                     type: cell.dataset.itemType,
                     id: String(cell.dataset.itemId),
-                    name: gridCellItemName(cell),
+                    name: cellItemName(cell),
                 },
             ])
     );
@@ -2015,6 +2016,33 @@ function facilityNameById(facilityId) {
         ?.name;
 }
 
+function cleanItemName(name) {
+    return String(name || '')
+        .replace(/^Approved grid cell \d+:\s*/i, '')
+        .replace(/^Grid cell \d+:\s*/i, '')
+        .replace(/\.\s*This item can no longer be changed\.?$/i, '')
+        .replace(/\.\s*Press Enter to select this item for moving\.\s*Press Delete to remove it\.?$/i, '')
+        .trim();
+}
+
+function cellItemName(cell) {
+    if (!cell) return '';
+
+    if (cell.dataset.itemName) {
+        return cleanItemName(cell.dataset.itemName);
+    }
+
+    if (cell.dataset.itemType === 'event') {
+        return cleanItemName(eventImpactMatrix[String(cell.dataset.itemId)]?.name);
+    }
+
+    return cleanItemName(
+        facilityNameById(cell.dataset.itemId)
+            || cell.getAttribute('aria-label')
+            || ''
+    );
+}
+
 function placementSnapshot(targetCell, payload) {
     const snapshot = new Map();
 
@@ -2023,7 +2051,7 @@ function placementSnapshot(targetCell, payload) {
 
         snapshot.set(String(gridCell.dataset.index), {
             id: gridCell.dataset.itemId,
-            name: gridCellItemName(gridCell) || facilityNameById(gridCell.dataset.itemId),
+            name: cellItemName(gridCell) || facilityNameById(gridCell.dataset.itemId),
         });
     });
 
@@ -2163,7 +2191,7 @@ function positionTooltip(tooltip, x, y) {
 }
 
 function updateTooltipContent(cell, tooltip) {
-    const itemName = gridCellItemName(cell) || 'Unknown item';
+    const itemName = cellItemName(cell) || 'Unknown item';
     const isEvent = cell.dataset.itemType === 'event';
 
     if (isEvent) {
@@ -2353,7 +2381,7 @@ function fillCell(cell, item) {
 function getAdjacentFacilities(targetCell) {
     return getHorizontalVerticalNeighbourCells(targetCell)
         .filter((c) => c.dataset.itemType === 'facility')
-        .map((c) => ({ id: c.dataset.itemId, name: gridCellItemName(c) || `Facility ${c.dataset.itemId}` }));
+        .map((c) => ({ id: c.dataset.itemId, name: cellItemName(c) || `Facility ${c.dataset.itemId}` }));
 }
 
 function findRestrictionConflicts(targetCell, facilityId) {
@@ -2495,7 +2523,7 @@ function payloadFromGridCell(cell) {
             ...event,
             type: 'event',
             id: cell.dataset.itemId,
-            name: event.name || gridCellItemName(cell) || 'Selected event',
+            name: event.name || cellItemName(cell) || 'Selected event',
         };
     }
 
@@ -2506,7 +2534,7 @@ function payloadFromGridCell(cell) {
         type: 'facility',
         id: cell.dataset.itemId,
         icon: libraryItem?.dataset.icon || cell.querySelector('.text-2xl')?.innerText || '',
-        name: libraryItem?.dataset.name || gridCellItemName(cell) || 'Selected function',
+        name: libraryItem?.dataset.name || cellItemName(cell) || 'Selected function',
     };
 }
 
@@ -2660,14 +2688,14 @@ function bindGridCells() {
                 ? {
                     type: 'event',
                     id: cell.dataset.itemId,
-                    name: gridCellItemName(cell),
+                    name: cellItemName(cell),
                     score: eventImpactMatrix[String(cell.dataset.itemId)]?.score ?? 0,
                 }
                 : {
                     type: 'facility',
                     id: cell.dataset.itemId,
                     icon: cell.querySelector('.text-2xl')?.innerText ?? '',
-                    name: gridCellItemName(cell),
+                    name: cellItemName(cell),
                 };
 
             setDragPayload(event, payload);
@@ -3042,7 +3070,7 @@ function exportToPDF() {
 
         doc.roundedRect(x, y, cellW, cellH, 1.5, 1.5, 'FD');
 
-        const itemName = gridCellItemName(cell);
+        const itemName = cellItemName(cell);
 
         if (itemName) {
             doc.setFontSize(7);
