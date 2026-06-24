@@ -20,14 +20,15 @@
     <div class="py-8">
         <div class="w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             @if (session('success'))
-                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300">
+                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:font-bold">
+                    <span class="mr-1" aria-hidden="true">✓</span>
                     {{ session('success') }}
                 </div>
             @endif
 
             @if ($errors->any())
-                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
-                    <p class="font-semibold">
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-orange-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-orange-950 [.colorblind-mode_&]:font-bold">                    <p class="font-semibold">
+                        <span class="mr-1" aria-hidden="true">!</span>
                         {{ __('The event could not be saved:') }}
                     </p>
 
@@ -81,8 +82,8 @@
 
                                 <span
                                     data-event-status-badge
-                                    class="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold capitalize text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                >
+                                    class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold capitalize text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:font-bold"                                
+                                    >
                                     planned
                                 </span>
                             </div>
@@ -95,13 +96,22 @@
                                         </span>
                                         <span
                                             @class([
-                                                'font-bold',
-                                                'text-green-700 dark:text-green-300' => $impact['score'] > 0,
-                                                'text-red-600 dark:text-red-300' => $impact['score'] < 0,
-                                                'text-gray-500 dark:text-gray-400' => $impact['score'] === 0,
+                                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold',
+                                            'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-sky-950 [.colorblind-mode_&]:text-white' => $impact['score'] > 0,
+                                            'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-orange-950 [.colorblind-mode_&]:bg-orange-900 [.colorblind-mode_&]:text-white' => $impact['score'] < 0,
+                                            'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-gray-900 [.colorblind-mode_&]:bg-gray-900 [.colorblind-mode_&]:text-white' => $impact['score'] === 0,
                                             ])
                                         >
-                                            {{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}
+                                            <span aria-hidden="true">
+                                                @if ($impact['score'] > 0)
+                                                    ▲
+                                                @elseif ($impact['score'] < 0)
+                                                    ▼
+                                                @else
+                                                    •
+                                                @endif
+                                            </span>
+                                            <span>{{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}</span>
                                         </span>
                                     </div>
                                 @endforeach
@@ -213,11 +223,21 @@
                                                     <span
                                                         @class([
                                                             'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold',
-                                                            'border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300' => $impact['score'] > 0,
-                                                            'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300' => $impact['score'] < 0,
-                                                            'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300' => $impact['score'] === 0,
+                                                            'border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-sky-950 [.colorblind-mode_&]:text-white' => $impact['score'] > 0,
+                                                            'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-orange-950 [.colorblind-mode_&]:bg-orange-900 [.colorblind-mode_&]:text-white' => $impact['score'] < 0,
+                                                            'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-gray-900 [.colorblind-mode_&]:bg-gray-900 [.colorblind-mode_&]:text-white' => $impact['score'] === 0,
                                                         ])
                                                     >
+                                                        <span aria-hidden="true">
+                                                            @if ($impact['score'] > 0)
+                                                                ▲
+                                                            @elseif ($impact['score'] < 0)
+                                                                ▼
+                                                            @else
+                                                                •
+                                                            @endif
+                                                        </span>
+
                                                         <span>{{ $impact['category_name'] }}</span>
                                                         <span>{{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}</span>
                                                     </span>
@@ -267,13 +287,19 @@
                                             <span
                                                 data-event-status-badge
                                                 @class([
-                                                    'mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold capitalize',
-                                                    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' => $status === 'planned',
-                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $status === 'active',
-                                                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => $status === 'past',
-                                                ])
+                                                'mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold capitalize',
+                                                'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:font-bold' => $status === 'planned',
+                                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-indigo-950 [.colorblind-mode_&]:bg-indigo-950 [.colorblind-mode_&]:text-white [.colorblind-mode_&]:font-bold' => $status === 'active',
+                                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-gray-900 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-gray-950 [.colorblind-mode_&]:font-bold' => $status === 'past',
+                                            ])
                                             >
-                                                {{ __($status) }}
+                                                @if ($status === 'active')
+                                                    ◆ {{ __('Active') }}
+                                                @elseif ($status === 'planned')
+                                                    ● {{ __('Planned') }}
+                                                @else
+                                                    • {{ __('Past') }}
+                                                @endif
                                             </span>
                                         </div>
 
@@ -741,15 +767,38 @@
                 const badge = card.querySelector('[data-event-status-badge]');
                 if (!badge) return;
 
-                badge.textContent = status;
-                badge.className = [
-                    'mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold capitalize',
-                    status === 'active'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                        : status === 'past'
-                            ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-                ].join(' ');
+                const labels = {
+                    active: 'Active',
+                    past: 'Past',
+                    planned: 'Planned',
+                };
+
+                const icons = {
+                    active: '◆',
+                    past: '•',
+                    planned: '●',
+                };
+
+                const colorblindMode = document.documentElement.classList.contains('colorblind-mode');
+
+                const baseClasses = colorblindMode
+                    ? 'mt-1 inline-flex items-center gap-1 rounded-full border-2 px-2 py-1 text-xs font-bold capitalize'
+                    : 'mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold capitalize';
+
+                const statusClasses = colorblindMode
+                    ? {
+                        active: 'border-indigo-950 bg-indigo-950 text-white',
+                        planned: 'border-sky-950 bg-white text-sky-950',
+                        past: 'border-gray-900 bg-white text-gray-950',
+                    }
+                    : {
+                        active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+                        planned: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                        past: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+                    };
+
+                badge.textContent = `${icons[status] ?? '●'} ${labels[status] ?? status}`;
+                badge.className = `${baseClasses} ${statusClasses[status] ?? statusClasses.planned}`;
             }
 
             document.querySelectorAll('[data-event-card]').forEach((card) => {
@@ -809,6 +858,15 @@
                 if (emptyMessage) {
                     emptyMessage.classList.toggle('hidden', count > 0);
                 }
+                function refreshEventPageColors() {
+                    document
+                        .querySelectorAll('[data-event-card], [data-upcoming-event-card]')
+                        .forEach((card) => {
+                            updateBadge(card, statusFor(card));
+                        });
+                }
+
+                window.addEventListener('accessibility:colorblind-mode-changed', refreshEventPageColors);
             });
             function applyEventFilters() {
                 const name = (document.getElementById("event-search")?.value || "")

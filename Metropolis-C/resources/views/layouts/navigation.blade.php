@@ -29,7 +29,66 @@
                 @endif
             </div>
 
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <div class="hidden sm:flex sm:items-center sm:ms-6 sm:gap-3">
+                <div class="relative">
+                    <button
+                        type="button"
+                        id="accessibilitySettingsButton"
+                        class="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm transition duration-150 ease-in-out hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-indigo-500 dark:hover:bg-gray-700 dark:hover:text-white"
+                        aria-controls="accessibilitySettingsMenu"
+                        aria-expanded="false"
+                    >
+                        <svg
+                            class="h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.8"
+                            stroke="currentColor"
+                            aria-hidden="true"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M12 3v2.25m0 13.5V21m8.25-9H18M6 12H3.75m14.6-6.35-1.6 1.6M7.25 16.75l-1.6 1.6m12.7 0-1.6-1.6M7.25 7.25l-1.6-1.6M12 8.25a3.75 3.75 0 1 1 0 7.5 3.75 3.75 0 0 1 0-7.5Z"
+                            />
+                        </svg>
+
+                        <span>Accessibility</span>
+                    </button>
+
+                    <div
+                        id="accessibilitySettingsMenu"
+                        class="absolute right-0 z-50 mt-3 hidden w-80 rounded-2xl border border-gray-200 bg-white p-5 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-800"
+                    >
+                        <h2 class="text-lg font-bold text-gray-900">
+                            Accessibility Settings
+                        </h2>
+
+                        <p class="mt-1 text-sm text-gray-600">
+                            Adjust visual settings to make the application easier to use.
+                        </p>
+
+                        <div class="mt-5 space-y-4">
+                            <label class="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-3">
+                                <span>
+                                    <span class="block text-sm font-medium text-gray-900">
+                                        Colorblind-friendly mode
+                                    </span>
+                                    <span class="block text-xs text-gray-500">
+                                        Uses clearer visual differences.
+                                    </span>
+                                </span>
+
+                                <input
+                                    type="checkbox"
+                                    id="colorblindMode"
+                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                >
+                            </label>
+                        </div>
+                    </div>
+                </div>
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">

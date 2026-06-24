@@ -23,13 +23,13 @@
     <div class="py-8">
         <div class="w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             @if (session('success'))
-                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300">
+                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300 [.colorblind-mode_&]:border-sky-300 [.colorblind-mode_&]:bg-sky-50 [.colorblind-mode_&]:text-sky-800">
                     {{ session('success') }}
                 </div>
             @endif
 
             @if (session('error'))
-                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 [.colorblind-mode_&]:border-orange-300 [.colorblind-mode_&]:bg-orange-50 [.colorblind-mode_&]:text-orange-800">
                     {{ session('error') }}
                 </div>
             @endif
@@ -416,19 +416,29 @@
                                         <td class="px-4 py-4 text-center">
                                             @if (! is_null($score))
                                                 <span
+                                                    data-score="{{ $score }}"
                                                     @if (! in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true))
                                                         data-score-id="{{ $functionScore->id }}"
                                                         data-score="{{ $score }}"
                                                         title="Click to edit"
                                                     @endif
                                                     @class([
-                                                        'inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold select-none transition',
+                                                        'inline-flex items-center justify-center gap-1 min-w-11 h-9 rounded-full px-2 text-sm font-bold select-none transition',
                                                         'cursor-pointer hover:ring-2 hover:ring-indigo-300' => ! in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true),
-                                                        'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' => $score > 0,
-                                                        'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300' => $score < 0,
-                                                        'text-gray-500 dark:bg-gray-700 dark:text-gray-400' => $score === 0,
+                                                        'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 [.colorblind-mode_&]:bg-sky-100 [.colorblind-mode_&]:text-sky-800' => $score > 0,
+                                                        'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300 [.colorblind-mode_&]:bg-orange-100 [.colorblind-mode_&]:text-orange-800' => $score < 0,
+                                                        'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' => $score === 0,
                                                     ])>
-                                                    {{ $score > 0 ? '+'.$score : $score }}
+                                                    <span aria-hidden="true">
+                                                        @if ($score > 0)
+                                                            ▲
+                                                        @elseif ($score < 0)
+                                                            ▼
+                                                        @else
+                                                            •
+                                                        @endif
+                                                    </span>
+                                                    <span>{{ $score > 0 ? '+'.$score : $score }}</span>
                                                 </span>
                                             @else
                                                 <span class="text-gray-300">-</span>
@@ -445,8 +455,6 @@
     </div>
 
     @push('scripts')
-        @if (! in_array(auth()->user()?->role, ['policy_maker', 'library_manager'], true))
-            @vite('resources/js/facilities/scoreEditor.js')
-        @endif
+        @vite('resources/js/facilities/scoreEditor.js')
     @endpush
 </x-app-layout>

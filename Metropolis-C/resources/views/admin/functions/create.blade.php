@@ -27,11 +27,11 @@
                             value="{{ old('name') }}"
                             required
                             placeholder="Example: Police Station"
-                            class="mt-2 block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                            class="mt-2 block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                         >
 
                         @error('name')
-                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            <p class="mt-2 text-sm text-red-600 [.colorblind-mode_&]:text-orange-700">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -49,7 +49,7 @@
                                 value="{{ old('icon') }}"
                                 required
                                 placeholder="Choose an icon"
-                                class="block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                                class="block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                             >
 
                             <button
@@ -63,7 +63,7 @@
                         </div>
 
                         @error('icon')
-                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            <p class="mt-2 text-sm text-red-600 [.colorblind-mode_&]:text-orange-700">{{ $message }}</p>
                         @enderror
 
                         <div class="mt-3 flex items-center gap-2 text-sm text-gray-600">
@@ -82,18 +82,18 @@
                             </p>
 
                             <div class="grid grid-cols-6 gap-3 sm:grid-cols-8">
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🏠</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🏢</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🏫</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🏥</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🚓</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🚒</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🌳</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🌲</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🛒</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🏭</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">🚉</button>
-                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-blue-50 hover:ring-blue-400">⚡</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🏠</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🏢</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🏫</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🏥</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🚓</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🚒</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🌳</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🌲</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🛒</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🏭</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">🚉</button>
+                                <button type="button" class="icon-option rounded-lg bg-white p-3 text-2xl shadow-sm ring-1 ring-gray-200 transition hover:bg-indigo-50 hover:ring-indigo-400">⚡</button>
                             </div>
                         </div>
                     </div>
@@ -108,7 +108,7 @@
                             name="category"
                             id="category"
                             required
-                            class="mt-2 block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                            class="mt-2 block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="">Select a category</option>
                             <option value="building" @selected(old('category') === 'building')>
@@ -129,7 +129,7 @@
                         </select>
 
                         @error('category')
-                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            <p class="mt-2 text-sm text-red-600 [.colorblind-mode_&]:text-orange-700">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -144,7 +144,7 @@
 
                         <button
                             type="submit"
-                            class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            class="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                         >
                             Save function
                         </button>

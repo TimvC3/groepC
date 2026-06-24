@@ -1,25 +1,99 @@
 
 export function initScoreEditor() {
-    document.querySelectorAll('[data-score-id]').forEach((badge) => {
+    refreshScoreBadges();
+
+    document.querySelectorAll('[data-score]').forEach((badge) => {
+        if (!badge.dataset.scoreId) {
+            return;
+        }
+
+        if (badge.dataset.scoreEditorBound === 'true') {
+            return;
+        }
+
+        badge.dataset.scoreEditorBound = 'true';
         badge.addEventListener('click', () => openEditor(badge));
     });
 }
 
+function refreshScoreBadges() {
+    document.querySelectorAll('[data-score]').forEach((badge) => {
+        const score = parseInt(badge.dataset.score, 10);
+
+        if (!Number.isNaN(score)) {
+            restoreBadge(badge, score);
+        }
+    });
+}
+
+window.addEventListener('accessibility:colorblind-mode-changed', refreshScoreBadges);
+
 const scoreColorClasses = [
+    'inline-flex',
+    'min-w-10',
+    'items-center',
+    'justify-center',
+    'gap-1',
+    'rounded-md',
+    'rounded-full',
+    'px-2',
+    'px-2.5',
+    'py-1',
+    'py-0.5',
+    'text-xs',
+    'font-semibold',
+    'font-bold',
+    'font-extrabold',
+    'cursor-pointer',
+    'select-none',
+    'shadow-sm',
+
     'bg-green-100',
     'text-green-800',
+    'text-green-700',
     'dark:bg-green-900/40',
+    'dark:bg-green-900/30',
     'dark:text-green-300',
+
     'bg-red-100',
     'text-red-600',
+    'text-red-700',
     'dark:bg-red-900/40',
+    'dark:bg-red-900/30',
     'dark:text-red-300',
+
+    'bg-gray-100',
     'text-gray-500',
+    'text-gray-600',
     'dark:bg-gray-700',
+    'dark:text-gray-300',
     'dark:text-gray-400',
+
+    'border',
+    'border-2',
+    'border-green-200',
+    'border-red-200',
+    'border-gray-200',
+    'border-sky-950',
+    'border-orange-950',
+    'border-gray-900',
+
+    'bg-white',
+    'bg-sky-950',
+    'bg-orange-900',
+    'bg-gray-900',
+
+    'text-white',
+    'text-sky-950',
+    'text-orange-950',
+    'text-gray-950',
 ];
 
 function openEditor(badge) {
+    if (!badge.dataset.scoreId) {
+        return;
+    }
+
     // Avoid opening multiple editors on the same badge.
     if (badge.querySelector('input')) return;
 
@@ -27,9 +101,23 @@ function openEditor(badge) {
     const scoreId      = badge.dataset.scoreId;
 
     // Replace the badge content with an input.
-    while (badge.firstChild) badge.removeChild(badge.firstChild);
-    badge.classList.remove(...scoreColorClasses);
-    badge.classList.add('bg-white', 'text-gray-900', 'ring-2', 'ring-indigo-400');
+   while (badge.firstChild) badge.removeChild(badge.firstChild);
+
+    badge.className = [
+        'inline-flex',
+        'h-12',
+        'w-12',
+        'items-center',
+        'justify-center',
+        'rounded-full',
+        'bg-white',
+        'p-0',
+        'text-xs',
+        'font-bold',
+        'text-gray-950',
+        'ring-2',
+        'ring-indigo-500',
+    ].join(' ');
 
     const input = document.createElement('input');
     input.type      = 'number';
@@ -38,8 +126,8 @@ function openEditor(badge) {
     input.value     = currentScore;
     input.className = 'rounded border border-gray-300 text-center text-sm font-bold outline-none';
     input.style.cssText = [
-        'width: 3rem',
-        'height: 1.75rem',
+        'width: 2.25rem',
+        'height: 2rem',
         'background-color: #ffffff',
         'color: #111827',
         'caret-color: #111827',
@@ -120,43 +208,142 @@ async function saveScore(badge, scoreId, newScore, oldScore) {
     }
 }
 
-function restoreBadge(badge, score) {
-    badge.classList.remove('bg-white', 'text-gray-900', 'ring-2', 'ring-indigo-400');
+function isColorblindModeEnabled() {
+    return document.documentElement.classList.contains('colorblind-mode');
+}
 
-    badge.classList.remove(...scoreColorClasses);
+function formatScore(score) {
+    return score > 0 ? `+${score}` : String(score);
+}
 
-    if (score > 0) {
-        badge.classList.add('bg-green-100', 'text-green-800', 'dark:bg-green-900/40', 'dark:text-green-300');
-    } else if (score < 0) {
-        badge.classList.add('bg-red-100', 'text-red-600', 'dark:bg-red-900/40', 'dark:text-red-300');
-    } else {
-        badge.classList.add('text-gray-500', 'dark:bg-gray-700', 'dark:text-gray-400');
+function scoreIcon(score) {
+    if (score > 0) return '▲';
+    if (score < 0) return '▼';
+
+    return '•';
+}
+
+function scoreBadgeClasses(score) {
+    const baseClasses = [
+        'inline-flex',
+        'h-12',
+        'w-12',
+        'items-center',
+        'justify-center',
+        'gap-0.5',
+        'rounded-full',
+        'p-0',
+        'text-[11px]',
+        'font-extrabold',
+        'cursor-pointer',
+        'select-none',
+        'shadow-sm',
+    ];
+
+    if (isColorblindModeEnabled()) {
+        if (score > 0) {
+            return [
+                ...baseClasses,
+                'border-2',
+                'border-sky-950',
+                'bg-sky-950',
+                'text-white',
+            ];
+        }
+
+        if (score < 0) {
+            return [
+                ...baseClasses,
+                'border-2',
+                'border-orange-950',
+                'bg-orange-900',
+                'text-white',
+            ];
+        }
+
+        return [
+            ...baseClasses,
+            'border-2',
+            'border-gray-900',
+            'bg-gray-900',
+            'text-white',
+        ];
     }
 
-    while (badge.firstChild) badge.removeChild(badge.firstChild);
+    if (score > 0) {
+        return [
+            ...baseClasses,
+            'bg-green-100',
+            'text-green-800',
+            'dark:bg-green-900/40',
+            'dark:text-green-300',
+        ];
+    }
+
+    if (score < 0) {
+        return [
+            ...baseClasses,
+            'bg-red-100',
+            'text-red-600',
+            'dark:bg-red-900/40',
+            'dark:text-red-300',
+        ];
+    }
+
+    return [
+        ...baseClasses,
+        'bg-gray-100',
+        'text-gray-600',
+        'dark:bg-gray-700',
+        'dark:text-gray-300',
+    ];
+}
+
+function restoreBadge(badge, score) {
+    badge.className = scoreBadgeClasses(score).join(' ');
+
+    while (badge.firstChild) {
+        badge.removeChild(badge.firstChild);
+    }
+
     badge.appendChild(
-        document.createTextNode(score > 0 ? `+${score}` : String(score))
+        document.createTextNode(`${scoreIcon(score)} ${formatScore(score)}`)
     );
 }
 
 function showToast(message, type = 'info', anchor = null) {
     document.getElementById('score-editor-toast')?.remove();
 
+    const colorblindMode = document.documentElement.classList.contains('colorblind-mode');
+
+    const baseClasses = [
+        'fixed',
+        'right-4',
+        'bottom-4',
+        'z-[9999]',
+        'max-w-[calc(100vw-2rem)]',
+        'rounded-lg',
+        'border',
+        'px-4',
+        'py-2',
+        'text-sm',
+        'font-medium',
+        'shadow-lg',
+    ].join(' ');
+
+    const colorClasses = type === 'error'
+        ? colorblindMode
+            ? 'border-2 border-orange-700 bg-white text-orange-950'
+            : 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300'
+        : colorblindMode
+            ? 'border-2 border-sky-700 bg-white text-sky-950'
+            : 'border-green-200 bg-green-50 text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300';
+
     const toast = document.createElement('div');
     toast.id = 'score-editor-toast';
-    toast.textContent = message;
+    toast.textContent = `${type === 'error' ? '!' : '✓'} ${message}`;
     toast.setAttribute('role', 'alert');
-    toast.className = 'px-4 py-2 rounded-lg text-sm font-medium shadow-lg';
-    toast.style.cssText = [
-        'position: fixed',
-        'right: 1rem',
-        'bottom: 1rem',
-        'z-index: 9999',
-        'max-width: calc(100vw - 2rem)',
-        'background: ' + (type === 'error' ? '#fee2e2' : '#dcfce7'),
-        'color: ' + (type === 'error' ? '#991b1b' : '#166534'),
-        'border: 1px solid ' + (type === 'error' ? '#fecaca' : '#bbf7d0'),
-    ].join(';');
+    toast.className = `${baseClasses} ${colorClasses}`;
 
     document.body.appendChild(toast);
 

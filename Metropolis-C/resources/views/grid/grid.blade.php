@@ -88,7 +88,7 @@
                                 @endphp
 
                                 <div
-                                    class="event-item cursor-grab active:cursor-grabbing rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm transition hover:border-amber-400 dark:border-amber-900/40 dark:bg-amber-900/20"
+                                    class="event-item cursor-grab active:cursor-grabbing rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm transition hover:border-amber-400 dark:border-amber-900/40 dark:bg-amber-900/20 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-orange-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:hover:border-orange-950"
                                     draggable="true"
                                     data-id="{{ $eventId }}"
                                     data-name="{{ $eventName }}"
@@ -107,8 +107,7 @@
                                         <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                             {{ $eventDate }} {{ $startTime }} - {{ $endTime }}
                                         </div>
-                                        <div class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                                            Score: {{ $eventScore > 0 ? '+' . $eventScore : $eventScore }}
+                                        <div class="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300 [.colorblind-mode_&]:text-orange-950">                                            Score: {{ $eventScore > 0 ? '+' . $eventScore : $eventScore }}
                                         </div>
                                     </div>
                                 </div>
@@ -125,8 +124,8 @@
                             <h3 class="text-2xl font-bold">City Grid</h3>
 
                             @if ($canApproveFunctions)
-                                <p class="mt-1 text-xs text-green-700 dark:text-green-300">
-                                    You are allowed to approve functions.
+                                <p class="mt-1 text-xs font-bold text-green-700 dark:text-green-300 [.colorblind-mode_&]:text-sky-950">
+                                    You are allowed to approve destinations.
                                 </p>
                             @else
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -157,7 +156,7 @@
                     <div class="grid grid-cols-4 gap-1 justify-center border-4 border-gray-100 dark:border-gray-700 p-2 rounded-3xl dark:bg-gray-900/50">
                         @for ($i = 1; $i <= 12; $i++)
                             <div
-                                class="grid-cell h-16 w-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all sm:h-24 sm:w-24"
+                                class="grid-cell h-16 w-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all sm:h-24 sm:w-24 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white"
                                 data-index="{{ $i }}"
                             >
                                 <span class="text-gray-400 text-xs font-mono">
@@ -169,13 +168,13 @@
 
                     <div
                         id="condition-status"
-                        class="mt-4 w-full max-w-md rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300"
+                        class="mt-4 w-full max-w-md rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:font-bold"
                         aria-live="polite"
                         aria-atomic="true"
                     >
                         Function conditions are active. Place functions to evaluate neighbour rules and automatic Level 4 adjacency modifiers.
                     </div>
-                </div>
+                                    </div>
 
                 <section class="mt-6">
                     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
@@ -222,7 +221,7 @@
 
                         <div class="mt-4 flex flex-wrap gap-2">
                             <button type="button" data-speed="0" class="sim-speed rounded-md border px-3 py-1 text-sm">Pause</button>
-                            <button type="button" data-speed="1" class="sim-speed rounded-md border px-3 py-1 text-sm bg-indigo-600 text-white">1x</button>
+                            <button type="button" data-speed="1" class="sim-speed rounded-md border px-3 py-1 text-sm bg-indigo-600 text-white [.colorblind-mode_&]:bg-sky-700">1x</button>
                             <button type="button" data-speed="5" class="sim-speed rounded-md border px-3 py-1 text-sm">5x</button>
                             <button type="button" data-speed="10" class="sim-speed rounded-md border px-3 py-1 text-sm">10x</button>
                         </div>
