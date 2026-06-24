@@ -546,7 +546,7 @@
     <div id="reschedule-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
         <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {{ __('repeat Event') }}
+                {{ __('Repeat Event') }}
             </h3>
 
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-300" id="reschedule-event-name"></p>
@@ -876,10 +876,6 @@
                     event_date: dateInput.value
                 };
 
-                console.log('[Reschedule] Submitting request');
-                console.log('[Reschedule] Event ID:', eventId);
-                console.log('[Reschedule] Payload:', payload);
-
                 try {
                     const res = await fetch(`/events/${eventId}/reschedule`, {
                         method: 'POST',
@@ -902,8 +898,6 @@
                     }
 
                     const data = await res.json();
-
-                    console.log('[Reschedule] Parsed JSON:', data);
 
                     const newEvent = data.event;
 
@@ -939,6 +933,7 @@
 
                     modal.classList.add('hidden');
                     modal.classList.remove('flex');
+                    window.location.reload();
 
                 } catch (err) {
                     console.error('[Reschedule] Exception:', err);
