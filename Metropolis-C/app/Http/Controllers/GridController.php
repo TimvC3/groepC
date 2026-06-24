@@ -6,7 +6,7 @@ use App\Models\ApprovedGridCell;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Facility;
-use App\Models\FacilityRestriction;
+use App\Models\FacilityCondition;
 use App\Support\GridEffectData;
 use Illuminate\Http\Request;
 
@@ -16,12 +16,38 @@ class GridController extends Controller
     {
         $categories = Category::orderBy('sort_order')->get();
 
-        $facilities = Facility::with(['category', 'scores.category', 'requiredNeighbour'])
+        $functions = Facility::with([
+            'category',
+            'scores.category',
+            'conditions.neighbourFacility',
+        ])
             ->orderBy('sort_order')
             ->get();
+        $conditions = FacilityCondition::with('neighbourFacility')->get();
 
-        $groupedFacilities = $facilities->groupBy('category.name');
-        $effectData = GridEffectData::from($categories, $facilities);
+        $groupedFunctions = $functions->groupBy('category.name');
+        $effectData = GridEffectData::from($categories, $functions, $conditions);
+        $conditionData = $functions->mapWithKeys(fn (Facility $facility) => [
+            (string) $facility->id => [
+                'name' => $facility->name,
+                'slug' => $facility->slug,
+                'categoryId' => $facility->category_id,
+                'categoryName' => $facility->category->name,
+                'conditions' => $facility->conditions->map(fn ($condition) => [
+                    'type' => $condition->condition_type,
+                    'neighbourFacilityId' => (string) $condition->neighbour_facility_id,
+                    'neighbourFacilityName' => $condition->neighbourFacility?->name,
+                ])->values(),
+            ],
+        ]);
+
+        $facilityData = $functions->mapWithKeys(fn (Facility $facility) => [
+            (string) $facility->id => [
+                'slug' => $facility->slug,
+                'categoryId' => $facility->category_id,
+                'categoryName' => $facility->category->name,
+            ],
+        ]);
 
         $eventEffectData = [
             'events' => Event::with('categories')
@@ -42,6 +68,9 @@ class GridController extends Controller
                         'endTime' => $this->formatTimeValue($event->end_time ?? null) ?? $this->formatTimeValue($event->start_time),
                         'recurrenceType' => $event->is_recurring ? ($event->recurrence_type ?? 'weekly') : 'none',
                         'status' => $event->status ?? 'planned',
+                        'score' => $event->categories->sum(
+                            fn ($category) => (int) ($category->pivot->score ?? 0)
+                        ),
                         'impacts' => $event->categories->map(fn ($category) => [
                             'category_id' => $category->id,
                             'category_name' => $category->name,
@@ -61,13 +90,21 @@ class GridController extends Controller
                 ],
             ]);
 
-        $restrictions = FacilityRestriction::all(['facility_id_1', 'facility_id_2']);
+        $restrictions = $conditions
+            ->where('condition_type', FacilityCondition::FORBIDDEN_NEIGHBOUR)
+            ->map(fn (FacilityCondition $condition) => [
+                'facility_id_1' => $condition->facility_id,
+                'facility_id_2' => $condition->neighbour_facility_id,
+            ])
+            ->values();
 
         return view('grid.grid', compact(
             'categories',
-            'facilities',
-            'groupedFacilities',
+            'functions',
+            'groupedFunctions',
             'effectData',
+            'conditionData',
+            'facilityData',
             'eventEffectData',
             'restrictions',
             'approvedGridCells',

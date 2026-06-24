@@ -4,12 +4,35 @@ namespace App\Support;
 
 use App\Models\Category;
 use App\Models\Facility;
+use App\Models\FacilityCondition;
 use Illuminate\Support\Collection;
 
 class GridEffectData
 {
-    public static function from(Collection $categories, Collection $facilities): array
-    {
+    public static function from(
+        Collection $categories,
+        Collection $facilities,
+        ?Collection $conditions = null
+    ): array {
+        $requiredConditions = ($conditions ?? collect())
+            ->where('condition_type', FacilityCondition::REQUIRED_NEIGHBOUR)
+            ->keyBy('facility_id');
+        $neighbourRules = $facilities
+            ->filter(fn (Facility $facility) => $requiredConditions->has($facility->id))
+            ->mapWithKeys(function (Facility $facility) use ($requiredConditions, $facilities): array {
+                $condition = $requiredConditions->get($facility->id);
+
+                return [
+                    $facility->id => [
+                        'requiredNeighbourId' => (int) $condition->neighbour_facility_id,
+                        'requiredNeighbourName' => $condition->neighbourFacility?->name
+                            ?? $facilities->firstWhere('id', $condition->neighbour_facility_id)?->name
+                            ?? 'Required neighbour',
+                    ],
+                ];
+            })
+            ->all();
+
         return [
             'categories' => $categories
                 ->map(fn (Category $category) => [
@@ -29,15 +52,7 @@ class GridEffectData
                         ->all(),
                 ]),
 
-            'neighbourRules' => $facilities
-                ->filter(fn (Facility $facility) => $facility->required_neighbour_facility_id)
-                ->mapWithKeys(fn (Facility $facility) => [
-                    $facility->id => [
-                        'requiredNeighbourId' => (int) $facility->required_neighbour_facility_id,
-                        'requiredNeighbourName' => $facility->requiredNeighbour?->name ?? 'Required neighbour',
-                    ],
-                ])
-                ->all(),
+            'neighbourRules' => $neighbourRules,
         ];
     }
 }

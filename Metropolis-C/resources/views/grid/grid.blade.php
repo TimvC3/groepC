@@ -3,7 +3,7 @@
         $userRole = auth()->user()?->role;
 
 
-    $canApproveDestinations = in_array($userRole, [
+    $canApproveFunctions = in_array($userRole, [
         'admin',
         'policy_maker',
         'municipal_policy_maker',
@@ -18,10 +18,10 @@
 
             <aside class="xl:col-span-1 space-y-6">
                 <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                    <h3 class="text-2xl font-bold">Zoning Library</h3>
+                    <h3 class="text-2xl font-bold">Function Library</h3>
 
                     <div class="mt-4">
-                        <label for="designation-search" class="sr-only">Zoek faciliteiten</label>
+                        <label for="designation-search" class="sr-only">Zoek functies</label>
                         <input
                             id="designation-search"
                             type="search"
@@ -31,33 +31,33 @@
                     </div>
 
                     <div class="mt-6 flex gap-3 overflow-x-auto pb-2 xl:block xl:max-h-[45vh] xl:space-y-6 xl:overflow-y-auto xl:pr-1">
-                        @foreach ($groupedFacilities as $category => $facilities)
+                        @foreach ($groupedFunctions as $category => $functions)
                             <section class="category-section min-w-56 flex-none xl:min-w-0">
                                 <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">
                                     {{ $category }}
                                 </h4>
 
                                 <div class="mt-3 flex gap-3 xl:grid xl:grid-cols-1">
-                                    @foreach ($facilities as $facility)
+                                    @foreach ($functions as $function)
                                         <div
                                             class="zoning-item w-44 flex-none cursor-grab active:cursor-grabbing rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4 shadow-sm transition hover:border-indigo-400 xl:w-full"
                                             draggable="true"
-                                            data-id="{{ $facility->id }}"
-                                            data-name="{{ $facility->name }}"
-                                            data-category="{{ $facility->category->name }}"
-                                            data-icon="{{ $facility->icon }}"
+                                            data-id="{{ $function->id }}"
+                                            data-name="{{ $function->name }}"
+                                            data-category="{{ $function->category->name }}"
+                                            data-icon="{{ $function->icon }}"
                                         >
                                             <div class="flex items-start gap-3 pointer-events-none">
                                                 <div class="text-3xl">
-                                                    {{ $facility->icon }}
+                                                    {{ $function->icon }}
                                                 </div>
 
                                                 <div>
                                                     <div class="font-semibold text-gray-900 dark:text-gray-100">
-                                                        {{ $facility->name }}
+                                                        {{ $function->name }}
                                                     </div>
                                                     <div class="text-sm text-gray-500">
-                                                        {{ $facility->category->name }}
+                                                        {{ $function->category->name }}
                                                     </div>
                                                 </div>
                                             </div>
@@ -88,7 +88,7 @@
                                 @endphp
 
                                 <div
-                                    class="event-item cursor-grab active:cursor-grabbing rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm transition hover:border-amber-400 dark:border-amber-900/40 dark:bg-amber-900/20"
+                                    class="event-item cursor-grab active:cursor-grabbing rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm transition hover:border-amber-400 dark:border-amber-900/40 dark:bg-amber-900/20 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-orange-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:hover:border-orange-950"
                                     draggable="true"
                                     data-id="{{ $eventId }}"
                                     data-name="{{ $eventName }}"
@@ -107,8 +107,7 @@
                                         <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                             {{ $eventDate }} {{ $startTime }} - {{ $endTime }}
                                         </div>
-                                        <div class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                                            Score: {{ $eventScore > 0 ? '+' . $eventScore : $eventScore }}
+                                        <div class="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300 [.colorblind-mode_&]:text-orange-950">                                            Score: {{ $eventScore > 0 ? '+' . $eventScore : $eventScore }}
                                         </div>
                                     </div>
                                 </div>
@@ -124,13 +123,13 @@
                         <div>
                             <h3 class="text-2xl font-bold">City Grid</h3>
 
-                            @if ($canApproveDestinations)
-                                <p class="mt-1 text-xs text-green-700 dark:text-green-300">
+                            @if ($canApproveFunctions)
+                                <p class="mt-1 text-xs font-bold text-green-700 dark:text-green-300 [.colorblind-mode_&]:text-sky-950">
                                     You are allowed to approve destinations.
                                 </p>
                             @else
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    You can view the grid, but you cannot approve destinations.
+                                    You can view the grid, but you cannot approve functions.
                                 </p>
                             @endif
                         </div>
@@ -157,7 +156,7 @@
                     <div class="grid grid-cols-4 gap-1 justify-center border-4 border-gray-100 dark:border-gray-700 p-2 rounded-3xl dark:bg-gray-900/50">
                         @for ($i = 1; $i <= 12; $i++)
                             <div
-                                class="grid-cell h-16 w-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all sm:h-24 sm:w-24"
+                                class="grid-cell h-16 w-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all sm:h-24 sm:w-24 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white"
                                 data-index="{{ $i }}"
                             >
                                 <span class="text-gray-400 text-xs font-mono">
@@ -166,7 +165,16 @@
                             </div>
                         @endfor
                     </div>
-                </div>
+
+                    <div
+                        id="condition-status"
+                        class="mt-4 w-full max-w-md rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:font-bold"
+                        aria-live="polite"
+                        aria-atomic="true"
+                    >
+                        Function conditions are active. Place functions to evaluate neighbour rules and automatic Level 4 adjacency modifiers.
+                    </div>
+                                    </div>
 
                 <section class="mt-6">
                     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
@@ -213,7 +221,7 @@
 
                         <div class="mt-4 flex flex-wrap gap-2">
                             <button type="button" data-speed="0" class="sim-speed rounded-md border px-3 py-1 text-sm">Pause</button>
-                            <button type="button" data-speed="1" class="sim-speed rounded-md border px-3 py-1 text-sm bg-indigo-600 text-white">1x</button>
+                            <button type="button" data-speed="1" class="sim-speed rounded-md border px-3 py-1 text-sm bg-indigo-600 text-white [.colorblind-mode_&]:bg-sky-700">1x</button>
                             <button type="button" data-speed="5" class="sim-speed rounded-md border px-3 py-1 text-sm">5x</button>
                             <button type="button" data-speed="10" class="sim-speed rounded-md border px-3 py-1 text-sm">10x</button>
                         </div>
@@ -244,7 +252,7 @@
 
                             <div class="text-right">
                                 <div class="text-xs font-bold uppercase tracking-wider text-gray-500">
-                                    Totale score
+                                    Total score
                                 </div>
                                 <div
                                     id="effect-total-score"
@@ -273,7 +281,7 @@
                         </div>
 
                         <p id="effect-empty-state" class="mt-4 text-sm text-gray-500" aria-live="polite">
-                            Drag facilities in the grid to see the score change.
+                            Drag functions in the grid to see the score change.
                         </p>
 
                         <div
@@ -386,12 +394,14 @@
 @push('scripts')
     <script>
         window.gridEffectData = {{ Illuminate\Support\Js::from($effectData) }};
+        window.gridConditionData = {{ Illuminate\Support\Js::from($conditionData) }};
+        window.gridFacilityData = {{ Illuminate\Support\Js::from($facilityData) }};
         window.gridEventEffectData = {{ Illuminate\Support\Js::from($eventEffectData ?? ['events' => []]) }};
         window.gridRestrictions = {{ Illuminate\Support\Js::from($restrictions) }};
         window.approvedGridCells = {{ Illuminate\Support\Js::from($approvedGridCells ?? []) }};
         window.approveCellUrl = @json(route('grid.approve-cell'));
         window.gridPermissions = {
-            canApproveDestinations: @json($canApproveDestinations),
+            canApproveFunctions: @json($canApproveFunctions),
         };
     </script>
 
@@ -399,6 +409,8 @@
         src="https://cdn.jsdelivr.net/npm/@dragdroptouch/drag-drop-touch@latest/dist/drag-drop-touch.esm.min.js?autoload"
         type="module">
     </script>
+
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
 
     @vite('resources/js/grid/effectGrid.js')
 @endpush

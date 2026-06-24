@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Category;
 use App\Models\Facility;
+use App\Models\FacilityCondition;
 use App\Support\GridEffectData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -34,7 +35,6 @@ class RequiredNeighbourRuleTest extends TestCase
             'slug' => 'school',
             'icon' => '🏫',
             'sort_order' => 2,
-            'required_neighbour_facility_id' => $park->id,
         ]);
 
         $hospital = Facility::create([
@@ -45,11 +45,18 @@ class RequiredNeighbourRuleTest extends TestCase
             'sort_order' => 3,
         ]);
 
+        FacilityCondition::create([
+            'facility_id' => $school->id,
+            'condition_type' => FacilityCondition::REQUIRED_NEIGHBOUR,
+            'neighbour_facility_id' => $park->id,
+        ]);
+
         $effectData = GridEffectData::from(
             Category::orderBy('sort_order')->get(),
-            Facility::with(['scores', 'requiredNeighbour'])
+            Facility::with(['scores'])
                 ->orderBy('sort_order')
                 ->get(),
+            FacilityCondition::with('neighbourFacility')->get(),
         );
 
         $this->assertArrayHasKey('neighbourRules', $effectData);

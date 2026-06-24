@@ -20,14 +20,15 @@
     <div class="py-8">
         <div class="w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             @if (session('success'))
-                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300">
+                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:font-bold">
+                    <span class="mr-1" aria-hidden="true">✓</span>
                     {{ session('success') }}
                 </div>
             @endif
 
             @if ($errors->any())
-                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
-                    <p class="font-semibold">
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-orange-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-orange-950 [.colorblind-mode_&]:font-bold">                    <p class="font-semibold">
+                        <span class="mr-1" aria-hidden="true">!</span>
                         {{ __('The event could not be saved:') }}
                     </p>
 
@@ -81,8 +82,8 @@
 
                                 <span
                                     data-event-status-badge
-                                    class="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold capitalize text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                >
+                                    class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold capitalize text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:font-bold"                                
+                                    >
                                     planned
                                 </span>
                             </div>
@@ -95,13 +96,22 @@
                                         </span>
                                         <span
                                             @class([
-                                                'font-bold',
-                                                'text-green-700 dark:text-green-300' => $impact['score'] > 0,
-                                                'text-red-600 dark:text-red-300' => $impact['score'] < 0,
-                                                'text-gray-500 dark:text-gray-400' => $impact['score'] === 0,
+                                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold',
+                                            'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-sky-950 [.colorblind-mode_&]:text-white' => $impact['score'] > 0,
+                                            'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-orange-950 [.colorblind-mode_&]:bg-orange-900 [.colorblind-mode_&]:text-white' => $impact['score'] < 0,
+                                            'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-gray-900 [.colorblind-mode_&]:bg-gray-900 [.colorblind-mode_&]:text-white' => $impact['score'] === 0,
                                             ])
                                         >
-                                            {{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}
+                                            <span aria-hidden="true">
+                                                @if ($impact['score'] > 0)
+                                                    ▲
+                                                @elseif ($impact['score'] < 0)
+                                                    ▼
+                                                @else
+                                                    •
+                                                @endif
+                                            </span>
+                                            <span>{{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}</span>
                                         </span>
                                     </div>
                                 @endforeach
@@ -125,9 +135,29 @@
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                             {{ __('Existing Events') }}
                         </h3>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                            {{ __('Grouped by the selected simulation time from the grid. Without a simulation time, events are never marked active.') }}
-                        </p>
+                        <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                            <div class="grid gap-3 md:grid-cols-3">
+                                <input
+                                    id="event-search"
+                                    type="text"
+                                    placeholder="Search by event name..."
+                                    class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                                >
+
+                                <input
+                                    id="event-date-search"
+                                    type="date"
+                                    class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                                >
+
+                                <input
+                                    id="event-type-search"
+                                    type="text"
+                                    placeholder=" by type..."
+                                    class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                                >
+                            </div>
+                        </div>
                     </div>
 
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -169,6 +199,9 @@
                                         <article
                                             class="rounded-lg p-0 transition hover:bg-gray-50 dark:hover:bg-gray-700/40"
                                             data-event-card
+                                            data-event-id="{{ $event->id }}"
+                                            data-event-name="{{ strtolower($event->name) }}"
+                                            data-event-type="{{ strtolower($event->event_type) }}"
                                             data-event-date="{{ $event->event_date?->format('Y-m-d') }}"
                                             data-start-time="{{ \Illuminate\Support\Carbon::parse($event->start_time)->format('H:i') }}"
                                             data-end-time="{{ \Illuminate\Support\Carbon::parse($event->end_time)->format('H:i') }}"
@@ -190,11 +223,21 @@
                                                     <span
                                                         @class([
                                                             'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold',
-                                                            'border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300' => $impact['score'] > 0,
-                                                            'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300' => $impact['score'] < 0,
-                                                            'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300' => $impact['score'] === 0,
+                                                            'border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-sky-950 [.colorblind-mode_&]:text-white' => $impact['score'] > 0,
+                                                            'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-orange-950 [.colorblind-mode_&]:bg-orange-900 [.colorblind-mode_&]:text-white' => $impact['score'] < 0,
+                                                            'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-gray-900 [.colorblind-mode_&]:bg-gray-900 [.colorblind-mode_&]:text-white' => $impact['score'] === 0,
                                                         ])
                                                     >
+                                                        <span aria-hidden="true">
+                                                            @if ($impact['score'] > 0)
+                                                                ▲
+                                                            @elseif ($impact['score'] < 0)
+                                                                ▼
+                                                            @else
+                                                                •
+                                                            @endif
+                                                        </span>
+
                                                         <span>{{ $impact['category_name'] }}</span>
                                                         <span>{{ $impact['score'] > 0 ? '+'.$impact['score'] : $impact['score'] }}</span>
                                                     </span>
@@ -215,7 +258,7 @@
                                             <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                                 {{ $event->recurrence_type->isRecurring() ? __('Next Date') : __('Date') }}
                                             </p>
-                                            <p class="mt-1 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-200">
+                                            <p class="mt-1 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-200" data-event-date-text>
                                                 {{ $occurrence ? $occurrence['starts_at']->format('d-m-Y') : \Illuminate\Support\Carbon::parse($event->event_date)->format('d-m-Y') }}
                                             </p>
                                             @if ($event->recurrence_type->isRecurring())
@@ -244,13 +287,19 @@
                                             <span
                                                 data-event-status-badge
                                                 @class([
-                                                    'mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold capitalize',
-                                                    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' => $status === 'planned',
-                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $status === 'active',
-                                                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' => $status === 'past',
-                                                ])
+                                                'mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold capitalize',
+                                                'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:font-bold' => $status === 'planned',
+                                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-indigo-950 [.colorblind-mode_&]:bg-indigo-950 [.colorblind-mode_&]:text-white [.colorblind-mode_&]:font-bold' => $status === 'active',
+                                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-gray-900 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-gray-950 [.colorblind-mode_&]:font-bold' => $status === 'past',
+                                            ])
                                             >
-                                                {{ __($status) }}
+                                                @if ($status === 'active')
+                                                    ◆ {{ __('Active') }}
+                                                @elseif ($status === 'planned')
+                                                    ● {{ __('Planned') }}
+                                                @else
+                                                    • {{ __('Past') }}
+                                                @endif
                                             </span>
                                         </div>
 
@@ -269,12 +318,24 @@
                                                 {{ __('Edit') }}
                                             </p>
 
-                                            <a
-                                                href="{{ route('events.edit', $event) }}"
-                                                class="mt-1 inline-flex text-sm font-medium text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-                                            >
-                                                {{ __('Edit') }}
-                                            </a>
+                                            <div class="mt-1 flex flex-col items-end gap-2">
+                                                <a
+                                                    href="{{ route('events.edit', $event) }}"
+                                                    class="inline-flex text-sm font-medium text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                >
+                                                    {{ __('Edit') }}
+                                                </a>
+
+                                                <button
+                                                    type="button"
+                                                    class="hidden inline-flex text-sm font-medium text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                    data-reschedule-btn
+                                                    data-event-id="{{ $event->id }}"
+                                                    data-event-name="{{ $event->name }}"
+                                                >
+                                                    {{ __('repeat') }}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -508,6 +569,45 @@
             </div>
         </div>
     </div>
+    <div id="reschedule-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+        <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {{ __('repeat Event') }}
+            </h3>
+
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300" id="reschedule-event-name"></p>
+
+            <form id="reschedule-form" class="mt-4 space-y-4">
+                <input type="hidden" name="event_id" id="reschedule-event-id">
+
+                <div>
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        {{ __('New Date') }}
+                    </label>
+
+                    <input
+                        type="date"
+                        name="event_date"
+                        id="reschedule-date"
+                        required
+                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900"
+                    >
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" id="reschedule-cancel"
+                        class="rounded-lg border px-4 py-2 text-sm dark:border-gray-600">
+                        {{ __('Cancel') }}
+                    </button>
+
+                    <button type="submit"
+                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
+                        {{ __('Confirm') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -529,6 +629,14 @@
             };
 
             const emptyMessages = {};
+
+            const modal = document.getElementById('reschedule-modal');
+            const form = document.getElementById('reschedule-form');
+            const cancelBtn = document.getElementById('reschedule-cancel');
+
+            const eventIdInput = document.getElementById('reschedule-event-id');
+            const dateInput = document.getElementById('reschedule-date');
+            const nameLabel = document.getElementById('reschedule-event-name');
 
             Object.entries(sections).forEach(([status, section]) => {
                 emptyMessages[status] = section?.querySelector('[data-empty-event-message]') ?? null;
@@ -659,21 +767,45 @@
                 const badge = card.querySelector('[data-event-status-badge]');
                 if (!badge) return;
 
-                badge.textContent = status;
-                badge.className = [
-                    'mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold capitalize',
-                    status === 'active'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                        : status === 'past'
-                            ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-                ].join(' ');
+                const labels = {
+                    active: 'Active',
+                    past: 'Past',
+                    planned: 'Planned',
+                };
+
+                const icons = {
+                    active: '◆',
+                    past: '•',
+                    planned: '●',
+                };
+
+                const colorblindMode = document.documentElement.classList.contains('colorblind-mode');
+
+                const baseClasses = colorblindMode
+                    ? 'mt-1 inline-flex items-center gap-1 rounded-full border-2 px-2 py-1 text-xs font-bold capitalize'
+                    : 'mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold capitalize';
+
+                const statusClasses = colorblindMode
+                    ? {
+                        active: 'border-indigo-950 bg-indigo-950 text-white',
+                        planned: 'border-sky-950 bg-white text-sky-950',
+                        past: 'border-gray-900 bg-white text-gray-950',
+                    }
+                    : {
+                        active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+                        planned: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                        past: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+                    };
+
+                badge.textContent = `${icons[status] ?? '●'} ${labels[status] ?? status}`;
+                badge.className = `${baseClasses} ${statusClasses[status] ?? statusClasses.planned}`;
             }
 
             document.querySelectorAll('[data-event-card]').forEach((card) => {
                 const status = statusFor(card);
                 sections[status]?.appendChild(card);
                 updateBadge(card, status);
+                updateRescheduleButton(card, status);
             });
 
             const upcomingList = document.querySelector('[data-upcoming-events-list]');
@@ -710,6 +842,7 @@
 
                         item.card.classList.remove('hidden');
                         updateBadge(item.card, item.status);
+                        updateRescheduleButton(item.card, item.status);
                         upcomingList?.appendChild(item.card);
                     });
             }
@@ -725,7 +858,161 @@
                 if (emptyMessage) {
                     emptyMessage.classList.toggle('hidden', count > 0);
                 }
+                function refreshEventPageColors() {
+                    document
+                        .querySelectorAll('[data-event-card], [data-upcoming-event-card]')
+                        .forEach((card) => {
+                            updateBadge(card, statusFor(card));
+                        });
+                }
+
+                window.addEventListener('accessibility:colorblind-mode-changed', refreshEventPageColors);
             });
+            function applyEventFilters() {
+                const name = (document.getElementById("event-search")?.value || "")
+                    .toLowerCase()
+                    .trim();
+
+                const date = document.getElementById("event-date-search")?.value || "";
+                const type = (document.getElementById("event-type-search")?.value || "")
+                    .toLowerCase()
+                    .trim();
+
+                document.querySelectorAll("[data-event-card]").forEach(card => {
+                    const cardName = (card.dataset.eventName || "").toLowerCase();
+                    const cardType = (card.dataset.eventType || "").toLowerCase();
+                    const cardDate = card.dataset.eventDate || "";
+
+                    const matchesName = !name || cardName.includes(name);
+                    const matchesDate = !date || cardDate === date;
+                    const matchesType = !type || cardType.includes(type);
+
+                    const shouldShow = matchesName && matchesDate && matchesType;
+
+                    card.classList.toggle("hidden", !shouldShow);
+
+                    if (shouldShow) {
+                        const status = statusFor(card);
+                        updateBadge(card, status);
+                        updateRescheduleButton(card, status);
+                    }
+                });
+            }
+            function bindEventSearch() {
+                const nameInput = document.getElementById("event-search");
+                const dateInput = document.getElementById("event-date-search");
+                const typeInput = document.getElementById("event-type-search");
+
+                const handler = () => applyEventFilters();
+
+                nameInput?.addEventListener("input", handler);
+                dateInput?.addEventListener("input", handler);
+                typeInput?.addEventListener("input", handler);
+            }
+            
+
+            document.querySelectorAll('[data-reschedule-btn]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    eventIdInput.value = btn.dataset.eventId;
+                    nameLabel.textContent = btn.dataset.eventName;
+
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                });
+            });
+
+            cancelBtn?.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            });
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const eventId = eventIdInput.value;
+                const payload = {
+                    event_date: dateInput.value
+                };
+
+                console.log('[Reschedule] Submitting request');
+                console.log('[Reschedule] Event ID:', eventId);
+                console.log('[Reschedule] Payload:', payload);
+
+                try {
+                    const res = await fetch(`/events/${eventId}/reschedule`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    console.log('[Reschedule] Response status:', res.status);
+
+                    const rawText = await res.clone().text();
+                    console.log('[Reschedule] Raw response:', rawText);
+
+                    if (!res.ok) {
+                        console.error('[Reschedule] Request failed');
+                        return;
+                    }
+
+                    const data = await res.json();
+
+                    console.log('[Reschedule] Parsed JSON:', data);
+
+                    const newEvent = data.event;
+
+                    const originalCard = document.querySelector(`[data-event-id="${eventId}"]`);
+
+                    if (originalCard) {
+                        // update dataset (used by logic)
+                        originalCard.dataset.eventDate = newEvent.event_date;
+                        originalCard.dataset.startTime = newEvent.start_time.slice(0, 5);
+                        originalCard.dataset.endTime = newEvent.end_time.slice(0, 5);
+
+                        // update visible date text
+                        const dateText = originalCard.querySelector('[data-event-date-text]');
+                        if (dateText) {
+                            const d = new Date(newEvent.event_date);
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const year = d.getFullYear();
+
+                            dateText.textContent = `${day}-${month}-${year}`;
+                        }
+
+                        // recalc status
+                        const status = statusFor(originalCard);
+
+                        // update UI state
+                        updateBadge(originalCard, status);
+                        updateRescheduleButton(originalCard, status);
+
+                        // move card to correct section
+                        sections[status]?.appendChild(originalCard);
+                    }
+
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+
+                } catch (err) {
+                    console.error('[Reschedule] Exception:', err);
+                }
+            });
+            function updateRescheduleButton(card, status) {
+                const btn = card.querySelector('[data-reschedule-btn]');
+                if (!btn) return;
+
+                if (status === 'past') {
+                    btn.classList.remove('hidden');
+                } else {
+                    btn.classList.add('hidden');
+                }
+            }
+            bindEventSearch();
         });
     </script>
 </x-app-layout>

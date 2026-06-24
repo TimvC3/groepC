@@ -9,6 +9,7 @@ use App\Models\Event;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Illuminate\Http\Request;
 
 class EventController extends Controller
 {
@@ -110,5 +111,25 @@ class EventController extends Controller
             ])
             ->filter(fn (array $data) => $data['score'] !== 0)
             ->all();
+    }
+    public function reschedule(Request $request, Event $event)
+    {
+        $validated = $request->validate([
+            'event_date' => ['required', 'date'],
+        ]);
+
+        $newEvent = $event->replicate();
+        $newEvent->event_date = $validated['event_date'];
+        $newEvent->save();
+
+        $newEvent->categories()->sync(
+            $event->categories->mapWithKeys(fn ($c) => [
+                $c->id => ['score' => $c->pivot->score]
+            ])
+        );
+
+        return response()->json([
+            'event' => $newEvent->load('categories'),
+        ]);
     }
 }

@@ -82,21 +82,12 @@ class FacilityManagementTest extends TestCase
     public function test_admin_can_create_facility_with_scores(): void
     {
         [$security, $mobility] = $this->createCategories();
-        $park = Facility::create([
-            'category_id' => $security->id,
-            'name' => 'Park',
-            'slug' => 'park',
-            'icon' => 'park',
-            'sort_order' => 1,
-        ]);
-
         $response = $this
             ->actingAs($this->adminUser())
             ->post(route('facilities.store'), [
                 'name' => 'Hospital',
                 'category_id' => $security->id,
                 'icon' => 'hospital',
-                'required_neighbour_facility_id' => $park->id,
                 'scores' => [
                     $security->id => 4,
                     $mobility->id => -1,
@@ -112,8 +103,7 @@ class FacilityManagementTest extends TestCase
             'name' => 'Hospital',
             'slug' => 'hospital',
             'icon' => 'hospital',
-            'sort_order' => 2,
-            'required_neighbour_facility_id' => $park->id,
+            'sort_order' => 1,
         ]);
 
         $facility = Facility::where('slug', 'hospital')->firstOrFail();
@@ -159,21 +149,12 @@ class FacilityManagementTest extends TestCase
             $security->id => 5,
             $mobility->id => -2,
         ]);
-        $park = Facility::create([
-            'category_id' => $security->id,
-            'name' => 'Park',
-            'slug' => 'park',
-            'icon' => 'park',
-            'sort_order' => 2,
-        ]);
-
         $response = $this
             ->actingAs($this->adminUser())
             ->patch(route('facilities.update', $facility), [
                 'name' => 'Emergency Center',
                 'category_id' => $mobility->id,
                 'icon' => 'emergency',
-                'required_neighbour_facility_id' => $park->id,
                 'scores' => [
                     $security->id => 2,
                     $mobility->id => 4,
@@ -190,7 +171,6 @@ class FacilityManagementTest extends TestCase
             'name' => 'Emergency Center',
             'slug' => 'emergency-center',
             'icon' => 'emergency',
-            'required_neighbour_facility_id' => $park->id,
         ]);
 
         $this->assertDatabaseHas('facility_scores', [
@@ -277,26 +257,6 @@ class FacilityManagementTest extends TestCase
             ]);
 
         $response->assertSessionHasErrors('scores.'.$security->id);
-    }
-
-    public function test_admin_cannot_require_facility_to_neighbour_itself(): void
-    {
-        [$security] = $this->createCategories();
-        $facility = $this->createFacilityWithScores($security, [
-            $security->id => 5,
-        ]);
-
-        $response = $this
-            ->actingAs($this->adminUser())
-            ->patch(route('facilities.update', $facility), [
-                'name' => $facility->name,
-                'category_id' => $security->id,
-                'icon' => $facility->icon,
-                'required_neighbour_facility_id' => $facility->id,
-                'scores' => [$security->id => 1],
-            ]);
-
-        $response->assertSessionHasErrors('required_neighbour_facility_id');
     }
 
     private function adminUser(): User

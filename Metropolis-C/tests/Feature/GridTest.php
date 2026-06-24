@@ -67,7 +67,7 @@ class GridTest extends TestCase
             ->assertSee('Upcoming Events')
             ->assertSee('Event Effects')
             ->assertSee('Road Closure')
-            ->assertSee('Quality Of Life Score')
+            ->assertSee('Total score')
             ->assertSee('id="effect-status"', false)
             ->assertSee('aria-live="polite"', false)
             ->assertSee('window.gridEffectData', false)
@@ -82,7 +82,7 @@ class GridTest extends TestCase
                 $impact = collect($eventData['impacts'])->firstWhere('category_id', $mobility->id);
 
                 return $impact
-                    && $eventData['score'] === -4;
+                    && $impact['score'] === -4;
             });
     }
 }

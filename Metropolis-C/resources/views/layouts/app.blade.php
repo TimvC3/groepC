@@ -14,6 +14,18 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
+        <script>
+            const authUserId = @json(auth()->id() ?? 'guest');
+
+            if (localStorage.getItem(`accessibility.colorblindMode.${authUserId}`) === 'true') {
+                document.documentElement.classList.add('colorblind-mode');
+            }
+        </script>
+
+        @if (auth()->check())
+            <meta name="auth-user-id" content="{{ auth()->id() }}">
+        @endif
+
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">

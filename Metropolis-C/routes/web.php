@@ -1,10 +1,10 @@
 <?php
 
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\FacilityConditionController;
 use App\Http\Controllers\FacilityController;
-use App\Http\Controllers\FacilityRestrictionController;
 use App\Http\Controllers\GridController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\EventController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -18,22 +18,41 @@ Route::middleware(['auth'])->group(function () {
     Route::redirect('/dashboard', '/grid')->name('dashboard');
     Route::post('/grid/approve-cell', [GridController::class, 'approveCell'])->name('grid.approve-cell');
 
-    Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities');
+    Route::get('/facilities', [FacilityController::class, 'index'])->name('functions.index');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 Route::middleware(['auth', 'library-manager'])->group(function () {
-    Route::patch('/facilities/scores/{facilityScore}', [FacilityController::class, 'update'])->name('facilities.scores.update');
-    Route::post('/facilities', [FacilityController::class, 'store'])->name('facilities.store');
-    Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('facilities.edit');
-    Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('facilities.update');
+    Route::post('/functions/{facility}/conditions', [FacilityConditionController::class, 'store'])
+        ->name('functions.function.conditions.store');
 
-    Route::post('/facilities/restrictions', [FacilityRestrictionController::class, 'store'])->name('facilities.restrictions.store');
-    Route::delete('/facilities/restrictions/{restriction}', [FacilityRestrictionController::class, 'destroy'])->name('facilities.restrictions.destroy');
+    Route::patch('/functions/{facility}/conditions/{condition}', [FacilityConditionController::class, 'update'])
+        ->name('functions.function.conditions.update');
 
-    Route::redirect('/functions', '/facilities')->name('functions.index');
+    Route::delete('/functions/{facility}/conditions/{condition}', [FacilityConditionController::class, 'destroy'])
+        ->name('functions.function.conditions.destroy');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::post('/facilities', [FacilityController::class, 'store'])->name('functions.store');
+    Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('functions.edit');
+    Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('functions.update');
+
+    Route::patch('/functions/scores/{facilityScore}', [FacilityController::class, 'update'])
+        ->name('functions.scores.update');
+
+    Route::redirect('/functions', '/facilities');
+});
+
+Route::middleware(['auth', 'library-manager'])->group(function () {
+    Route::post('/functions/conditions', [FacilityConditionController::class, 'store'])
+        ->name('functions.conditions.store');
+    Route::patch('/functions/conditions/{condition}', [FacilityConditionController::class, 'update'])
+        ->name('functions.conditions.update');
+    Route::delete('/functions/conditions/{condition}', [FacilityConditionController::class, 'destroy'])
+        ->name('functions.conditions.destroy');
 });
 
 Route::middleware(['auth', 'library-manager'])
@@ -56,3 +75,5 @@ Route::middleware(['auth', 'city-planner'])
         Route::get('/{event}/edit', [EventController::class, 'edit'])->name('edit');
         Route::patch('/{event}', [EventController::class, 'update'])->name('update');
     });
+Route::post('/events/{event}/reschedule', [EventController::class, 'reschedule'])
+    ->name('events.reschedule');
