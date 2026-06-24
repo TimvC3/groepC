@@ -1,4 +1,3 @@
-
 export function initScoreEditor() {
     refreshScoreBadges();
 
@@ -93,6 +92,7 @@ const scoreColorClasses = [
 function openEditor(badge) {
     if (badge.dataset.approvedDestination === 'true') {
         showToast(approvedDestinationMessage, 'error', badge);
+    }
     if (!badge.dataset.scoreId) {
         return;
     }

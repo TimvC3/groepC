@@ -364,6 +364,8 @@ function showPlacementFeedback(message, type = 'error') {
         feedback.style.border = '1px solid #bbf7d0';
     }
 
+    feedback.textContent = message;
+
     document.body.appendChild(feedback);
 
     const statusElement = document.getElementById('effect-status');
@@ -1416,6 +1418,23 @@ function findRoadClusters(state) {
     return clusters;
 }
 
+function getHorizontalVerticalNeighbourCells(cell) {
+    const index = Number(cell.dataset.index);
+    return neighbouringIndexes(index)
+        .map((neighbourIndex) =>
+            document.querySelector(`.grid-cell[data-index="${neighbourIndex}"]`)
+        )
+        .filter(Boolean);
+}
+
+function requiredNeighbourIsPresent(targetCell, facilityId) {
+    const rule = getNeighbourRule(facilityId);
+    if (!rule) return true; // no rule = no requirement = ok
+
+    return getHorizontalVerticalNeighbourCells(targetCell)
+        .some((cell) => String(cell.dataset.itemId) === String(rule.requiredNeighbourId));
+}
+
 function selectedEvents() {
     return Array.from(document.querySelectorAll('.grid-cell'))
         .filter((cell) => cell.dataset.itemType === 'event')
@@ -2447,6 +2466,7 @@ function bindGridCells() {
 
             fillCell(cell, payload);
 
+            const requiredNeighbourViolations = requiredNeighbourViolationsForPlacement(cell, payload);
             if (requiredNeighbourViolations.length > 0) {
                 showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
             }
