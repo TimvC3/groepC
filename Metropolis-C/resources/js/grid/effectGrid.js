@@ -316,6 +316,42 @@ function isColorblindModeEnabled() {
     return document.documentElement.classList.contains('colorblind-mode');
 }
 
+function gridCellPosition(cell) {
+    const index = Number(cell.dataset.index);
+    const row = Number(cell.dataset.row) || Math.floor((index - 1) / gridColumns) + 1;
+    const column = Number(cell.dataset.column) || ((index - 1) % gridColumns) + 1;
+
+    return { index, row, column };
+}
+
+function gridCellItemName(cell) {
+    return cell.dataset.itemName || '';
+}
+
+function gridCellAriaLabel(cell) {
+    const { index, row, column } = gridCellPosition(cell);
+    const itemName = gridCellItemName(cell);
+
+    if (!itemName) {
+        return `Grid cell ${index}, row ${row}, column ${column}, empty. Press Enter to place a selected item here.`;
+    }
+
+    const itemType = cell.dataset.itemType === 'event' ? 'event' : 'function';
+    const statusText = isApprovedCell(cell)
+        ? ' This item has been approved and can no longer be changed.'
+        : ' Press Enter to select this item for moving. Press Delete to remove it.';
+
+    return `Grid cell ${index}, row ${row}, column ${column}, contains ${itemType} ${itemName}.${statusText}`;
+}
+
+function updateGridCellAccessibility(cell) {
+    const { row, column } = gridCellPosition(cell);
+
+    cell.setAttribute('aria-rowindex', String(row));
+    cell.setAttribute('aria-colindex', String(column));
+    cell.setAttribute('aria-label', gridCellAriaLabel(cell));
+}
+
 function placedCellClasses(isEvent) {
     if (isColorblindModeEnabled()) {
         return isEvent
@@ -543,7 +579,7 @@ function storeApprovedCell(cell) {
     approvedCells[cell.dataset.index] = {
         itemId: cell.dataset.itemId,
         itemType: cell.dataset.itemType,
-        name: cell.getAttribute('aria-label'),
+        name: gridCellItemName(cell),
     };
 }
 
@@ -559,7 +595,7 @@ function getApprovedItem(approvedCell) {
         return {
             type: 'facility',
             id: approvedCell.itemId,
-            name: approvedCell.name,
+            name: libraryItem?.dataset.name || approvedCell.name,
             icon: libraryItem?.dataset.icon || '✓',
         };
     }
@@ -571,7 +607,7 @@ function getApprovedItem(approvedCell) {
             ...(event || {}),
             type: 'event',
             id: approvedCell.itemId,
-            name: approvedCell.name,
+            name: event?.name || approvedCell.name,
         };
     }
 
@@ -588,12 +624,10 @@ function renderApprovedCell(cell, approvedCell) {
 
     cell.dataset.itemId = approvedCell.itemId;
     cell.dataset.itemType = approvedCell.itemType;
+    cell.dataset.itemName = approvedCell.name;
     cell.dataset.approved = 'true';
 
-    cell.setAttribute(
-        'aria-label',
-        `Approved grid cell ${cell.dataset.index}: ${approvedCell.name}. This item can no longer be changed.`
-    );
+    updateGridCellAccessibility(cell);
     cell.classList.remove('border-dashed');
     cell.classList.add('group', 'border-solid');
     applyPlacedCellStyle(cell, isEvent);
@@ -729,6 +763,7 @@ function updateApprovalUI(cell) {
     if (!cell.dataset.itemId) {
         delete cell.dataset.approved;
         removeApprovedStyle(cell);
+        updateGridCellAccessibility(cell);
         return;
     }
 
@@ -741,6 +776,7 @@ function updateApprovalUI(cell) {
             wrapper.append(createApprovedBadge());
         }
 
+        updateGridCellAccessibility(cell);
         return;
     }
 
@@ -749,6 +785,8 @@ function updateApprovalUI(cell) {
     if (canApproveFunctions && wrapper) {
         wrapper.append(createApproveButton(cell));
     }
+
+    updateGridCellAccessibility(cell);
 }
 
 async function approveCell(cell) {
@@ -780,7 +818,7 @@ async function approveCell(cell) {
                 cell_index: cell.dataset.index,
                 item_type: cell.dataset.itemType,
                 item_id: cell.dataset.itemId,
-                item_name: cell.getAttribute('aria-label'),
+                item_name: gridCellItemName(cell),
             }),
         });
 
@@ -1205,7 +1243,7 @@ function currentGridState() {
                 {
                     type: cell.dataset.itemType,
                     id: String(cell.dataset.itemId),
-                    name: cell.getAttribute('aria-label') || '',
+                    name: gridCellItemName(cell),
                 },
             ])
     );
@@ -1985,7 +2023,7 @@ function placementSnapshot(targetCell, payload) {
 
         snapshot.set(String(gridCell.dataset.index), {
             id: gridCell.dataset.itemId,
-            name: gridCell.getAttribute('aria-label') || facilityNameById(gridCell.dataset.itemId),
+            name: gridCellItemName(gridCell) || facilityNameById(gridCell.dataset.itemId),
         });
     });
 
@@ -2125,7 +2163,7 @@ function positionTooltip(tooltip, x, y) {
 }
 
 function updateTooltipContent(cell, tooltip) {
-    const itemName = cell.getAttribute('aria-label') || 'Unknown item';
+    const itemName = gridCellItemName(cell) || 'Unknown item';
     const isEvent = cell.dataset.itemType === 'event';
 
     if (isEvent) {
@@ -2241,16 +2279,15 @@ function removeCellContent(cell) {
 
     label.className = 'text-gray-400 text-xs font-mono';
     label.textContent = index;
+    label.setAttribute('aria-hidden', 'true');
 
     cell.replaceChildren(label);
     delete cell.dataset.itemId;
     delete cell.dataset.itemType;
+    delete cell.dataset.itemName;
     delete cell.dataset.approved;
 
-    cell.setAttribute(
-        'aria-label',
-        `Grid cell ${index}. Press Enter to place a selected item here.`
-    );
+    updateGridCellAccessibility(cell);
     cell.classList.remove(
         'group',
         'border-solid',
@@ -2288,12 +2325,10 @@ function fillCell(cell, item) {
 
     cell.dataset.itemId = item.id;
     cell.dataset.itemType = item.type;
+    cell.dataset.itemName = item.name;
     delete cell.dataset.approved;
 
-    cell.setAttribute(
-        'aria-label',
-        `Grid cell ${cell.dataset.index}: ${item.name}. Press Enter to select this item for moving. Press Delete to remove it.`
-    );
+    updateGridCellAccessibility(cell);
     cell.classList.remove(
         'border-dashed',
         'border-green-500',
@@ -2318,7 +2353,7 @@ function fillCell(cell, item) {
 function getAdjacentFacilities(targetCell) {
     return getHorizontalVerticalNeighbourCells(targetCell)
         .filter((c) => c.dataset.itemType === 'facility')
-        .map((c) => ({ id: c.dataset.itemId, name: c.getAttribute('aria-label') || `Facility ${c.dataset.itemId}` }));
+        .map((c) => ({ id: c.dataset.itemId, name: gridCellItemName(c) || `Facility ${c.dataset.itemId}` }));
 }
 
 function findRestrictionConflicts(targetCell, facilityId) {
@@ -2460,7 +2495,7 @@ function payloadFromGridCell(cell) {
             ...event,
             type: 'event',
             id: cell.dataset.itemId,
-            name: event.name || cell.getAttribute('aria-label') || 'Selected event',
+            name: event.name || gridCellItemName(cell) || 'Selected event',
         };
     }
 
@@ -2471,7 +2506,7 @@ function payloadFromGridCell(cell) {
         type: 'facility',
         id: cell.dataset.itemId,
         icon: libraryItem?.dataset.icon || cell.querySelector('.text-2xl')?.innerText || '',
-        name: libraryItem?.dataset.name || cell.getAttribute('aria-label') || 'Selected function',
+        name: libraryItem?.dataset.name || gridCellItemName(cell) || 'Selected function',
     };
 }
 
@@ -2601,13 +2636,6 @@ function bindGridCells() {
     document.querySelectorAll('.grid-cell').forEach((cell) => {
         updateApprovalUI(cell);
 
-        if (!cell.getAttribute('aria-label')) {
-            cell.setAttribute(
-                'aria-label',
-                `Grid cell ${cell.dataset.index}. Press Enter to place a selected item here.`
-            );
-        }
-
         cell.addEventListener('dragstart', (event) => {
             hideCellTooltip();
 
@@ -2632,14 +2660,14 @@ function bindGridCells() {
                 ? {
                     type: 'event',
                     id: cell.dataset.itemId,
-                    name: cell.getAttribute('aria-label'),
+                    name: gridCellItemName(cell),
                     score: eventImpactMatrix[String(cell.dataset.itemId)]?.score ?? 0,
                 }
                 : {
                     type: 'facility',
                     id: cell.dataset.itemId,
                     icon: cell.querySelector('.text-2xl')?.innerText ?? '',
-                    name: cell.getAttribute('aria-label'),
+                    name: gridCellItemName(cell),
                 };
 
             setDragPayload(event, payload);
@@ -3014,7 +3042,7 @@ function exportToPDF() {
 
         doc.roundedRect(x, y, cellW, cellH, 1.5, 1.5, 'FD');
 
-        const itemName = cell.getAttribute('aria-label');
+        const itemName = gridCellItemName(cell);
 
         if (itemName) {
             doc.setFontSize(7);

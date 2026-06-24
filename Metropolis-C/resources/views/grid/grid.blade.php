@@ -107,18 +107,36 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-4 gap-1 justify-center border-4 border-gray-100 dark:border-gray-700 p-2 rounded-3xl dark:bg-gray-900/50">
-                                @for ($i = 1; $i <= 12; $i++)
-                                    <div
-                                        class="grid-cell h-16 w-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all sm:h-24 sm:w-24 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white"
-                                        data-index="{{ $i }}"
-                                        tabindex="0"
-                                        role="button"
-                                        aria-label="Grid cell {{ $i }}. Press Enter to place a selected item here."
-                                    >
-                                        <span class="text-gray-400 text-xs font-mono">
-                                            {{ $i }}
-                                        </span>
+                            <div
+                                class="flex flex-col items-center gap-1 justify-center border-4 border-gray-100 dark:border-gray-700 p-2 rounded-3xl dark:bg-gray-900/50"
+                                role="grid"
+                                aria-label="City Grid"
+                                aria-rowcount="3"
+                                aria-colcount="4"
+                            >
+                                @for ($row = 1; $row <= 3; $row++)
+                                    <div class="grid grid-cols-4 gap-1" role="row" aria-rowindex="{{ $row }}">
+                                        @for ($column = 1; $column <= 4; $column++)
+                                            @php
+                                                $i = (($row - 1) * 4) + $column;
+                                            @endphp
+
+                                            <div
+                                                class="grid-cell h-16 w-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center p-1 transition-all sm:h-24 sm:w-24 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white"
+                                                data-index="{{ $i }}"
+                                                data-row="{{ $row }}"
+                                                data-column="{{ $column }}"
+                                                tabindex="0"
+                                                role="gridcell"
+                                                aria-rowindex="{{ $row }}"
+                                                aria-colindex="{{ $column }}"
+                                                aria-label="Grid cell {{ $i }}, row {{ $row }}, column {{ $column }}, empty. Press Enter to place a selected item here."
+                                            >
+                                                <span class="text-gray-400 text-xs font-mono" aria-hidden="true">
+                                                    {{ $i }}
+                                                </span>
+                                            </div>
+                                        @endfor
                                     </div>
                                 @endfor
                             </div>
