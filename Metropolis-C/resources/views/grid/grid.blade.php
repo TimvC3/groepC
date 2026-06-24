@@ -278,11 +278,7 @@
                                     >
                                         0
                                     </div>
-                                    <!-- Dynamic Highest Category Highlight -->
-                                    <div id="effect-highest-category" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold mt-1 hidden">
-                                        Hoogste score: <span id="effect-highest-category-name">-</span>
-                                    </div>
-                                </div>
+</div>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
