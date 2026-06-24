@@ -60,7 +60,8 @@ class FacilityController extends Controller
             'functions',
             'categories',
             'editingFacility',
-            'conditions'
+            'conditions',
+            'approvedFacilityIds'
         ));
     }
 

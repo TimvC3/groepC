@@ -95,11 +95,24 @@
                                                 {{ $function->updated_at?->format('M j, Y') }}
                                             </td>
                                             <td class="px-6 py-4 text-right text-sm font-medium">
+                                                @php
+                                                    $isApproved = in_array($function->id, $approvedFacilityIds);
+                                                @endphp
+
                                                 <a
-                                                    href="{{ route('functions.edit', $function) }}"
-                                                    class="text-indigo-600 transition hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                    @unless($isApproved)
+                                                        href="{{ route('functions.edit', $function) }}"
+                                                    @endunless
+                                                    class="{{ $isApproved
+                                                        ? 'pointer-events-none cursor-not-allowed text-gray-500'
+                                                        : 'text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300'
+                                                    }} transition"
+                                                    aria-disabled="{{ $isApproved ? 'true' : 'false' }}"
                                                 >
-                                                    {{ __('Edit') }}
+                                                    {{ $isApproved
+                                                        ? 'Editing is disabled: This facility is already approved.'
+                                                        : __('Edit')
+                                                    }}
                                                 </a>
                                             </td>
                                         </tr>

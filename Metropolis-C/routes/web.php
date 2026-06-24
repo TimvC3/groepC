@@ -60,6 +60,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/facilities', [FacilityController::class, 'store'])->name('functions.store');
     Route::get('/facilities/{facility}/edit', [FacilityController::class, 'edit'])->name('functions.edit');
     Route::patch('/facilities/{facility}', [FacilityController::class, 'updateFacility'])->name('functions.update');
-    Route::patch('/functions/scores/{facilityScore}', [FacilityController::class, 'update'])
-        ->name('functions.scores.update');
+    
 });
+
+Route::patch('/functions/scores/{facilityScore}', [FacilityController::class, 'update'])
+        ->name('functions.scores.update');
