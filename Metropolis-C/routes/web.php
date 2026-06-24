@@ -55,7 +55,7 @@ Route::middleware(['auth', 'library-manager'])->group(function () {
         ->name('functions.conditions.destroy');
 });
 
-Route::middleware(['auth', 'admin'])
+Route::middleware(['auth', 'library-manager'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {

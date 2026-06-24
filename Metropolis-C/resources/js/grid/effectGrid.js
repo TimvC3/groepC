@@ -248,7 +248,6 @@ let simulationRunning = false;
 let simulationSpeed = 1;
 let lastSimulationSpeed = 1;
 let lastApprovedFeedbackAt = 0;
-let lastNeighbourFeedbackAt = 0;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 const canApproveFunctions = Boolean(gridPermissions.canApproveFunctions);
@@ -340,8 +339,30 @@ function showPlacementFeedback(message, type = 'error') {
     feedback.setAttribute('role', 'alert');
     feedback.className = placementFeedbackClasses(type);
 
-    const icon = type === 'error' ? '!' : '✓';
-    feedback.textContent = `${icon} ${message}`;
+    feedback.style.position = 'fixed';
+    feedback.style.right = '20px';
+    feedback.style.bottom = '20px';
+    feedback.style.zIndex = '999999';
+    feedback.style.maxWidth = '360px';
+    feedback.style.padding = '14px 18px';
+    feedback.style.borderRadius = '10px';
+    feedback.style.fontSize = '14px';
+    feedback.style.fontWeight = '700';
+    feedback.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.25)';
+
+    if (type === 'error') {
+        feedback.style.backgroundColor = '#fee2e2';
+        feedback.style.color = '#991b1b';
+        feedback.style.border = '1px solid #fecaca';
+    } else if (type === 'warning') {
+        feedback.style.backgroundColor = '#fef3c7';
+        feedback.style.color = '#92400e';
+        feedback.style.border = '1px solid #fde68a';
+    } else {
+        feedback.style.backgroundColor = '#dcfce7';
+        feedback.style.color = '#166534';
+        feedback.style.border = '1px solid #bbf7d0';
+    }
 
     document.body.appendChild(feedback);
 
@@ -1759,23 +1780,6 @@ function getSurroundingCells(cell) {
     });
 }
 
-function getHorizontalVerticalNeighbourCells(cell) {
-    const index = Number(cell.dataset.index);
-    const allCells = Array.from(document.querySelectorAll('.grid-cell'));
-    const totalCells = allCells.length;
-    const row = Math.floor((index - 1) / gridColumns);
-    const column = (index - 1) % gridColumns;
-
-    return allCells.filter((otherCell) => {
-        const otherIndex = Number(otherCell.dataset.index);
-        const otherRow = Math.floor((otherIndex - 1) / gridColumns);
-        const otherColumn = (otherIndex - 1) % gridColumns;
-        const isDirectNeighbour = Math.abs(otherRow - row) + Math.abs(otherColumn - column) === 1;
-
-        return otherIndex >= 1 && otherIndex <= totalCells && isDirectNeighbour;
-    });
-}
-
 function getNeighbourRule(facilityId) {
     return neighbourRules[String(facilityId)] || neighbourRules[facilityId] || null;
 }
@@ -1796,17 +1800,6 @@ function directNeighbourIndexes(index, totalCells) {
     }
 
     return indexes;
-}
-
-function requiredNeighbourIsPresent(cell, facilityId) {
-    const rule = getNeighbourRule(facilityId);
-
-    if (!rule) return true;
-
-    return getHorizontalVerticalNeighbourCells(cell).some((neighbourCell) => {
-        return neighbourCell.dataset.itemType === 'facility'
-            && String(neighbourCell.dataset.itemId) === String(rule.requiredNeighbourId);
-    });
 }
 
 function facilityNameById(facilityId) {
@@ -2453,6 +2446,10 @@ function bindGridCells() {
             }
 
             fillCell(cell, payload);
+
+            if (requiredNeighbourViolations.length > 0) {
+                showRequiredNeighbourViolation(requiredNeighbourViolations[0]);
+            }
 
             sourceCell = null;
             draggedData = null;
