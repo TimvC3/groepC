@@ -251,6 +251,49 @@ let lastApprovedFeedbackAt = 0;
 
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 const canApproveFunctions = Boolean(gridPermissions.canApproveFunctions);
+const placedCellColorClasses = [
+    'bg-blue-50',
+    'dark:bg-blue-900/20',
+    'bg-amber-50',
+    'dark:bg-amber-900/20',
+    'bg-white',
+    'border-sky-950',
+    'border-orange-950',
+    'ring-2',
+    'ring-sky-200',
+    'ring-orange-200',
+];
+const gridDropFeedbackClasses = [
+    'bg-indigo-50',
+    'border-indigo-400',
+    'bg-red-50',
+    'border-red-400',
+    'bg-white',
+    'border-sky-950',
+    'border-orange-950',
+    'ring-2',
+    'ring-sky-300',
+    'ring-orange-300',
+];
+const approvedCellColorClasses = [
+    'border-green-500',
+    'bg-green-50',
+    'dark:bg-green-900/20',
+    'border-sky-950',
+    'bg-white',
+    'ring-2',
+    'ring-sky-200',
+];
+const conditionViolationClasses = [
+    'border-red-500',
+    'bg-red-50',
+    'dark:bg-red-900/20',
+    'border-orange-950',
+    'bg-white',
+    'ring-2',
+    'ring-red-400/60',
+    'ring-orange-300',
+];
 
 function formatScore(score) {
     return score > 0 ? `+${score}` : String(score);
@@ -270,6 +313,59 @@ function scoreColorClass(score) {
 
 function isColorblindModeEnabled() {
     return document.documentElement.classList.contains('colorblind-mode');
+}
+
+function placedCellClasses(isEvent) {
+    if (isColorblindModeEnabled()) {
+        return isEvent
+            ? ['bg-white', 'border-orange-950', 'ring-2', 'ring-orange-200']
+            : ['bg-white', 'border-sky-950', 'ring-2', 'ring-sky-200'];
+    }
+
+    return isEvent
+        ? ['bg-amber-50', 'dark:bg-amber-900/20']
+        : ['bg-blue-50', 'dark:bg-blue-900/20'];
+}
+
+function applyPlacedCellStyle(cell, isEvent) {
+    cell.classList.remove(...placedCellColorClasses);
+    cell.classList.add(...placedCellClasses(isEvent));
+}
+
+function clearGridDropFeedbackStyle(cell) {
+    cell.classList.remove(...gridDropFeedbackClasses);
+}
+
+function restoreGridCellVisualState(cell) {
+    if (isApprovedCell(cell)) {
+        updateApprovalUI(cell);
+        return;
+    }
+
+    if (cell.dataset.itemId) {
+        applyPlacedCellStyle(cell, cell.dataset.itemType === 'event');
+    }
+}
+
+function addGridDropFeedbackStyle(cell, type = 'valid') {
+    clearGridDropFeedbackStyle(cell);
+
+    if (isColorblindModeEnabled()) {
+        cell.classList.add(
+            'bg-white',
+            'ring-2',
+            type === 'valid' ? 'border-sky-950' : 'border-orange-950',
+            type === 'valid' ? 'ring-sky-300' : 'ring-orange-300'
+        );
+        return;
+    }
+
+    if (type === 'valid') {
+        cell.classList.add('bg-indigo-50', 'border-indigo-400');
+        return;
+    }
+
+    cell.classList.add('bg-red-50', 'border-red-400');
 }
 
 function statusBadgeClasses(status) {
@@ -320,15 +416,57 @@ function placementFeedbackClasses(type = 'error') {
         'shadow-xl',
     ].join(' ');
 
-    if (type === 'error') {
+    if (type === 'error' || type === 'warning') {
         return isColorblindModeEnabled()
             ? `${baseClasses} border-orange-700 bg-white text-orange-950`
-            : `${baseClasses} border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300`;
+            : type === 'warning'
+                ? `${baseClasses} border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-300`
+                : `${baseClasses} border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300`;
     }
 
     return isColorblindModeEnabled()
         ? `${baseClasses} border-sky-700 bg-white text-sky-950`
         : `${baseClasses} border-green-200 bg-green-50 text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300`;
+}
+
+function placementFeedbackPalette(type = 'error') {
+    if (isColorblindModeEnabled()) {
+        if (type === 'error' || type === 'warning') {
+            return {
+                backgroundColor: '#ffffff',
+                color: '#7c2d12',
+                border: '2px solid #7c2d12',
+            };
+        }
+
+        return {
+            backgroundColor: '#ffffff',
+            color: '#0c4a6e',
+            border: '2px solid #0c4a6e',
+        };
+    }
+
+    if (type === 'warning') {
+        return {
+            backgroundColor: '#fef3c7',
+            color: '#92400e',
+            border: '1px solid #fde68a',
+        };
+    }
+
+    if (type === 'error') {
+        return {
+            backgroundColor: '#fee2e2',
+            color: '#991b1b',
+            border: '1px solid #fecaca',
+        };
+    }
+
+    return {
+        backgroundColor: '#dcfce7',
+        color: '#166534',
+        border: '1px solid #bbf7d0',
+    };
 }
 
 function showPlacementFeedback(message, type = 'error') {
@@ -350,19 +488,10 @@ function showPlacementFeedback(message, type = 'error') {
     feedback.style.fontWeight = '700';
     feedback.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.25)';
 
-    if (type === 'error') {
-        feedback.style.backgroundColor = '#fee2e2';
-        feedback.style.color = '#991b1b';
-        feedback.style.border = '1px solid #fecaca';
-    } else if (type === 'warning') {
-        feedback.style.backgroundColor = '#fef3c7';
-        feedback.style.color = '#92400e';
-        feedback.style.border = '1px solid #fde68a';
-    } else {
-        feedback.style.backgroundColor = '#dcfce7';
-        feedback.style.color = '#166534';
-        feedback.style.border = '1px solid #bbf7d0';
-    }
+    const palette = placementFeedbackPalette(type);
+    feedback.style.backgroundColor = palette.backgroundColor;
+    feedback.style.color = palette.color;
+    feedback.style.border = palette.border;
 
     feedback.textContent = message;
 
@@ -463,10 +592,7 @@ function renderApprovedCell(cell, approvedCell) {
     cell.setAttribute('aria-label', approvedCell.name);
     cell.classList.remove('border-dashed');
     cell.classList.add('group', 'border-solid');
-    cell.classList.toggle('bg-blue-50', !isEvent);
-    cell.classList.toggle('dark:bg-blue-900/20', !isEvent);
-    cell.classList.toggle('bg-amber-50', isEvent);
-    cell.classList.toggle('dark:bg-amber-900/20', isEvent);
+    applyPlacedCellStyle(cell, isEvent);
     cell.setAttribute('draggable', 'true');
 
     updateApprovalUI(cell);
@@ -487,21 +613,26 @@ function restoreApprovedCellsFromStorage() {
 function createApprovedBadge() {
     const badge = document.createElement('span');
 
-    badge.className = [
+    const classes = [
         'approved-badge',
         'mt-1',
         'rounded-full',
         'border',
-        'border-green-600',
-        'bg-green-100',
         'px-2',
         'py-0.5',
         'text-[10px]',
         'font-bold',
         'uppercase',
         'tracking-wide',
-        'text-green-700',
-    ].join(' ');
+    ];
+
+    if (isColorblindModeEnabled()) {
+        classes.push('border-2', 'border-sky-950', 'bg-sky-950', 'text-white');
+    } else {
+        classes.push('border-green-600', 'bg-green-100', 'text-green-700');
+    }
+
+    badge.className = classes.join(' ');
 
     badge.textContent = 'Approved';
 
@@ -512,22 +643,27 @@ function createApproveButton(cell) {
     const button = document.createElement('button');
 
     button.type = 'button';
-    button.className = [
+    const classes = [
         'approve-cell-button',
         'mt-2',
         'rounded-md',
-        'bg-green-600',
         'px-2',
         'py-1',
         'text-xs',
         'font-semibold',
         'text-white',
         'shadow-sm',
-        'hover:bg-green-700',
         'focus:outline-none',
         'focus:ring-2',
-        'focus:ring-green-500',
-    ].join(' ');
+    ];
+
+    if (isColorblindModeEnabled()) {
+        classes.push('bg-sky-950', 'hover:bg-sky-900', 'focus:ring-sky-700');
+    } else {
+        classes.push('bg-green-600', 'hover:bg-green-700', 'focus:ring-green-500');
+    }
+
+    button.className = classes.join(' ');
 
     button.textContent = 'Approve';
 
@@ -549,25 +685,29 @@ function applyApprovedStyle(cell) {
         'border-indigo-400',
         'bg-indigo-50',
         'border-red-400',
-        'bg-red-50'
+        'bg-red-50',
+        ...placedCellColorClasses,
+        ...conditionViolationClasses,
+        ...approvedCellColorClasses
     );
 
     cell.classList.add(
         'border-solid',
-        'border-green-500',
-        'bg-green-50',
-        'dark:bg-green-900/20',
         'cursor-not-allowed'
     );
+
+    if (isColorblindModeEnabled()) {
+        cell.classList.add('border-sky-950', 'bg-white', 'ring-2', 'ring-sky-200');
+    } else {
+        cell.classList.add('border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
+    }
 
     cell.title = 'Approved function: this cell can no longer be changed or removed.';
 }
 
 function removeApprovedStyle(cell) {
     cell.classList.remove(
-        'border-green-500',
-        'bg-green-50',
-        'dark:bg-green-900/20',
+        ...approvedCellColorClasses,
         'cursor-not-allowed'
     );
 
@@ -1151,13 +1291,8 @@ function extractConditionViolationCellIndexes(state) {
 
 function clearConditionViolationHighlights() {
     document.querySelectorAll('.grid-cell').forEach((cell) => {
-        cell.classList.remove(
-            'border-red-500',
-            'bg-red-50',
-            'dark:bg-red-900/20',
-            'ring-2',
-            'ring-red-400/60'
-        );
+        cell.classList.remove(...conditionViolationClasses);
+        restoreGridCellVisualState(cell);
     });
 }
 
@@ -1169,6 +1304,16 @@ function highlightConditionViolations(state) {
     violatingIndexes.forEach((index) => {
         const cell = document.querySelector(`.grid-cell[data-index="${index}"]`);
         if (!cell) return;
+
+        if (isColorblindModeEnabled()) {
+            cell.classList.add(
+                'border-orange-950',
+                'bg-white',
+                'ring-2',
+                'ring-orange-300'
+            );
+            return;
+        }
 
         cell.classList.add(
             'border-red-500',
@@ -2109,7 +2254,10 @@ function removeCellContent(cell) {
         'border-green-500',
         'bg-green-50',
         'dark:bg-green-900/20',
-        'cursor-not-allowed'
+        'cursor-not-allowed',
+        ...placedCellColorClasses,
+        ...approvedCellColorClasses,
+        ...conditionViolationClasses
     );
     cell.classList.add('border-dashed');
     cell.removeAttribute('draggable');
@@ -2141,13 +2289,12 @@ function fillCell(cell, item) {
         'border-green-500',
         'bg-green-50',
         'dark:bg-green-900/20',
-        'cursor-not-allowed'
+        'cursor-not-allowed',
+        ...placedCellColorClasses,
+        ...conditionViolationClasses
     );
     cell.classList.add('group', 'border-solid');
-    cell.classList.toggle('bg-blue-50', !isEvent);
-    cell.classList.toggle('dark:bg-blue-900/20', !isEvent);
-    cell.classList.toggle('bg-amber-50', isEvent);
-    cell.classList.toggle('dark:bg-amber-900/20', isEvent);
+    applyPlacedCellStyle(cell, isEvent);
     cell.setAttribute('draggable', 'true');
 
     removeStoredApprovedCell(cell);
@@ -2381,11 +2528,7 @@ function bindGridCells() {
 
     if (isApprovedCell(cell)) {
         event.dataTransfer.dropEffect = 'move';
-        if (isColorblindModeEnabled()) {
-            cell.classList.add('bg-white', 'border-orange-950');
-        } else {
-            cell.classList.add('bg-red-50', 'border-red-400');
-        }
+        addGridDropFeedbackStyle(cell, 'blocked');
         return;
     }
 
@@ -2398,10 +2541,10 @@ function bindGridCells() {
             event.dataTransfer.dropEffect = 'move';
 
             if (missingRequiredNeighbour) {
-                cell.classList.add('bg-white', 'border-orange-950');
+                addGridDropFeedbackStyle(cell, 'blocked');
                 showRequiredNeighbourToast(draggedData);
             } else {
-                cell.classList.add('bg-red-50', 'border-red-400');
+                addGridDropFeedbackStyle(cell, 'blocked');
             }
 
             return;
@@ -2409,31 +2552,19 @@ function bindGridCells() {
     }
 
     event.dataTransfer.dropEffect = 'move';
-    cell.classList.add('bg-indigo-50', 'border-indigo-400');
+    addGridDropFeedbackStyle(cell, 'valid');
     });
 
         cell.addEventListener('dragleave', () => {
-            cell.classList.remove(
-                'bg-indigo-50',
-                'border-indigo-400',
-                'bg-red-50',
-                'border-red-400',
-                'bg-white',
-                'border-orange-950'
-            );
+            clearGridDropFeedbackStyle(cell);
+            restoreGridCellVisualState(cell);
         });
 
         cell.addEventListener('drop', (event) => {
             event.preventDefault();
 
-            cell.classList.remove(
-                'bg-indigo-50',
-                'border-indigo-400',
-                'bg-red-50',
-                'border-red-400',
-                'bg-white',
-                'border-orange-950'
-            );
+            clearGridDropFeedbackStyle(cell);
+            restoreGridCellVisualState(cell);
 
             const payload = getDropPayload(event);
             if (!payload) return;
@@ -2916,13 +3047,17 @@ function bindExportButton() {
     document.getElementById('export-pdf')?.addEventListener('click', exportToPDF);
 }
 function refreshColorblindGridStyles() {
+    document.querySelectorAll('.grid-cell').forEach((cell) => {
+        if (cell.dataset.itemId && !isApprovedCell(cell)) {
+            applyPlacedCellStyle(cell, cell.dataset.itemType === 'event');
+        }
+
+        updateApprovalUI(cell);
+    });
+
     updateEffectView();
     updateEventEffectView();
     updateUpcomingEventList();
-
-    document.querySelectorAll('.grid-cell').forEach((cell) => {
-        updateApprovalUI(cell);
-    });
 
     if (activeTooltip) {
         updateTooltipContent(activeTooltip, getOrCreateTooltip());

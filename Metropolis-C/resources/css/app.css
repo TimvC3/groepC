@@ -1,3 +1,81 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html.colorblind-mode {
+    --cb-surface: #ffffff;
+    --cb-text: #111827;
+    --cb-muted: #374151;
+    --cb-border: #4b5563;
+    --cb-positive: #0c4a6e;
+    --cb-negative: #7c2d12;
+    --cb-action: #075985;
+    --cb-active: #312e81;
+    --cb-neutral: #111827;
+}
+
+html.colorblind-mode :where(.text-gray-300, .text-gray-400, .text-gray-500, .text-gray-600) {
+    color: var(--cb-muted);
+}
+
+html.colorblind-mode :where(.text-green-300, .text-green-400, .text-green-600, .text-green-700, .text-green-800) {
+    color: var(--cb-positive);
+}
+
+html.colorblind-mode :where(.text-red-300, .text-red-400, .text-red-600, .text-red-700, .text-red-800) {
+    color: var(--cb-negative);
+}
+
+html.colorblind-mode :where(.text-blue-300, .text-blue-400, .text-blue-600, .text-blue-700, .text-indigo-300, .text-indigo-400, .text-indigo-600, .text-indigo-700) {
+    color: var(--cb-action);
+}
+
+html.colorblind-mode :where(.text-amber-300, .text-amber-700, .text-orange-700, .text-orange-800) {
+    color: var(--cb-negative);
+}
+
+html.colorblind-mode :where(.bg-green-50, .bg-green-100, .bg-red-50, .bg-red-100, .bg-blue-50, .bg-blue-100, .bg-indigo-50, .bg-amber-50, .bg-orange-50, .bg-orange-100) {
+    background-color: var(--cb-surface);
+}
+
+html.colorblind-mode :where(.hover\:bg-blue-50:hover, .hover\:bg-indigo-50:hover, .hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover) {
+    background-color: var(--cb-surface);
+}
+
+html.colorblind-mode :where(.bg-green-600, .hover\:bg-green-700:hover, .bg-blue-600, .hover\:bg-blue-700:hover, .bg-indigo-600, .hover\:bg-indigo-700:hover) {
+    background-color: var(--cb-action);
+}
+
+html.colorblind-mode :where(.bg-red-600, .hover\:bg-red-500:hover, .active\:bg-red-700:active, .bg-amber-600, .hover\:bg-amber-700:hover) {
+    background-color: var(--cb-negative);
+}
+
+html.colorblind-mode :where(.border-gray-100, .border-gray-200, .border-gray-300) {
+    border-color: var(--cb-border);
+}
+
+html.colorblind-mode :where(.border-green-200, .border-green-500, .border-green-600) {
+    border-color: var(--cb-positive);
+}
+
+html.colorblind-mode :where(.border-red-200, .border-red-400, .border-red-500) {
+    border-color: var(--cb-negative);
+}
+
+html.colorblind-mode :where(.border-blue-200, .border-blue-400, .border-indigo-300, .border-indigo-400, .border-indigo-500) {
+    border-color: var(--cb-action);
+}
+
+html.colorblind-mode :where(.hover\:border-blue-400:hover, .hover\:border-indigo-300:hover, .hover\:border-indigo-400:hover, .hover\:ring-indigo-400:hover) {
+    border-color: var(--cb-action);
+    --tw-ring-color: var(--cb-action);
+}
+
+html.colorblind-mode :where(.border-amber-200, .border-amber-400, .border-orange-300, .border-orange-700) {
+    border-color: var(--cb-negative);
+}
+
+html.colorblind-mode :where(.focus\:border-indigo-500:focus, .focus\:ring-indigo-500:focus, .focus\:ring-red-500:focus, .focus\:ring-green-500:focus) {
+    --tw-ring-color: var(--cb-action);
+    border-color: var(--cb-action);
+}

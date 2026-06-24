@@ -23,7 +23,7 @@
     <div class="py-8">
         <div class="w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             @if (session('success'))
-                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300 [.colorblind-mode_&]:border-sky-300 [.colorblind-mode_&]:bg-sky-50 [.colorblind-mode_&]:text-sky-800">
+                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300 [.colorblind-mode_&]:border-2 [.colorblind-mode_&]:border-sky-950 [.colorblind-mode_&]:bg-white [.colorblind-mode_&]:text-sky-950 [.colorblind-mode_&]:font-bold">
                     {{ session('success') }}
                 </div>
             @endif
